@@ -1,0 +1,42 @@
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+
+const api = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+api.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('fuelflow_token');
+      if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+api.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError<{ message?: string }>) => {
+    if (error.response?.status === 401) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('fuelflow_token');
+        localStorage.removeItem('fuelflow_user');
+        window.location.href = '/login';
+      }
+    }
+    const message =
+      error.response?.data?.message ||
+      error.message ||
+      'An unexpected error occurred';
+    return Promise.reject(new Error(message));
+  }
+);
+
+export default api;

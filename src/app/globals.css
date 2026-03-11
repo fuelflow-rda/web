@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --fuel-orange: #F97316;
+  --fuel-blue: #3B82F6;
+  --sidebar-bg: #1E293B;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.ant-btn-primary {
+  background-color: var(--fuel-orange) !important;
+  border-color: var(--fuel-orange) !important;
+}
+
+.ant-btn-primary:hover {
+  background-color: #EA580C !important;
+  border-color: #EA580C !important;
+}
+
+.ant-switch-checked {
+  background-color: var(--fuel-orange) !important;
+}
+
+.ant-pagination-item-active {
+  border-color: var(--fuel-orange) !important;
+}
+
+.ant-pagination-item-active a {
+  color: var(--fuel-orange) !important;
+}
+
+.ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: var(--fuel-orange) !important;
+}
+
+.ant-tabs-ink-bar {
+  background: var(--fuel-orange) !important;
+}
+
+.ant-menu-item-selected {
+  background-color: rgba(249, 115, 22, 0.1) !important;
+  color: var(--fuel-orange) !important;
+}
+
+.ant-table-thead > tr > th {
+  background: #f8fafc !important;
+  font-weight: 600 !important;
+  color: #334155 !important;
+}
+
+.ant-card {
+  border-radius: 12px !important;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1) !important;
+}
+
+.ant-statistic-content-value {
+  font-weight: 700 !important;
+}
+
+.sidebar-nav .ant-menu {
+  background: transparent !important;
+  border: none !important;
+}
+
+.sidebar-nav .ant-menu-item {
+  color: #94a3b8 !important;
+  margin: 2px 8px !important;
+  border-radius: 8px !important;
+}
+
+.sidebar-nav .ant-menu-item:hover {
+  color: #f8fafc !important;
+  background: #334155 !important;
+}
+
+.sidebar-nav .ant-menu-item-selected {
+  color: #F97316 !important;
+  background: rgba(249, 115, 22, 0.15) !important;
+}
+
+.transaction-feed {
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.stats-card-up .ant-statistic-content-suffix {
+  color: #16a34a;
+}
+
+.stats-card-down .ant-statistic-content-suffix {
+  color: #dc2626;
+}
