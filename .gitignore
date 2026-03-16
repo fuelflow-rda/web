@@ -1,20 +1,24 @@
-# Dependencies
+# Dependencies (never commit)
 node_modules/
 .pnp
 .pnp.js
 .pnpm-store/
+**/node_modules/
 
 # Environment & secrets
 .env
-.env.*
+.env.local
+.env.*.local
 !.env.example
+!.env.local.example
 *.pem
 *.key
 
-# Next.js
+# Next.js build & cache (never commit)
 .next/
 out/
 build/
+.turbo/
 
 # Build & output
 *.tsbuildinfo
