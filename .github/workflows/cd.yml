@@ -1,0 +1,21 @@
+# Web CD – build Docker image (on tag or manual)
+# Standalone repo: context is . Monorepo: copy to root and set context: ./fuelflow-web
+name: Web CD
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "web-v*"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: fuelflow-web:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1,3 +1,44 @@
-# Fuelflow Web – see repo root .gitignore for full list.
-# Project-specific (already in root):
-# node_modules, .next, out, build, .env*.local, .vercel, .DS_Store
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+.pnpm-store/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Next.js
+.next/
+out/
+build/
+
+# Build & output
+*.tsbuildinfo
+next-env.d.ts
+
+# Testing
+coverage/
+
+# Docker
+docker-compose.override.yml
+.docker/
+
+# Vercel
+.vercel
+
+# IDE & OS
+.DS_Store
+.idea/
+.vscode/*
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
