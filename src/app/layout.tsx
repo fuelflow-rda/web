@@ -2,7 +2,10 @@
 
 import React from 'react';
 import { ConfigProvider } from 'antd';
+import { Inter } from 'next/font/google';
 import './globals.css';
+
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 const theme = {
   token: {
@@ -10,7 +13,7 @@ const theme = {
     colorLink: '#F97316',
     colorLinkHover: '#EA580C',
     borderRadius: 10,
-    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    fontFamily: 'var(--font-inter), system-ui, -apple-system, sans-serif',
     colorBgContainer: '#ffffff',
     colorBorderSecondary: '#F1F5F9',
   },
@@ -47,18 +50,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={inter.variable}>
       <head>
         <title>FuelFlow — Station Management</title>
         <meta name="description" content="FuelFlow fuel station management dashboard" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
-          rel="stylesheet"
-        />
       </head>
-      <body className="min-h-screen w-full m-0 p-0 overflow-x-hidden" style={{ background: '#F8FAFC' }}>
+      <body className={`${inter.className} min-h-screen w-full m-0 p-0 overflow-x-hidden`} style={{ background: '#F8FAFC' }}>
         <ConfigProvider theme={theme}>
           {children}
         </ConfigProvider>
