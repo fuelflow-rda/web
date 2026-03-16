@@ -107,7 +107,7 @@ export interface FuelPrice {
   previousPrice?: number;
   effectiveDate: string;
   changedById: string;
-  changedBy?: User;
+  changedBy?: { id: string; name: string };
   createdAt: string;
 }
 
@@ -195,7 +195,7 @@ export interface PumpReport {
   date: string;
   pumpId: string;
   pumpNumber: number;
-  fuelType: FuelType;
+  fuelType: PumpFuelType;
   litersDispensed: number;
   expectedRevenue: number;
   recordedRevenue: number;

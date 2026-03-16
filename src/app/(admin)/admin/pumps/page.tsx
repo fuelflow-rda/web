@@ -49,15 +49,18 @@ export default function AdminPumpsPage() {
   const [pumpSortOrder, setPumpSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const unwrapPumps = (raw: unknown[]): Pump[] =>
-    raw.map((p: Record<string, unknown>) => ({
-      id: p.id as string,
-      stationId: p.station_id as string,
-      pumpNumber: Number(p.pump_number) ?? 0,
-      fuelType: (p.fuel_type as Pump['fuelType']) ?? 'PETROL',
-      status: (String(p.status ?? 'active').toUpperCase() === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE') as Pump['status'],
-      createdAt: (p.created_at as string) ?? '',
-      updatedAt: (p.updated_at as string) ?? '',
-    }));
+    raw.map((p) => {
+      const r = p as Record<string, unknown>;
+      return {
+        id: r.id as string,
+        stationId: r.station_id as string,
+        pumpNumber: Number(r.pump_number) ?? 0,
+        fuelType: (r.fuel_type as Pump['fuelType']) ?? 'PETROL',
+        status: (String(r.status ?? 'active').toUpperCase() === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE') as Pump['status'],
+        createdAt: (r.created_at as string) ?? '',
+        updatedAt: (r.updated_at as string) ?? '',
+      };
+    });
 
   const fetchData = useCallback(async () => {
     setLoading(true);

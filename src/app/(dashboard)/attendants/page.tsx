@@ -400,7 +400,7 @@ export default function AttendantsPage() {
           <Form.Item name="phone" label="Phone number" rules={[{ required: true }]}>
             <Input placeholder="e.g. +250 788 123 456" />
           </Form.Item>
-          <Form.Item name="pin" label="PIN (4–6 digits)" rules={[{ required: true, len: [4, 6], message: '4–6 digits' }]}>
+          <Form.Item name="pin" label="PIN (4–6 digits)" rules={[{ required: true, min: 4, max: 6, message: '4–6 digits' }]}>
             <Input.Password placeholder="1234" maxLength={6} />
           </Form.Item>
           <div className="flex justify-end gap-2">

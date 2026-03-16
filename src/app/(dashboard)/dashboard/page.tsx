@@ -83,7 +83,7 @@ export default function DashboardPage() {
         active_shifts?: Array<{ pump_id: string; attendant_id: string; users?: { id: string; name: string } | null }>;
         revenue_by_hour?: { hour: string; revenue: number; liters: number }[];
       };
-      const today = overview?.today ?? {};
+      const today = (overview?.today ?? {}) as { total_liters_petrol?: number; total_liters_diesel?: number; total_revenue?: number; total_transactions?: number };
       const totalLiters = (today.total_liters_petrol ?? 0) + (today.total_liters_diesel ?? 0);
       const pumpsPayload = pumpsRes.data as { data?: unknown[] };
       const rawPumps = pumpsPayload?.data ?? (Array.isArray(pumpsRes.data) ? pumpsRes.data : []);
@@ -98,19 +98,20 @@ export default function DashboardPage() {
           };
         }
       }
-      const pumpsMapped: Pump[] = rawPumps.map((p: Record<string, unknown>) => {
-        const pumpId = p.id as string;
+      const pumpsMapped: Pump[] = rawPumps.map((p) => {
+        const r = p as Record<string, unknown>;
+        const pumpId = r.id as string;
         const activeShift = activeShiftByPumpId[pumpId];
         return {
           id: pumpId,
-          stationId: p.station_id as string,
-          pumpNumber: Number(p.pump_number) ?? 0,
-          fuelType: (p.fuel_type as Pump['fuelType']) ?? 'PETROL',
-          status: (p.status as Pump['status']) ?? 'ACTIVE',
+          stationId: r.station_id as string,
+          pumpNumber: Number(r.pump_number) ?? 0,
+          fuelType: (r.fuel_type as Pump['fuelType']) ?? 'PETROL',
+          status: (r.status as Pump['status']) ?? 'ACTIVE',
           currentAttendantId: activeShift?.attendantId,
           currentAttendant: activeShift ? { id: activeShift.attendantId, name: activeShift.attendantName, email: '', role: 'ATTENDANT' as const, isActive: true, createdAt: '', updatedAt: '' } : undefined,
-          createdAt: (p.created_at as string) ?? '',
-          updatedAt: (p.updated_at as string) ?? '',
+          createdAt: (r.created_at as string) ?? '',
+          updatedAt: (r.updated_at as string) ?? '',
         };
       });
       setPumps(pumpsMapped);
@@ -126,20 +127,23 @@ export default function DashboardPage() {
 
       const txPayload = txRes.data as { data?: unknown[] } | unknown[];
       const rawTx = Array.isArray(txPayload) ? txPayload : txPayload?.data ?? [];
-      const txMapped: Transaction[] = rawTx.map((t: Record<string, unknown>) => ({
-        id: t.id as string,
-        stationId: t.station_id as string,
-        pumpId: t.pump_id as string,
-        attendantId: t.attendant_id as string,
-        fuelType: (t.fuel_type as Transaction['fuelType']) ?? 'PETROL',
-        liters: Number(t.liters) ?? 0,
-        pricePerLiter: Number(t.price_per_liter) ?? 0,
-        totalAmount: Number(t.total_amount) ?? 0,
-        paymentMethod: (t.payment_method as Transaction['paymentMethod']) ?? 'CASH',
-        isFlagged: Boolean(t.is_flagged),
-        createdAt: (t.timestamp ?? t.created_at) as string,
-        updatedAt: (t.updated_at ?? t.timestamp) as string,
-      }));
+      const txMapped: Transaction[] = rawTx.map((t) => {
+        const r = t as Record<string, unknown>;
+        return {
+          id: r.id as string,
+          stationId: r.station_id as string,
+          pumpId: r.pump_id as string,
+          attendantId: r.attendant_id as string,
+          fuelType: (r.fuel_type as Transaction['fuelType']) ?? 'PETROL',
+          liters: Number(r.liters) ?? 0,
+          pricePerLiter: Number(r.price_per_liter) ?? 0,
+          totalAmount: Number(r.total_amount) ?? 0,
+          paymentMethod: (r.payment_method as Transaction['paymentMethod']) ?? 'CASH',
+          isFlagged: Boolean(r.is_flagged),
+          createdAt: (r.timestamp ?? r.created_at) as string,
+          updatedAt: (r.updated_at ?? r.timestamp) as string,
+        };
+      });
       setRecentTransactions(txMapped);
 
       const inactive = pumpsMapped.filter((p) => p.status === 'ACTIVE' && !p.currentAttendantId);

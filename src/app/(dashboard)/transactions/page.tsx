@@ -97,24 +97,25 @@ export default function TransactionsPage() {
       const payload = res.data as { data?: unknown[]; pagination?: { total: number } };
       const raw = Array.isArray(payload?.data) ? payload.data : [];
       setTransactions(
-        raw.map((t: Record<string, unknown>) => {
-          const users = t.users as { id: string; name: string } | undefined;
-          const pumpsRef = t.pumps as { id: string; pump_number: number; fuel_type: string } | undefined;
+        raw.map((t) => {
+          const r = t as Record<string, unknown>;
+          const users = r.users as { id: string; name: string } | undefined;
+          const pumpsRef = r.pumps as { id: string; pump_number: number; fuel_type: string } | undefined;
           return {
-            id: t.id as string,
-            stationId: t.station_id as string,
-            pumpId: t.pump_id as string,
-            attendantId: t.attendant_id as string,
-            fuelType: (t.fuel_type as Transaction['fuelType']) ?? 'PETROL',
-            liters: Number(t.liters) ?? 0,
-            pricePerLiter: Number(t.price_per_liter) ?? 0,
-            totalAmount: Number(t.total_amount) ?? 0,
-            paymentMethod: (t.payment_method as Transaction['paymentMethod']) ?? 'CASH',
-            isFlagged: Boolean(t.is_flagged),
-            vehiclePlate: (t.vehicle_plate as string) ?? undefined,
-            customerPhone: (t.customer_phone as string) ?? undefined,
-            createdAt: (t.timestamp ?? t.created_at) as string,
-            updatedAt: (t.updated_at ?? t.timestamp) as string,
+            id: r.id as string,
+            stationId: r.station_id as string,
+            pumpId: r.pump_id as string,
+            attendantId: r.attendant_id as string,
+            fuelType: (r.fuel_type as Transaction['fuelType']) ?? 'PETROL',
+            liters: Number(r.liters) ?? 0,
+            pricePerLiter: Number(r.price_per_liter) ?? 0,
+            totalAmount: Number(r.total_amount) ?? 0,
+            paymentMethod: (r.payment_method as Transaction['paymentMethod']) ?? 'CASH',
+            isFlagged: Boolean(r.is_flagged),
+            vehiclePlate: (r.vehicle_plate as string) ?? undefined,
+            customerPhone: (r.customer_phone as string) ?? undefined,
+            createdAt: (r.timestamp ?? r.created_at) as string,
+            updatedAt: (r.updated_at ?? r.timestamp) as string,
             pump: pumpsRef ? { id: pumpsRef.id, pumpNumber: pumpsRef.pump_number, fuelType: pumpsRef.fuel_type as Pump['fuelType'], stationId: '', status: 'ACTIVE' as const, createdAt: '', updatedAt: '' } : undefined,
             attendant: users ? { id: users.id, name: users.name, email: '', role: 'ATTENDANT' as const, isActive: true, createdAt: '', updatedAt: '' } : undefined,
           };
@@ -139,27 +140,33 @@ export default function TransactionsPage() {
       const pumpOut = pumpsRes.data as { data?: unknown[] };
       const rawPumps = pumpOut?.data ?? (Array.isArray(pumpsRes.data) ? pumpsRes.data : []);
       setPumps(
-        rawPumps.map((p: Record<string, unknown>) => ({
-          id: p.id as string,
-          stationId: p.station_id as string,
-          pumpNumber: Number(p.pump_number) ?? 0,
-          fuelType: (p.fuel_type as Pump['fuelType']) ?? 'PETROL',
-          status: 'ACTIVE' as const,
-          createdAt: (p.created_at as string) ?? '',
-          updatedAt: (p.updated_at as string) ?? '',
-        })),
+        rawPumps.map((p) => {
+          const r = p as Record<string, unknown>;
+          return {
+            id: r.id as string,
+            stationId: r.station_id as string,
+            pumpNumber: Number(r.pump_number) ?? 0,
+            fuelType: (r.fuel_type as Pump['fuelType']) ?? 'PETROL',
+            status: 'ACTIVE' as const,
+            createdAt: (r.created_at as string) ?? '',
+            updatedAt: (r.updated_at as string) ?? '',
+          };
+        }),
       );
       const rawAttendants = Array.isArray(attendantsRes.data) ? attendantsRes.data : [];
       setAttendants(
-        rawAttendants.map((a: Record<string, unknown>) => ({
-          id: a.id as string,
-          name: (a.name as string) ?? '',
-          email: '',
-          role: 'ATTENDANT' as const,
-          isActive: true,
-          createdAt: (a.created_at as string) ?? '',
-          updatedAt: (a.updated_at as string) ?? '',
-        })),
+        rawAttendants.map((a) => {
+          const r = a as Record<string, unknown>;
+          return {
+            id: r.id as string,
+            name: (r.name as string) ?? '',
+            email: '',
+            role: 'ATTENDANT' as const,
+            isActive: true,
+            createdAt: (r.created_at as string) ?? '',
+            updatedAt: (r.updated_at as string) ?? '',
+          };
+        }),
       );
     } catch {
       setPumps([]);

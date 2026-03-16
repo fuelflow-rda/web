@@ -430,7 +430,7 @@ export default function AdminUsersPage() {
                       <Input placeholder="e.g. +250 788 123 456" />
                     </Form.Item>
                     {!editingUser && (
-                      <Form.Item name="pin" label="PIN (4–6 digits)" rules={[{ required: true, len: [4, 6], message: '4–6 digits' }]}>
+                      <Form.Item name="pin" label="PIN (4–6 digits)" rules={[{ required: true, min: 4, max: 6, message: '4–6 digits' }]}>
                         <Input.Password placeholder="1234" maxLength={6} />
                       </Form.Item>
                     )}

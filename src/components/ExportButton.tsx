@@ -14,7 +14,7 @@ interface ExportColumn {
 }
 
 interface ExportButtonProps {
-  data: Record<string, unknown>[];
+  data: object[];
   columns: ExportColumn[];
   filename: string;
 }
@@ -40,8 +40,9 @@ export default function ExportButton({ data, columns, filename }: ExportButtonPr
 
     data.forEach((row) => {
       const rowData: Record<string, unknown> = {};
+      const r = row as Record<string, unknown>;
       columns.forEach((col) => {
-        rowData[col.key] = row[col.key] ?? '';
+        rowData[col.key] = r[col.key] ?? '';
       });
       worksheet.addRow(rowData);
     });
@@ -74,7 +75,7 @@ export default function ExportButton({ data, columns, filename }: ExportButtonPr
 
     const headers = columns.map((c) => c.header);
     const rows = data.map((row) =>
-      columns.map((col) => String(row[col.key] ?? ''))
+      columns.map((col) => String((row as Record<string, unknown>)[col.key] ?? ''))
     );
 
     autoTable(doc, {

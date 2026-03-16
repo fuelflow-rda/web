@@ -63,18 +63,19 @@ export default function FuelPricesPage() {
       const historyPayload = historyRes.data as { data?: unknown[] };
       const rawHistory = historyPayload?.data ?? (Array.isArray(historyRes.data) ? historyRes.data : []);
       setHistory(
-        rawHistory.map((h: Record<string, unknown>) => {
-          const userRef = h.users as { id: string; name: string } | undefined;
+        rawHistory.map((h) => {
+          const r = h as Record<string, unknown>;
+          const userRef = r.users as { id: string; name: string } | undefined;
           return {
-            id: h.id as string,
-            stationId: h.station_id as string,
-            fuelType: (h.fuel_type as FuelPrice['fuelType']) ?? 'PETROL',
-            price: Number(h.price_per_liter) ?? 0,
+            id: r.id as string,
+            stationId: r.station_id as string,
+            fuelType: (r.fuel_type as FuelPrice['fuelType']) ?? 'PETROL',
+            price: Number(r.price_per_liter) ?? 0,
             previousPrice: undefined,
-            effectiveDate: (h.set_at as string) ?? (h.effectiveDate as string) ?? '',
-            changedById: (h.set_by as string) ?? '',
+            effectiveDate: (r.set_at as string) ?? (r.effectiveDate as string) ?? '',
+            changedById: (r.set_by as string) ?? '',
             changedBy: userRef ? { id: userRef.id, name: userRef.name } : undefined,
-            createdAt: (h.set_at as string) ?? '',
+            createdAt: (r.set_at as string) ?? '',
           };
         }),
       );
