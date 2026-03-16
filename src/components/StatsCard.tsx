@@ -1,10 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Card, Typography } from 'antd';
 import { ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
-
-const { Text } = Typography;
 
 interface StatsCardProps {
   title: string;
@@ -16,6 +13,29 @@ interface StatsCardProps {
   trend?: number;
 }
 
+const colorMap: Record<string, { gradient: string; bg: string; shadow: string }> = {
+  '#F97316': {
+    gradient: 'from-orange-500 to-amber-500',
+    bg: 'bg-orange-50',
+    shadow: 'shadow-orange-500/20',
+  },
+  '#3B82F6': {
+    gradient: 'from-blue-500 to-cyan-500',
+    bg: 'bg-blue-50',
+    shadow: 'shadow-blue-500/20',
+  },
+  '#8B5CF6': {
+    gradient: 'from-violet-500 to-purple-500',
+    bg: 'bg-violet-50',
+    shadow: 'shadow-violet-500/20',
+  },
+  '#10B981': {
+    gradient: 'from-emerald-500 to-teal-500',
+    bg: 'bg-emerald-50',
+    shadow: 'shadow-emerald-500/20',
+  },
+};
+
 export default function StatsCard({
   title,
   value,
@@ -25,38 +45,42 @@ export default function StatsCard({
   color,
   trend,
 }: StatsCardProps) {
+  const palette = colorMap[color] || colorMap['#F97316'];
+
   return (
-    <Card className="!rounded-xl hover:shadow-lg transition-shadow" bodyStyle={{ padding: 20 }}>
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <Text type="secondary" className="text-sm">{title}</Text>
-          <div className="mt-1 flex items-baseline gap-1">
-            {prefix && <span className="text-sm font-medium text-gray-500">{prefix}</span>}
-            <span className="text-2xl font-bold" style={{ color }}>
-              {value.toLocaleString()}
-            </span>
-            {suffix && <span className="text-sm font-medium text-gray-500">{suffix}</span>}
-          </div>
-          {trend !== undefined && (
-            <div className="mt-2 flex items-center gap-1">
-              {trend >= 0 ? (
-                <ArrowUpOutlined className="text-xs text-green-500" />
-              ) : (
-                <ArrowDownOutlined className="text-xs text-red-500" />
-              )}
-              <Text className={`!text-xs ${trend >= 0 ? '!text-green-500' : '!text-red-500'}`}>
-                {Math.abs(trend)}% vs yesterday
-              </Text>
-            </div>
-          )}
-        </div>
+    <div className="group bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-card-hover transition-all duration-300 hover:-translate-y-0.5">
+      <div className="flex items-start justify-between mb-4">
         <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center text-xl"
-          style={{ background: `${color}15`, color }}
+          className={`w-11 h-11 rounded-xl bg-gradient-to-br ${palette.gradient} flex items-center justify-center text-white text-lg shadow-lg ${palette.shadow}`}
         >
           {icon}
         </div>
+        {trend !== undefined && (
+          <div
+            className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
+              trend >= 0
+                ? 'text-emerald-600 bg-emerald-50'
+                : 'text-red-600 bg-red-50'
+            }`}
+          >
+            {trend >= 0 ? (
+              <ArrowUpOutlined style={{ fontSize: 10 }} />
+            ) : (
+              <ArrowDownOutlined style={{ fontSize: 10 }} />
+            )}
+            {Math.abs(trend)}%
+          </div>
+        )}
       </div>
-    </Card>
+
+      <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">{title}</p>
+      <div className="flex items-baseline gap-1.5">
+        {prefix && <span className="text-sm font-medium text-slate-400">{prefix}</span>}
+        <span className="text-2xl font-extrabold text-slate-800">
+          {value.toLocaleString()}
+        </span>
+        {suffix && <span className="text-sm font-medium text-slate-400">{suffix}</span>}
+      </div>
+    </div>
   );
 }

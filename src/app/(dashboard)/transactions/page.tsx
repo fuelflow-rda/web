@@ -79,23 +79,51 @@ export default function TransactionsPage() {
       const params: Record<string, unknown> = {
         page,
         limit: pageSize,
-        sort: 'createdAt:desc',
+        sortBy: 'timestamp',
+        sortOrder: 'desc',
       };
+      params.station_id = currentStation.id;
       if (filters.dateRange) {
-        params.startDate = filters.dateRange[0].toISOString();
-        params.endDate = filters.dateRange[1].toISOString();
+        params.from = filters.dateRange[0].startOf('day').toISOString();
+        params.to = filters.dateRange[1].endOf('day').toISOString();
       }
-      if (filters.pumpId) params.pumpId = filters.pumpId;
-      if (filters.attendantId) params.attendantId = filters.attendantId;
-      if (filters.fuelType) params.fuelType = filters.fuelType;
-      if (filters.paymentMethod) params.paymentMethod = filters.paymentMethod;
-      if (filters.search) params.search = filters.search;
+      if (filters.pumpId) params.pump_id = filters.pumpId;
+      if (filters.attendantId) params.attendant_id = filters.attendantId;
+      if (filters.fuelType) params.fuel_type = filters.fuelType;
+      if (filters.paymentMethod) params.payment_method = filters.paymentMethod;
+      if (filters.search?.trim()) params.search = filters.search.trim();
 
-      const res = await api.get(`/stations/${currentStation.id}/transactions`, { params });
-      setTransactions(res.data.data || res.data);
-      setTotal(res.data.total || 0);
+      const res = await api.get('/transactions', { params });
+      const payload = res.data as { data?: unknown[]; pagination?: { total: number } };
+      const raw = Array.isArray(payload?.data) ? payload.data : [];
+      setTransactions(
+        raw.map((t: Record<string, unknown>) => {
+          const users = t.users as { id: string; name: string } | undefined;
+          const pumpsRef = t.pumps as { id: string; pump_number: number; fuel_type: string } | undefined;
+          return {
+            id: t.id as string,
+            stationId: t.station_id as string,
+            pumpId: t.pump_id as string,
+            attendantId: t.attendant_id as string,
+            fuelType: (t.fuel_type as Transaction['fuelType']) ?? 'PETROL',
+            liters: Number(t.liters) ?? 0,
+            pricePerLiter: Number(t.price_per_liter) ?? 0,
+            totalAmount: Number(t.total_amount) ?? 0,
+            paymentMethod: (t.payment_method as Transaction['paymentMethod']) ?? 'CASH',
+            isFlagged: Boolean(t.is_flagged),
+            vehiclePlate: (t.vehicle_plate as string) ?? undefined,
+            customerPhone: (t.customer_phone as string) ?? undefined,
+            createdAt: (t.timestamp ?? t.created_at) as string,
+            updatedAt: (t.updated_at ?? t.timestamp) as string,
+            pump: pumpsRef ? { id: pumpsRef.id, pumpNumber: pumpsRef.pump_number, fuelType: pumpsRef.fuel_type as Pump['fuelType'], stationId: '', status: 'ACTIVE' as const, createdAt: '', updatedAt: '' } : undefined,
+            attendant: users ? { id: users.id, name: users.name, email: '', role: 'ATTENDANT' as const, isActive: true, createdAt: '', updatedAt: '' } : undefined,
+          };
+        }),
+      );
+      setTotal(payload?.pagination?.total ?? raw.length);
     } catch {
-      // Handle error silently
+      setTransactions([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -105,13 +133,37 @@ export default function TransactionsPage() {
     if (!currentStation) return;
     try {
       const [pumpsRes, attendantsRes] = await Promise.all([
-        api.get(`/stations/${currentStation.id}/pumps`),
-        api.get(`/stations/${currentStation.id}/users`, { params: { role: 'ATTENDANT' } }),
+        api.get('/pumps', { params: { stationId: currentStation.id } }),
+        api.get(`/users/attendants/${currentStation.id}`),
       ]);
-      setPumps(pumpsRes.data);
-      setAttendants(attendantsRes.data);
+      const pumpOut = pumpsRes.data as { data?: unknown[] };
+      const rawPumps = pumpOut?.data ?? (Array.isArray(pumpsRes.data) ? pumpsRes.data : []);
+      setPumps(
+        rawPumps.map((p: Record<string, unknown>) => ({
+          id: p.id as string,
+          stationId: p.station_id as string,
+          pumpNumber: Number(p.pump_number) ?? 0,
+          fuelType: (p.fuel_type as Pump['fuelType']) ?? 'PETROL',
+          status: 'ACTIVE' as const,
+          createdAt: (p.created_at as string) ?? '',
+          updatedAt: (p.updated_at as string) ?? '',
+        })),
+      );
+      const rawAttendants = Array.isArray(attendantsRes.data) ? attendantsRes.data : [];
+      setAttendants(
+        rawAttendants.map((a: Record<string, unknown>) => ({
+          id: a.id as string,
+          name: (a.name as string) ?? '',
+          email: '',
+          role: 'ATTENDANT' as const,
+          isActive: true,
+          createdAt: (a.created_at as string) ?? '',
+          updatedAt: (a.updated_at as string) ?? '',
+        })),
+      );
     } catch {
-      // Handle error silently
+      setPumps([]);
+      setAttendants([]);
     }
   }, [currentStation]);
 
@@ -127,8 +179,7 @@ export default function TransactionsPage() {
     if (!selectedTx) return;
     try {
       await api.patch(`/transactions/${selectedTx.id}/flag`, {
-        isFlagged: true,
-        flagReason: values.reason,
+        reason: values.reason,
       });
       message.success('Transaction flagged');
       setFlagModalVisible(false);

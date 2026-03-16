@@ -49,17 +49,38 @@ export default function FuelPricesPage() {
     setLoading(true);
     try {
       const [currentRes, historyRes] = await Promise.all([
-        api.get(`/stations/${currentStation.id}/fuel-prices/current`),
-        api.get(`/stations/${currentStation.id}/fuel-prices/history`),
+        api.get(`/fuel-prices/${currentStation.id}/current`),
+        api.get(`/fuel-prices/${currentStation.id}/history`),
       ]);
-      const prices = currentRes.data;
+      const payload = currentRes.data;
+      const pricesObj = payload?.prices ?? {};
+      const petrolRow = pricesObj.PETROL ?? pricesObj.petrol;
+      const dieselRow = pricesObj.DIESEL ?? pricesObj.diesel;
       setCurrentPrices({
-        petrol: prices.PETROL || prices.petrol || 0,
-        diesel: prices.DIESEL || prices.diesel || 0,
+        petrol: petrolRow?.price_per_liter ?? petrolRow ?? 0,
+        diesel: dieselRow?.price_per_liter ?? dieselRow ?? 0,
       });
-      setHistory(historyRes.data);
+      const historyPayload = historyRes.data as { data?: unknown[] };
+      const rawHistory = historyPayload?.data ?? (Array.isArray(historyRes.data) ? historyRes.data : []);
+      setHistory(
+        rawHistory.map((h: Record<string, unknown>) => {
+          const userRef = h.users as { id: string; name: string } | undefined;
+          return {
+            id: h.id as string,
+            stationId: h.station_id as string,
+            fuelType: (h.fuel_type as FuelPrice['fuelType']) ?? 'PETROL',
+            price: Number(h.price_per_liter) ?? 0,
+            previousPrice: undefined,
+            effectiveDate: (h.set_at as string) ?? (h.effectiveDate as string) ?? '',
+            changedById: (h.set_by as string) ?? '',
+            changedBy: userRef ? { id: userRef.id, name: userRef.name } : undefined,
+            createdAt: (h.set_at as string) ?? '',
+          };
+        }),
+      );
     } catch {
-      // Handle silently
+      setCurrentPrices({ petrol: 0, diesel: 0 });
+      setHistory([]);
     } finally {
       setLoading(false);
     }
@@ -73,16 +94,18 @@ export default function FuelPricesPage() {
     if (!currentStation) return;
     setSubmitting(true);
     try {
-      await api.post(`/stations/${currentStation.id}/fuel-prices`, {
-        fuelType: values.fuelType,
-        price: values.price,
+      await api.post('/fuel-prices', {
+        station_id: currentStation.id,
+        fuel_type: values.fuelType,
+        price_per_liter: Math.round(Number(values.price)) || 0,
       });
       message.success('Fuel price updated successfully');
       setModalOpen(false);
       form.resetFields();
       fetchPrices();
-    } catch {
-      message.error('Failed to update price');
+    } catch (err: unknown) {
+      const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message: string }).message) : 'Failed to update price';
+      message.error(msg);
     } finally {
       setSubmitting(false);
     }

@@ -19,6 +19,8 @@ import {
   CheckCircleOutlined,
   WarningOutlined,
   FileTextOutlined,
+  UserOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { Dayjs } from 'dayjs';
@@ -26,7 +28,12 @@ import api from '@/lib/api';
 import { formatRWF } from '@/lib/format';
 import { useStationStore } from '@/store/station-store';
 import ExportButton from '@/components/ExportButton';
-import type { ReconciliationReport, PumpReconciliation, PaymentBreakdown } from '@/types';
+import type {
+  ReconciliationReport,
+  PumpReconciliation,
+  PaymentBreakdown,
+  AttendantReconciliation,
+} from '@/types';
 
 const { Title, Text } = Typography;
 
@@ -41,9 +48,8 @@ export default function ReconciliationPage() {
     if (!currentStation) return;
     setLoading(true);
     try {
-      const res = await api.get(`/stations/${currentStation.id}/reconciliation`, {
-        params: { date: selectedDate.format('YYYY-MM-DD') },
-      });
+      const dateStr = selectedDate.format('YYYY-MM-DD');
+      const res = await api.get(`/reconciliation/${currentStation.id}/${dateStr}`);
       setReport(res.data);
     } catch {
       setReport(null);
@@ -56,17 +62,33 @@ export default function ReconciliationPage() {
     fetchReport();
   }, [fetchReport]);
 
+  const handleDateChange = (d: Dayjs | null) => {
+    if (!d) return;
+    setSelectedDate(d);
+    if (currentStation) {
+      setLoading(true);
+      const dateStr = d.format('YYYY-MM-DD');
+      api
+        .get(`/reconciliation/${currentStation.id}/${dateStr}`)
+        .then((res) => setReport(res.data))
+        .catch(() => setReport(null))
+        .finally(() => setLoading(false));
+    }
+  };
+
   const handleGenerate = async () => {
     if (!currentStation) return;
     setGenerating(true);
     try {
-      const res = await api.post(`/stations/${currentStation.id}/reconciliation`, {
-        date: selectedDate.format('YYYY-MM-DD'),
+      const dateStr = selectedDate.format('YYYY-MM-DD');
+      const res = await api.post(`/reconciliation/${currentStation.id}/generate`, {}, {
+        params: { date: dateStr },
       });
       setReport(res.data);
-      message.success('Reconciliation report generated');
-    } catch {
-      message.error('Failed to generate report');
+      message.success(`Report for ${selectedDate.format('MMM D, YYYY')} generated`);
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { message?: string } } };
+      message.error(ax?.response?.data?.message ?? 'Failed to generate report');
     } finally {
       setGenerating(false);
     }
@@ -130,6 +152,40 @@ export default function ReconciliationPage() {
     },
   ];
 
+  const attendantColumns: ColumnsType<AttendantReconciliation> = [
+    {
+      title: 'Attendant',
+      dataIndex: 'attendantName',
+      key: 'attendantName',
+      render: (name: string) => (
+        <Space>
+          <UserOutlined className="text-slate-400" />
+          <Text strong>{name}</Text>
+        </Space>
+      ),
+    },
+    {
+      title: 'Transactions',
+      dataIndex: 'transactionCount',
+      key: 'transactionCount',
+      align: 'right',
+    },
+    {
+      title: 'Liters',
+      dataIndex: 'liters',
+      key: 'liters',
+      align: 'right',
+      render: (v: number) => `${Number(v).toLocaleString()} L`,
+    },
+    {
+      title: 'Revenue',
+      dataIndex: 'revenue',
+      key: 'revenue',
+      align: 'right',
+      render: (v: number) => <Text strong>{formatRWF(v)}</Text>,
+    },
+  ];
+
   const paymentColumns: ColumnsType<PaymentBreakdown> = [
     {
       title: 'Payment Method',
@@ -170,18 +226,43 @@ export default function ReconciliationPage() {
     { header: 'Status', key: 'status' },
   ];
 
+  const reportDateLabel = selectedDate.format('MMMM D, YYYY');
+  const exportData = [
+    ...(report?.pumpBreakdown || []).map((p) => ({
+      section: 'Pump',
+      label: `#${p.pumpNumber} (${p.fuelType})`,
+      litersDispensed: p.litersDispensed,
+      expectedRevenue: p.expectedRevenue,
+      recordedRevenue: p.recordedRevenue,
+      difference: p.difference,
+      status: p.status,
+    })),
+    ...(report?.attendantBreakdown || []).map((a) => ({
+      section: 'Attendant',
+      label: a.attendantName,
+      transactionCount: a.transactionCount,
+      liters: a.liters,
+      revenue: a.revenue,
+    })),
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <Title level={3} className="!mb-0">Reconciliation</Title>
-          <Text type="secondary">End of day revenue reconciliation</Text>
+          <Text type="secondary">End of day revenue reconciliation · Select a date, then generate</Text>
         </div>
-        <Space>
+        <Space wrap align="center">
+          <span className="text-slate-500 text-sm font-medium flex items-center gap-1.5">
+            <CalendarOutlined />
+            Report date
+          </span>
           <DatePicker
             value={selectedDate}
-            onChange={(d) => d && setSelectedDate(d)}
+            onChange={handleDateChange}
             disabledDate={(d) => d.isAfter(dayjs())}
+            allowClear={false}
           />
           <Button
             type="primary"
@@ -189,11 +270,26 @@ export default function ReconciliationPage() {
             onClick={handleGenerate}
             loading={generating}
           >
-            Generate Report
+            Generate report for {selectedDate.format('MMM D')}
           </Button>
           <ExportButton
-            data={exportPumpData}
-            columns={exportPumpColumns}
+            data={report ? exportData : exportPumpData}
+            columns={
+              report
+                ? [
+                    { header: 'Section', key: 'section' },
+                    { header: 'Label', key: 'label' },
+                    { header: 'Transactions', key: 'transactionCount' },
+                    { header: 'Liters', key: 'liters' },
+                    { header: 'Liters dispensed', key: 'litersDispensed' },
+                    { header: 'Revenue (RWF)', key: 'revenue' },
+                    { header: 'Expected (RWF)', key: 'expectedRevenue' },
+                    { header: 'Recorded (RWF)', key: 'recordedRevenue' },
+                    { header: 'Difference', key: 'difference' },
+                    { header: 'Status', key: 'status' },
+                  ]
+                : exportPumpColumns
+            }
             filename={`reconciliation-${selectedDate.format('YYYY-MM-DD')}`}
           />
         </Space>
@@ -205,6 +301,13 @@ export default function ReconciliationPage() {
         </div>
       ) : report ? (
         <>
+          <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <CalendarOutlined className="text-slate-400" />
+            <Text strong className="text-slate-600">
+              Report for {reportDateLabel}
+            </Text>
+          </div>
+
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={8}>
               <Card className="!rounded-xl">
@@ -250,6 +353,25 @@ export default function ReconciliationPage() {
               </Card>
             </Col>
           </Row>
+
+          <Card
+            title={
+              <span className="flex items-center gap-2">
+                <UserOutlined />
+                Attendants who worked
+              </span>
+            }
+            className="!rounded-xl"
+          >
+            <Table
+              columns={attendantColumns}
+              dataSource={report.attendantBreakdown ?? []}
+              rowKey="attendantId"
+              pagination={false}
+              size="middle"
+              locale={{ emptyText: 'No attendant activity for this date' }}
+            />
+          </Card>
 
           <Card title="Breakdown by Pump" className="!rounded-xl">
             <Table

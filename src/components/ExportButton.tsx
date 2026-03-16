@@ -31,13 +31,12 @@ export default function ExportButton({ data, columns, filename }: ExportButtonPr
       width: 20,
     }));
 
-    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
     worksheet.getRow(1).fill = {
       type: 'pattern',
       pattern: 'solid',
       fgColor: { argb: 'FFF97316' },
     };
-    worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
 
     data.forEach((row) => {
       const rowData: Record<string, unknown> = {};
@@ -98,20 +97,25 @@ export default function ExportButton({ data, columns, filename }: ExportButtonPr
     {
       key: 'excel',
       icon: <FileExcelOutlined className="!text-green-600" />,
-      label: 'Export to Excel',
+      label: <span className="font-medium">Export to Excel</span>,
       onClick: exportToExcel,
     },
     {
       key: 'pdf',
       icon: <FilePdfOutlined className="!text-red-500" />,
-      label: 'Export to PDF',
+      label: <span className="font-medium">Export to PDF</span>,
       onClick: exportToPdf,
     },
   ];
 
   return (
     <Dropdown menu={{ items }} trigger={['click']}>
-      <Button icon={<DownloadOutlined />}>Export</Button>
+      <Button
+        icon={<DownloadOutlined />}
+        className="!rounded-xl !font-semibold !border-gray-200 hover:!border-fuel-orange hover:!text-fuel-orange"
+      >
+        Export
+      </Button>
     </Dropdown>
   );
 }

@@ -24,13 +24,15 @@ export interface Station {
 }
 
 export type FuelType = 'PETROL' | 'DIESEL';
+/** Pump dispenses one fuel type or both */
+export type PumpFuelType = 'PETROL' | 'DIESEL' | 'BOTH';
 export type PumpStatus = 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
 
 export interface Pump {
   id: string;
   stationId: string;
   pumpNumber: number;
-  fuelType: FuelType;
+  fuelType: PumpFuelType;
   status: PumpStatus;
   currentAttendantId?: string;
   currentAttendant?: User;
@@ -109,6 +111,14 @@ export interface FuelPrice {
   createdAt: string;
 }
 
+export interface AttendantReconciliation {
+  attendantId: string;
+  attendantName: string;
+  transactionCount: number;
+  liters: number;
+  revenue: number;
+}
+
 export interface ReconciliationReport {
   id: string;
   stationId: string;
@@ -120,10 +130,12 @@ export interface ReconciliationReport {
   status: 'BALANCED' | 'DISCREPANCY';
   pumpBreakdown: PumpReconciliation[];
   paymentBreakdown: PaymentBreakdown[];
-  generatedById: string;
+  attendantBreakdown?: AttendantReconciliation[];
+  generatedAt?: string;
+  generatedById?: string;
   generatedBy?: User;
   notes?: string;
-  createdAt: string;
+  createdAt?: string;
 }
 
 export interface PumpReconciliation {
@@ -167,6 +179,10 @@ export interface DashboardStats {
 export interface AttendantReport {
   attendantId: string;
   attendantName: string;
+  assignedPumpId?: string | null;
+  assignedPumpLabel?: string | null;
+  /** Short label for table (e.g. "#6") to keep row compact */
+  assignedPumpShort?: string | null;
   totalTransactions: number;
   totalLiters: number;
   totalRevenue: number;

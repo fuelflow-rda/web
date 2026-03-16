@@ -41,20 +41,35 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const [typeFilter, setTypeFilter] = useState<string | undefined>();
+  const [search, setSearch] = useState('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
     try {
-      const params: Record<string, string> = {};
+      const params: Record<string, string | number> = { limit: 50 };
       if (typeFilter) params.type = typeFilter;
+      if (search?.trim()) params.search = search.trim();
+      params.sortOrder = sortOrder;
       const res = await api.get('/notifications', { params });
-      setNotifications(res.data);
+      const payload = res.data as { data?: Record<string, unknown>[] };
+      const raw = payload?.data ?? (Array.isArray(res.data) ? res.data : []);
+      setNotifications(raw.map((n: Record<string, unknown>) => ({
+        id: n.id as string,
+        userId: (n.user_id ?? n.userId) as string,
+        stationId: (n.station_id ?? n.stationId) as string | undefined,
+        type: (n.type as Notification['type']) ?? 'INFO',
+        title: (n.title as string) ?? '',
+        message: (n.message as string) ?? '',
+        isRead: Boolean(n.is_read ?? n.isRead),
+        createdAt: (n.created_at ?? n.createdAt) as string,
+      })));
     } catch {
       // Handle silently
     } finally {
       setLoading(false);
     }
-  }, [typeFilter]);
+  }, [typeFilter, search, sortOrder]);
 
   useEffect(() => {
     fetchNotifications();
@@ -100,7 +115,15 @@ export default function NotificationsPage() {
           </Title>
           <Text type="secondary">Stay updated with station alerts and events</Text>
         </div>
-        <Space>
+        <Space wrap>
+          <Input.Search
+            placeholder="Search title or message"
+            allowClear
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onSearch={() => fetchNotifications()}
+            className="w-48"
+          />
           <Select
             value={typeFilter}
             onChange={setTypeFilter}
@@ -113,6 +136,15 @@ export default function NotificationsPage() {
               { value: 'INFO', label: 'Info' },
               { value: 'SUCCESS', label: 'Success' },
             ]}
+          />
+          <Select
+            value={sortOrder}
+            onChange={(v) => setSortOrder(v as 'asc' | 'desc')}
+            options={[
+              { value: 'desc', label: 'Newest first' },
+              { value: 'asc', label: 'Oldest first' },
+            ]}
+            className="w-36"
           />
           {unreadCount > 0 && (
             <Button icon={<CheckOutlined />} onClick={markAllAsRead}>

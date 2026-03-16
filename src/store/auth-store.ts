@@ -35,7 +35,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ loading: true });
     try {
       const response = await api.post('/auth/login', { email, password });
-      const { user, token } = response.data;
+      const { user: raw, session } = response.data as { user: Record<string, unknown>; session?: { access_token: string } };
+      const token = session?.access_token;
+      if (!token) throw new Error('No token in response');
+      const roleMap: Record<string, AuthUser['role']> = { company_admin: 'ADMIN', station_manager: 'MANAGER', attendant: 'ATTENDANT' };
+      const user: AuthUser = {
+        id: raw.id as string,
+        email: (raw.email as string) ?? '',
+        name: (raw.name as string) ?? '',
+        role: roleMap[raw.role as string] ?? 'ATTENDANT',
+        stationId: raw.station_id as string | undefined,
+        companyId: raw.company_id as string | undefined,
+      };
       localStorage.setItem('fuelflow_token', token);
       localStorage.setItem('fuelflow_user', JSON.stringify(user));
       set({ user, token, loading: false });

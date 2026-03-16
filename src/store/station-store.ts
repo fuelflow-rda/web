@@ -21,7 +21,17 @@ export const useStationStore = create<StationState>((set, get) => ({
     set({ loading: true });
     try {
       const response = await api.get('/stations');
-      const stations: Station[] = response.data;
+      const payload = response.data as { data?: unknown[] };
+      const raw = payload?.data ?? (Array.isArray(response.data) ? response.data : []);
+      const stations: Station[] = raw.map((s: Record<string, unknown>) => ({
+        id: s.id as string,
+        companyId: (s.company_id as string) ?? '',
+        name: (s.name as string) ?? '',
+        location: (s.location as string) ?? '',
+        isActive: true,
+        createdAt: (s.created_at as string) ?? '',
+        updatedAt: (s.updated_at as string) ?? '',
+      }));
       set({ stations, loading: false });
       if (!get().currentStation && stations.length > 0) {
         set({ currentStation: stations[0] });

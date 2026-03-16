@@ -1,13 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Tag, Typography, Empty } from 'antd';
-import {
-  DollarOutlined,
-  CreditCardOutlined,
-  MobileOutlined,
-  WalletOutlined,
-} from '@ant-design/icons';
+import { Typography, Empty } from 'antd';
 import dayjs from 'dayjs';
 import { formatRWF } from '@/lib/format';
 import type { Transaction } from '@/types';
@@ -18,58 +12,72 @@ interface TransactionFeedProps {
   transactions: Transaction[];
 }
 
-const paymentIcons: Record<string, React.ReactNode> = {
-  CASH: <DollarOutlined className="text-green-500" />,
-  CARD: <CreditCardOutlined className="text-blue-500" />,
-  MOMO: <MobileOutlined className="text-yellow-500" />,
-  CREDIT: <WalletOutlined className="text-purple-500" />,
+const paymentConfig: Record<string, { icon: string; color: string; bg: string }> = {
+  CASH: { icon: '💵', color: '#16A34A', bg: '#F0FDF4' },
+  CARD: { icon: '💳', color: '#2563EB', bg: '#EFF6FF' },
+  MOMO: { icon: '📱', color: '#CA8A04', bg: '#FEFCE8' },
+  CREDIT: { icon: '🏦', color: '#7C3AED', bg: '#F5F3FF' },
 };
 
 export default function TransactionFeed({ transactions }: TransactionFeedProps) {
   if (transactions.length === 0) {
     return (
-      <div className="py-12">
-        <Empty description="No recent transactions" />
+      <div className="py-16">
+        <Empty
+          description={
+            <span className="text-slate-400 text-sm">No transactions yet</span>
+          }
+        />
       </div>
     );
   }
 
   return (
     <div className="transaction-feed">
-      {transactions.map((tx) => (
-        <div
-          key={tx.id}
-          className="flex items-center justify-between px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors"
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="flex-shrink-0">
-              {paymentIcons[tx.paymentMethod] || paymentIcons.CASH}
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <Tag
-                  color={tx.fuelType === 'PETROL' ? 'orange' : 'blue'}
-                  className="!text-xs !px-1.5 !py-0 !m-0"
-                >
-                  {tx.fuelType}
-                </Tag>
-                <Text className="!text-xs text-gray-500">
-                  {tx.liters.toFixed(1)} L
+      {transactions.map((tx, index) => {
+        const payment = paymentConfig[tx.paymentMethod] || paymentConfig.CASH;
+        const isPetrol = tx.fuelType === 'PETROL';
+        return (
+          <div
+            key={tx.id}
+            className="flex items-center justify-between px-5 py-3.5 border-b border-gray-50/80 hover:bg-slate-50/50 transition-colors cursor-default"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div
+                className="w-9 h-9 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
+                style={{ background: payment.bg }}
+              >
+                {payment.icon}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                    style={{
+                      background: isPetrol ? '#FFF7ED' : '#EFF6FF',
+                      color: isPetrol ? '#EA580C' : '#2563EB',
+                    }}
+                  >
+                    {tx.fuelType}
+                  </span>
+                  <Text className="!text-xs !text-slate-500 !font-medium">
+                    {tx.liters.toFixed(1)} L
+                  </Text>
+                </div>
+                <Text className="!text-[11px] !text-slate-400 block truncate mt-0.5">
+                  {tx.vehiclePlate || 'No plate'} &middot; {tx.paymentMethod}
                 </Text>
               </div>
-              <Text type="secondary" className="!text-xs block truncate">
-                {tx.vehiclePlate || 'No plate'} • {tx.paymentMethod}
+            </div>
+            <div className="text-right flex-shrink-0 ml-3">
+              <Text strong className="!text-sm block !text-slate-700">{formatRWF(tx.totalAmount)}</Text>
+              <Text className="!text-[11px] !text-slate-400">
+                {dayjs(tx.createdAt).format('HH:mm')}
               </Text>
             </div>
           </div>
-          <div className="text-right flex-shrink-0 ml-2">
-            <Text strong className="!text-sm block">{formatRWF(tx.totalAmount)}</Text>
-            <Text type="secondary" className="!text-xs">
-              {dayjs(tx.createdAt).format('HH:mm')}
-            </Text>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

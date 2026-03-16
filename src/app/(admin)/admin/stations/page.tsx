@@ -11,10 +11,12 @@ import {
   Modal,
   Form,
   Input,
+  Select,
   Switch,
   message,
   Popconfirm,
 } from 'antd';
+import type { TablePaginationConfig } from 'antd/es/table';
 import {
   PlusOutlined,
   EditOutlined,
@@ -25,9 +27,24 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import api from '@/lib/api';
+import { useAuthStore } from '@/store/auth-store';
 import type { Station } from '@/types';
 
 const { Title, Text } = Typography;
+
+function mapStationFromApi(raw: Record<string, unknown>): Station {
+  return {
+    id: raw.id as string,
+    companyId: (raw.company_id as string) ?? '',
+    name: (raw.name as string) ?? '',
+    location: (raw.location as string) ?? '',
+    address: raw.address as string | undefined,
+    phone: raw.phone as string | undefined,
+    isActive: true,
+    createdAt: (raw.created_at as string) ?? '',
+    updatedAt: (raw.updated_at as string) ?? '',
+  };
+}
 
 export default function AdminStationsPage() {
   const [stations, setStations] = useState<Station[]>([]);
@@ -37,17 +54,29 @@ export default function AdminStationsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm();
 
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [total, setTotal] = useState(0);
+
   const fetchStations = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get('/admin/stations');
-      setStations(res.data);
+      const res = await api.get('/stations', {
+        params: { search: search || undefined, sortBy, sortOrder, page, limit: pageSize },
+      });
+      const payload = res.data as { data?: unknown[]; pagination?: { total: number } };
+      const raw = payload?.data ?? (Array.isArray(res.data) ? res.data : []);
+      setTotal(payload?.pagination?.total ?? raw.length);
+      setStations(raw.map((s: Record<string, unknown>) => mapStationFromApi(s)));
     } catch {
-      // Handle silently
+      message.error('Failed to load stations');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [search, sortBy, sortOrder, page, pageSize]);
 
   useEffect(() => {
     fetchStations();
@@ -75,17 +104,24 @@ export default function AdminStationsPage() {
     setSubmitting(true);
     try {
       if (editingStation) {
-        await api.patch(`/admin/stations/${editingStation.id}`, values);
+        await api.patch(`/stations/${editingStation.id}`, { name: values.name, location: values.location });
         message.success('Station updated');
       } else {
-        await api.post('/admin/stations', values);
+        const companyId = useAuthStore.getState().user?.companyId;
+        if (!companyId) {
+          message.error('You must be assigned to a company to create stations.');
+          setSubmitting(false);
+          return;
+        }
+        await api.post('/stations', { name: values.name, company_id: companyId, location: values.location ?? '' });
         message.success('Station created');
       }
       setModalOpen(false);
       form.resetFields();
       fetchStations();
-    } catch {
-      message.error('Operation failed');
+    } catch (err: unknown) {
+      const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message: string }).message) : 'Operation failed';
+      message.error(msg);
     } finally {
       setSubmitting(false);
     }
@@ -93,12 +129,17 @@ export default function AdminStationsPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      await api.delete(`/admin/stations/${id}`);
+      await api.delete(`/stations/${id}`);
       message.success('Station deleted');
       fetchStations();
     } catch {
       message.error('Failed to delete station');
     }
+  };
+
+  const handleTableChange = (pagination: TablePaginationConfig) => {
+    if (pagination.current) setPage(pagination.current);
+    if (pagination.pageSize) setPageSize(pagination.pageSize);
   };
 
   const columns: ColumnsType<Station> = [
@@ -177,12 +218,48 @@ export default function AdminStationsPage() {
       </div>
 
       <Card className="!rounded-xl">
+        <div className="flex flex-wrap gap-3 mb-4">
+          <Input.Search
+            placeholder="Search name or location"
+            allowClear
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onSearch={() => setPage(1)}
+            className="max-w-xs"
+          />
+          <Select
+            value={sortBy}
+            onChange={(v) => { setSortBy(v); setPage(1); }}
+            options={[
+              { value: 'created_at', label: 'Date' },
+              { value: 'name', label: 'Name' },
+              { value: 'location', label: 'Location' },
+            ]}
+            className="w-32"
+          />
+          <Select
+            value={sortOrder}
+            onChange={(v) => { setSortOrder(v as 'asc' | 'desc'); setPage(1); }}
+            options={[
+              { value: 'desc', label: 'Desc' },
+              { value: 'asc', label: 'Asc' },
+            ]}
+            className="w-24"
+          />
+        </div>
         <Table
           columns={columns}
           dataSource={stations}
           rowKey="id"
           loading={loading}
-          pagination={{ pageSize: 10, showTotal: (t) => `${t} stations` }}
+          pagination={{
+            current: page,
+            pageSize,
+            total,
+            showSizeChanger: true,
+            showTotal: (t) => `${t} stations`,
+          }}
+          onChange={handleTableChange}
           size="middle"
         />
       </Card>
