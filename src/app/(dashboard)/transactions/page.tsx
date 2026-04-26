@@ -29,6 +29,12 @@ import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import dayjs, { Dayjs } from 'dayjs';
 import api from '@/lib/api';
 import { formatRWF } from '@/lib/format';
+import {
+  fuelTypeLabel,
+  isGasolineFuelType,
+  normalizePumpFuelType,
+  normalizeTransactionFuelType,
+} from '@/lib/fuel-type-labels';
 import { useStationStore } from '@/store/station-store';
 import ExportButton from '@/components/ExportButton';
 import type { Transaction, Pump, User } from '@/types';
@@ -62,6 +68,7 @@ export default function TransactionsPage() {
     attendantId: string | undefined;
     fuelType: string | undefined;
     paymentMethod: string | undefined;
+    flagStatus: 'all' | 'flagged' | 'unflagged';
     search: string;
   }>({
     dateRange: null,
@@ -69,6 +76,7 @@ export default function TransactionsPage() {
     attendantId: undefined,
     fuelType: undefined,
     paymentMethod: undefined,
+    flagStatus: 'all',
     search: '',
   });
 
@@ -91,6 +99,7 @@ export default function TransactionsPage() {
       if (filters.attendantId) params.attendant_id = filters.attendantId;
       if (filters.fuelType) params.fuel_type = filters.fuelType;
       if (filters.paymentMethod) params.payment_method = filters.paymentMethod;
+      if (filters.flagStatus !== 'all') params.flag_status = filters.flagStatus;
       if (filters.search?.trim()) params.search = filters.search.trim();
 
       const res = await api.get('/transactions', { params });
@@ -106,7 +115,7 @@ export default function TransactionsPage() {
             stationId: r.station_id as string,
             pumpId: r.pump_id as string,
             attendantId: r.attendant_id as string,
-            fuelType: (r.fuel_type as Transaction['fuelType']) ?? 'PETROL',
+            fuelType: normalizeTransactionFuelType(r.fuel_type as string | undefined),
             liters: Number(r.liters) ?? 0,
             pricePerLiter: Number(r.price_per_liter) ?? 0,
             totalAmount: Number(r.total_amount) ?? 0,
@@ -116,7 +125,17 @@ export default function TransactionsPage() {
             customerPhone: (r.customer_phone as string) ?? undefined,
             createdAt: (r.timestamp ?? r.created_at) as string,
             updatedAt: (r.updated_at ?? r.timestamp) as string,
-            pump: pumpsRef ? { id: pumpsRef.id, pumpNumber: pumpsRef.pump_number, fuelType: pumpsRef.fuel_type as Pump['fuelType'], stationId: '', status: 'ACTIVE' as const, createdAt: '', updatedAt: '' } : undefined,
+            pump: pumpsRef
+              ? {
+                  id: pumpsRef.id,
+                  pumpNumber: pumpsRef.pump_number,
+                  fuelType: normalizePumpFuelType(pumpsRef.fuel_type),
+                  stationId: '',
+                  status: 'ACTIVE' as const,
+                  createdAt: '',
+                  updatedAt: '',
+                }
+              : undefined,
             attendant: users ? { id: users.id, name: users.name, email: '', role: 'ATTENDANT' as const, isActive: true, createdAt: '', updatedAt: '' } : undefined,
           };
         }),
@@ -146,7 +165,7 @@ export default function TransactionsPage() {
             id: r.id as string,
             stationId: r.station_id as string,
             pumpNumber: Number(r.pump_number) ?? 0,
-            fuelType: (r.fuel_type as Pump['fuelType']) ?? 'PETROL',
+            fuelType: normalizePumpFuelType(r.fuel_type as string | undefined),
             status: 'ACTIVE' as const,
             createdAt: (r.created_at as string) ?? '',
             updatedAt: (r.updated_at as string) ?? '',
@@ -182,6 +201,17 @@ export default function TransactionsPage() {
     fetchFiltersData();
   }, [fetchFiltersData]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [
+    filters.dateRange,
+    filters.pumpId,
+    filters.attendantId,
+    filters.fuelType,
+    filters.paymentMethod,
+    filters.flagStatus,
+  ]);
+
   const handleFlag = async (values: { reason: string }) => {
     if (!selectedTx) return;
     try {
@@ -216,7 +246,7 @@ export default function TransactionsPage() {
       dataIndex: 'vehiclePlate',
       key: 'vehiclePlate',
       width: 130,
-      render: (plate: string) => plate || '—',
+      render: (plate: string) => plate || 'N/A',
     },
     {
       title: 'Fuel Type',
@@ -224,8 +254,8 @@ export default function TransactionsPage() {
       key: 'fuelType',
       width: 100,
       render: (type: string) => (
-        <Tag color={type === 'PETROL' ? 'orange' : 'blue'} className="!font-medium">
-          {type}
+        <Tag color={isGasolineFuelType(type) ? 'orange' : 'blue'} className="!font-medium">
+          {fuelTypeLabel(type)}
         </Tag>
       ),
     },
@@ -261,13 +291,13 @@ export default function TransactionsPage() {
       title: 'Pump',
       key: 'pump',
       width: 80,
-      render: (_: unknown, record: Transaction) => `#${record.pump?.pumpNumber || '—'}`,
+      render: (_: unknown, record: Transaction) => `#${record.pump?.pumpNumber ?? '?'}`,
     },
     {
       title: 'Attendant',
       key: 'attendant',
       width: 140,
-      render: (_: unknown, record: Transaction) => record.attendant?.name || '—',
+      render: (_: unknown, record: Transaction) => record.attendant?.name || 'N/A',
     },
     {
       title: 'Actions',
@@ -304,6 +334,7 @@ export default function TransactionsPage() {
 
   const exportData = transactions.map((t) => ({
     ...t,
+    fuelType: fuelTypeLabel(t.fuelType),
     createdAt: dayjs(t.createdAt).format('YYYY-MM-DD HH:mm'),
     pumpNumber: t.pump?.pumpNumber || '',
     attendantName: t.attendant?.name || '',
@@ -351,7 +382,7 @@ export default function TransactionsPage() {
             allowClear
             className="w-36"
             options={[
-              { value: 'PETROL', label: 'Petrol' },
+              { value: 'GASOLINE', label: 'Gasoline' },
               { value: 'DIESEL', label: 'Diesel' },
             ]}
           />
@@ -366,6 +397,16 @@ export default function TransactionsPage() {
               { value: 'CARD', label: 'Card' },
               { value: 'MOMO', label: 'MoMo' },
               { value: 'CREDIT', label: 'Credit' },
+            ]}
+          />
+          <Select
+            value={filters.flagStatus}
+            onChange={(v) => setFilters((f) => ({ ...f, flagStatus: v as 'all' | 'flagged' | 'unflagged' }))}
+            className="w-44"
+            options={[
+              { value: 'all', label: 'All transactions' },
+              { value: 'flagged', label: 'Flagged only' },
+              { value: 'unflagged', label: 'Not flagged' },
             ]}
           />
           <Input
@@ -385,6 +426,7 @@ export default function TransactionsPage() {
                 attendantId: undefined,
                 fuelType: undefined,
                 paymentMethod: undefined,
+                flagStatus: 'all',
                 search: '',
               })
             }

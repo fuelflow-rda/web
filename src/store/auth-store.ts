@@ -5,7 +5,7 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string;
-  role: 'ADMIN' | 'MANAGER' | 'ATTENDANT';
+  role: 'SUPERADMIN' | 'ADMIN' | 'MANAGER' | 'ATTENDANT';
   stationId?: string;
   companyId?: string;
   avatarUrl?: string;
@@ -38,12 +38,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { user: raw, session } = response.data as { user: Record<string, unknown>; session?: { access_token: string } };
       const token = session?.access_token;
       if (!token) throw new Error('No token in response');
-      const roleMap: Record<string, AuthUser['role']> = { company_admin: 'ADMIN', station_manager: 'MANAGER', attendant: 'ATTENDANT' };
+      const roleMap: Record<string, AuthUser['role']> = {
+        superadmin: 'SUPERADMIN',
+        company_admin: 'ADMIN',
+        station_manager: 'MANAGER',
+        attendant: 'ATTENDANT',
+      };
       const user: AuthUser = {
         id: raw.id as string,
         email: (raw.email as string) ?? '',
         name: (raw.name as string) ?? '',
-        role: roleMap[raw.role as string] ?? 'ATTENDANT',
+        role: roleMap[String(raw.role ?? '').toLowerCase()] ?? 'ATTENDANT',
         stationId: raw.station_id as string | undefined,
         companyId: raw.company_id as string | undefined,
       };
@@ -81,6 +86,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  isAdmin: () => get().user?.role === 'ADMIN',
+  isAdmin: () => {
+    const r = get().user?.role;
+    return r === 'ADMIN' || r === 'SUPERADMIN';
+  },
   isManager: () => get().user?.role === 'MANAGER',
 }));

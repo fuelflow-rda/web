@@ -1,6 +1,7 @@
 export interface Company {
   id: string;
   name: string;
+  country?: string;
   address?: string;
   phone?: string;
   email?: string;
@@ -12,6 +13,8 @@ export interface Company {
 export interface Station {
   id: string;
   companyId: string;
+  /** Present when API joins companies (e.g. superadmin list). */
+  companyName?: string;
   name: string;
   location: string;
   address?: string;
@@ -23,9 +26,8 @@ export interface Station {
   updatedAt: string;
 }
 
-export type FuelType = 'PETROL' | 'DIESEL';
-/** Pump dispenses one fuel type or both */
-export type PumpFuelType = 'PETROL' | 'DIESEL' | 'BOTH';
+export type FuelType = 'GASOLINE' | 'DIESEL';
+export type PumpFuelType = FuelType;
 export type PumpStatus = 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
 
 export interface Pump {
@@ -51,6 +53,8 @@ export interface User {
   stationId?: string;
   station?: Station;
   companyId?: string;
+  /** When API joins companies (e.g. superadmin user list). */
+  companyName?: string;
   isActive: boolean;
   avatarUrl?: string;
   createdAt: string;
@@ -170,6 +174,9 @@ export interface Notification {
 export interface DashboardStats {
   totalRevenue: number;
   totalLiters: number;
+  /** Liters from gasoline-class fuel (API aggregates non-diesel as gasoline). */
+  gasolineLiters: number;
+  dieselLiters: number;
   totalTransactions: number;
   activePumps: number;
   totalPumps: number;
@@ -179,9 +186,11 @@ export interface DashboardStats {
 export interface AttendantReport {
   attendantId: string;
   attendantName: string;
+  phone?: string | null;
+  isActive?: boolean;
+  createdAt?: string | null;
   assignedPumpId?: string | null;
   assignedPumpLabel?: string | null;
-  /** Short label for table (e.g. "#6") to keep row compact */
   assignedPumpShort?: string | null;
   totalTransactions: number;
   totalLiters: number;

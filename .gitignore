@@ -5,12 +5,11 @@ node_modules/
 .pnpm-store/
 **/node_modules/
 
-# Environment & secrets
-.env
-.env.local
-.env.*.local
+# Environment & secrets (never commit real keys — templates stay allowed below)
+.env*
 !.env.example
 !.env.local.example
+!.env.staging.local.example
 *.pem
 *.key
 

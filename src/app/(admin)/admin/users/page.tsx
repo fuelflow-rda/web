@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Table,
   Card,
@@ -16,6 +17,7 @@ import {
   message,
   Avatar,
   Popconfirm,
+  Tooltip,
 } from 'antd';
 import type { TablePaginationConfig } from 'antd/es/table';
 import {
@@ -24,11 +26,13 @@ import {
   UserOutlined,
   StopOutlined,
   CheckCircleOutlined,
+  EyeOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
+import { useStationStore } from '@/store/station-store';
 import type { User, Station } from '@/types';
 
 const { Title, Text } = Typography;
@@ -42,8 +46,23 @@ const roleColors: Record<string, string> = {
 const API_ROLE_TO_UI: Record<string, User['role']> = { company_admin: 'ADMIN', station_manager: 'MANAGER', attendant: 'ATTENDANT' };
 const UI_ROLE_TO_API: Record<string, string> = { ADMIN: 'company_admin', MANAGER: 'station_manager', ATTENDANT: 'attendant' };
 
+function roleFormSelectOptions(isSuperAdmin: boolean, editingUser: User | null) {
+  const all = [
+    { value: 'ADMIN', label: 'Admin' },
+    { value: 'MANAGER', label: 'Manager' },
+    { value: 'ATTENDANT', label: 'Attendant' },
+  ];
+  if (isSuperAdmin) return all;
+  const withoutCompanyAdmin = all.filter((o) => o.value !== 'ADMIN');
+  if (editingUser?.role === 'ADMIN') {
+    return [{ value: 'ADMIN' as const, label: 'Admin', disabled: true }, ...withoutCompanyAdmin];
+  }
+  return withoutCompanyAdmin;
+}
+
 function mapUserFromApi(raw: Record<string, unknown>): User {
   const station = raw.stations as Record<string, unknown> | undefined;
+  const companies = raw.companies as { id?: string; name?: string } | null | undefined;
   return {
     id: raw.id as string,
     email: (raw.email as string) ?? '',
@@ -53,6 +72,7 @@ function mapUserFromApi(raw: Record<string, unknown>): User {
     stationId: raw.station_id as string | undefined,
     station: station ? { id: station.id as string, name: station.name as string, companyId: station.company_id as string, location: (station.location as string) ?? '', isActive: true, createdAt: '', updatedAt: '' } as Station : undefined,
     companyId: raw.company_id as string | undefined,
+    companyName: companies?.name,
     isActive: raw.is_active !== false,
     createdAt: (raw.created_at as string) ?? '',
     updatedAt: (raw.updated_at as string) ?? '',
@@ -72,6 +92,12 @@ function mapStationFromApi(raw: Record<string, unknown>): Station {
 }
 
 export default function AdminUsersPage() {
+  const router = useRouter();
+  const authUser = useAuthStore((s) => s.user);
+  const setCurrentStationById = useStationStore((s) => s.setCurrentStationById);
+  const isSuperAdmin = authUser?.role === 'SUPERADMIN';
+  const [companies, setCompanies] = useState<{ id: string; name: string }[]>([]);
+  const [companyFilter, setCompanyFilter] = useState<string | undefined>();
   const [users, setUsers] = useState<User[]>([]);
   const [stations, setStations] = useState<Station[]>([]);
   const [loading, setLoading] = useState(false);
@@ -90,13 +116,28 @@ export default function AdminUsersPage() {
 
   const fetchStationsList = useCallback(async () => {
     try {
-      const res = await api.get('/stations', { params: { limit: 100 } });
+      const res = await api.get('/stations', {
+        params: { limit: 500, ...(isSuperAdmin && companyFilter ? { company_id: companyFilter } : {}) },
+      });
       const raw = (res.data as { data?: unknown[] })?.data ?? (Array.isArray(res.data) ? res.data : []);
       return raw.map((s: Record<string, unknown>) => mapStationFromApi(s));
     } catch {
       return [];
     }
-  }, []);
+  }, [isSuperAdmin, companyFilter]);
+
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    (async () => {
+      try {
+        const res = await api.get('/companies');
+        const raw = Array.isArray(res.data) ? res.data : [];
+        setCompanies(raw.map((c: Record<string, unknown>) => ({ id: c.id as string, name: (c.name as string) ?? '' })));
+      } catch {
+        setCompanies([]);
+      }
+    })();
+  }, [isSuperAdmin]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -107,6 +148,7 @@ export default function AdminUsersPage() {
             search: search || undefined,
             role: roleFilter ? { ADMIN: 'company_admin', MANAGER: 'station_manager', ATTENDANT: 'attendant' }[roleFilter] : undefined,
             station_id: stationFilter,
+            company_id: isSuperAdmin ? companyFilter : undefined,
             sortBy,
             sortOrder,
             page,
@@ -134,7 +176,7 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, roleFilter, stationFilter, sortBy, sortOrder, page, pageSize, fetchStationsList]);
+  }, [search, roleFilter, stationFilter, companyFilter, sortBy, sortOrder, page, pageSize, fetchStationsList, isSuperAdmin]);
 
   useEffect(() => {
     fetchData();
@@ -143,6 +185,9 @@ export default function AdminUsersPage() {
   const openCreate = () => {
     setEditingUser(null);
     form.resetFields();
+    if (isSuperAdmin && companyFilter) {
+      form.setFieldsValue({ companyId: companyFilter });
+    }
     setModalOpen(true);
   };
 
@@ -172,10 +217,15 @@ export default function AdminUsersPage() {
         });
         message.success('User updated');
       } else {
-        const authUser = useAuthStore.getState().user;
-        const companyId = (values.companyId as string) ?? authUser?.companyId ?? (values.stationId && stations.find((s) => s.id === values.stationId)?.companyId);
+        const authUserNow = useAuthStore.getState().user;
+        const companyId =
+          (values.companyId as string) ??
+          authUserNow?.companyId ??
+          (values.stationId && stations.find((s) => s.id === values.stationId)?.companyId);
         if (!companyId) {
-          message.error('Company is required. Ensure you are assigned to a company.');
+          message.error(
+            isSuperAdmin ? 'Select a company (or pick a station so we can infer it).' : 'Company is required. Ensure you are assigned to a company.',
+          );
           setSubmitting(false);
           return;
         }
@@ -217,6 +267,17 @@ export default function AdminUsersPage() {
     }
   };
 
+  const previewManagerStation = (record: User) => {
+    const sid = record.stationId;
+    if (!sid) {
+      message.warning('This manager has no station assigned yet.');
+      return;
+    }
+    setCurrentStationById(sid);
+    message.info(`Opening manager view for ${record.station?.name ?? 'station'}…`);
+    router.push('/dashboard');
+  };
+
   const toggleActive = async (user: User) => {
     try {
       await api.patch(`/users/${user.id}`, { is_active: !user.isActive });
@@ -242,6 +303,17 @@ export default function AdminUsersPage() {
         </Space>
       ),
     },
+    ...(isSuperAdmin
+      ? [
+          {
+            title: 'Company',
+            dataIndex: 'companyName',
+            key: 'companyName',
+            width: 160,
+            render: (name: string | undefined) => name || '—',
+          } as const,
+        ]
+      : []),
     {
       title: 'Role',
       dataIndex: 'role',
@@ -251,13 +323,13 @@ export default function AdminUsersPage() {
     {
       title: 'Station',
       key: 'station',
-      render: (_: unknown, record: User) => record.station?.name || '—',
+      render: (_: unknown, record: User) => record.station?.name || 'N/A',
     },
     {
       title: 'Phone',
       dataIndex: 'phone',
       key: 'phone',
-      render: (v: string) => v || '—',
+      render: (v: string) => v || 'N/A',
     },
     {
       title: 'Status',
@@ -276,9 +348,16 @@ export default function AdminUsersPage() {
     {
       title: 'Actions',
       key: 'actions',
-      width: 140,
+      width: isSuperAdmin ? 160 : 200,
       render: (_: unknown, record: User) => (
         <Space>
+          {record.role === 'MANAGER' && (
+            <Tooltip title="Open the station dashboard as a manager would see it (same data scope)">
+              <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => previewManagerStation(record)}>
+                Preview
+              </Button>
+            </Tooltip>
+          )}
           <Button type="text" icon={<EditOutlined />} onClick={() => openEdit(record)} />
           <Popconfirm
             title={`${record.isActive ? 'Deactivate' : 'Activate'} this user?`}
@@ -305,7 +384,11 @@ export default function AdminUsersPage() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <Title level={3} className="!mb-0">Users</Title>
-          <Text type="secondary">Manage managers, attendants, and administrators</Text>
+          <Text type="secondary">
+            {isSuperAdmin
+              ? 'Manage managers, attendants, and company administrators'
+              : 'Add managers and attendants; use Preview on a manager row to open their station dashboard'}
+          </Text>
         </div>
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
           Add User
@@ -334,6 +417,18 @@ export default function AdminUsersPage() {
             ]}
             className="w-36"
           />
+          {isSuperAdmin && (
+            <Select
+              placeholder="Company"
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              value={companyFilter}
+              onChange={(v) => { setCompanyFilter(v); setPage(1); }}
+              options={companies.map((c) => ({ value: c.id, label: c.name }))}
+              className="min-w-[200px]"
+            />
+          )}
           <Select
             placeholder="Station"
             allowClear
@@ -394,13 +489,24 @@ export default function AdminUsersPage() {
             <Input placeholder="John Doe" />
           </Form.Item>
           <Form.Item name="role" label="Role" rules={[{ required: true }]}>
-            <Select
-              options={[
-                { value: 'ADMIN', label: 'Admin' },
-                { value: 'MANAGER', label: 'Manager' },
-                { value: 'ATTENDANT', label: 'Attendant' },
-              ]}
-            />
+            <Select options={roleFormSelectOptions(isSuperAdmin, editingUser)} />
+          </Form.Item>
+          <Form.Item noStyle shouldUpdate={(p, c) => p.role !== c.role}>
+            {({ getFieldValue }) =>
+              isSuperAdmin && getFieldValue('role') === 'ADMIN' ? (
+                <Form.Item
+                  name="companyId"
+                  label="Company"
+                  rules={[{ required: true, message: 'Select company for this admin' }]}
+                >
+                  <Select
+                    placeholder="Select company"
+                    showSearch
+                    optionFilterProp="label"
+                    options={companies.map((c) => ({ value: c.id, label: c.name }))}
+                  />
+                </Form.Item>
+              ) : null}
           </Form.Item>
           <Form.Item
             noStyle
@@ -430,7 +536,7 @@ export default function AdminUsersPage() {
                       <Input placeholder="e.g. +250 788 123 456" />
                     </Form.Item>
                     {!editingUser && (
-                      <Form.Item name="pin" label="PIN (4–6 digits)" rules={[{ required: true, min: 4, max: 6, message: '4–6 digits' }]}>
+                      <Form.Item name="pin" label="PIN (4 to 6 digits)" rules={[{ required: true, min: 4, max: 6, message: 'Enter 4 to 6 digits' }]}>
                         <Input.Password placeholder="1234" maxLength={6} />
                       </Form.Item>
                     )}

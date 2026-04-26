@@ -27,7 +27,8 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<{ message?: string }>) => {
-    if (error.response?.status === 401) {
+    const isLoginRequest = error.config?.url?.includes('/auth/login');
+    if (error.response?.status === 401 && !isLoginRequest) {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('fuelflow_token');
         localStorage.removeItem('fuelflow_user');

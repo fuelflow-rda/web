@@ -24,6 +24,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import api from '@/lib/api';
+import { fuelTypeLabel, isGasolineFuelType, normalizePumpFuelType } from '@/lib/fuel-type-labels';
 import type { Pump, Station } from '@/types';
 
 const { Title, Text } = Typography;
@@ -55,7 +56,7 @@ export default function AdminPumpsPage() {
         id: r.id as string,
         stationId: r.station_id as string,
         pumpNumber: Number(r.pump_number) ?? 0,
-        fuelType: (r.fuel_type as Pump['fuelType']) ?? 'PETROL',
+        fuelType: normalizePumpFuelType(r.fuel_type as string | undefined),
         status: (String(r.status ?? 'active').toUpperCase() === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE') as Pump['status'],
         createdAt: (r.created_at as string) ?? '',
         updatedAt: (r.updated_at as string) ?? '',
@@ -65,19 +66,23 @@ export default function AdminPumpsPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const stationsRes = await api.get('/stations', { params: { limit: 100 } });
+      const stationsRes = await api.get('/stations', { params: { limit: 500 } });
       const payload = stationsRes.data as { data?: unknown[] };
       const rawStations = payload?.data ?? (Array.isArray(stationsRes.data) ? stationsRes.data : []);
       setStations(
-        rawStations.map((s: Record<string, unknown>) => ({
-          id: s.id as string,
-          companyId: (s.company_id as string) ?? '',
-          name: s.name as string,
-          location: (s.location as string) ?? '',
-          isActive: true,
-          createdAt: (s.created_at as string) ?? '',
-          updatedAt: (s.updated_at as string) ?? '',
-        })),
+        rawStations.map((s: Record<string, unknown>) => {
+          const comp = s.companies as { name?: string } | null | undefined;
+          return {
+            id: s.id as string,
+            companyId: (s.company_id as string) ?? '',
+            companyName: comp?.name,
+            name: s.name as string,
+            location: (s.location as string) ?? '',
+            isActive: true,
+            createdAt: (s.created_at as string) ?? '',
+            updatedAt: (s.updated_at as string) ?? '',
+          };
+        }),
       );
       const pumpParams = {
         stationId: stationFilter,
@@ -118,7 +123,7 @@ export default function AdminPumpsPage() {
     if (stationFilter) {
       form.setFieldsValue({ stationId: stationFilter });
       api.get<{ nextNumber: number }>('/pumps/next-number', { params: { stationId: stationFilter } })
-        .then((res) => form.setFieldsValue({ pumpNumber: res.data?.nextNumber ?? 1, fuelType: 'PETROL' }))
+        .then((res) => form.setFieldsValue({ pumpNumber: res.data?.nextNumber ?? 1, fuelType: 'GASOLINE' }))
         .catch(() => {});
     }
   };
@@ -147,7 +152,7 @@ export default function AdminPumpsPage() {
         await api.post('/pumps', {
           station_id: values.stationId,
           pump_number: Number(values.pumpNumber) ?? 1,
-          fuel_type: values.fuelType ?? 'PETROL',
+          fuel_type: values.fuelType ?? 'GASOLINE',
         });
         message.success('Pump created');
       }
@@ -172,7 +177,9 @@ export default function AdminPumpsPage() {
     }
   };
 
-  const stationMap = new Map(stations.map((s) => [s.id, s.name]));
+  const stationMap = new Map(
+    stations.map((s) => [s.id, s.companyName ? `${s.name} · ${s.companyName}` : s.name]),
+  );
 
   const columns: ColumnsType<Pump> = [
     {
@@ -188,15 +195,15 @@ export default function AdminPumpsPage() {
     {
       title: 'Station',
       key: 'station',
-      render: (_: unknown, record: Pump) => stationMap.get(record.stationId) || '—',
+      render: (_: unknown, record: Pump) => stationMap.get(record.stationId) || 'N/A',
     },
     {
       title: 'Fuel Type',
       dataIndex: 'fuelType',
       key: 'fuelType',
       render: (type: string) => (
-        <Tag color={type === 'PETROL' ? 'orange' : type === 'DIESEL' ? 'blue' : 'green'} className="!font-medium">
-          {type === 'BOTH' ? 'Petrol & Diesel' : type}
+        <Tag color={isGasolineFuelType(type) ? 'orange' : 'blue'} className="!font-medium">
+          {fuelTypeLabel(type)}
         </Tag>
       ),
     },
@@ -209,7 +216,7 @@ export default function AdminPumpsPage() {
     {
       title: 'Current Attendant',
       key: 'attendant',
-      render: (_: unknown, record: Pump) => record.currentAttendant?.name || '—',
+      render: (_: unknown, record: Pump) => record.currentAttendant?.name || 'None',
     },
     {
       title: 'Actions',
@@ -245,7 +252,10 @@ export default function AdminPumpsPage() {
             placeholder="All Stations"
             allowClear
             className="w-52"
-            options={stations.map((s) => ({ value: s.id, label: s.name }))}
+            options={stations.map((s) => ({
+              value: s.id,
+              label: s.companyName ? `${s.name} (${s.companyName})` : s.name,
+            }))}
           />
           <Input.Search
             placeholder="Pump # or fuel type"
@@ -302,7 +312,10 @@ export default function AdminPumpsPage() {
           <Form.Item name="stationId" label="Station" rules={[{ required: true }]}>
             <Select
               placeholder="Select station"
-              options={stations.map((s) => ({ value: s.id, label: s.name }))}
+              options={stations.map((s) => ({
+                value: s.id,
+                label: s.companyName ? `${s.name} (${s.companyName})` : s.name,
+              }))}
               disabled={!!editingPump}
               onChange={(stationId: string) => {
                 if (!editingPump && stationId) {
@@ -323,9 +336,8 @@ export default function AdminPumpsPage() {
           <Form.Item name="fuelType" label="Fuel Type" rules={[{ required: true }]}>
             <Select
               options={[
-                { value: 'BOTH', label: 'Petrol & Diesel' },
-                { value: 'PETROL', label: 'Petrol only' },
-                { value: 'DIESEL', label: 'Diesel only' },
+                { value: 'GASOLINE', label: 'Gasoline' },
+                { value: 'DIESEL', label: 'Diesel' },
               ]}
             />
           </Form.Item>

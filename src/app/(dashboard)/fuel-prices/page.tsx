@@ -26,6 +26,8 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import api from '@/lib/api';
 import { formatRWF } from '@/lib/format';
+import { fuelTypeLabel, isGasolineFuelType, normalizeTransactionFuelType } from '@/lib/fuel-type-labels';
+import { LEGACY_GASOLINE_FUEL_TYPE } from '@/lib/legacy-gasoline-fuel-type';
 import { useStationStore } from '@/store/station-store';
 import RevenueChart from '@/components/charts/RevenueChart';
 import type { FuelPrice } from '@/types';
@@ -34,8 +36,8 @@ const { Title, Text } = Typography;
 
 export default function FuelPricesPage() {
   const { currentStation } = useStationStore();
-  const [currentPrices, setCurrentPrices] = useState<{ petrol: number; diesel: number }>({
-    petrol: 0,
+  const [currentPrices, setCurrentPrices] = useState<{ gasoline: number; diesel: number }>({
+    gasoline: 0,
     diesel: 0,
   });
   const [history, setHistory] = useState<FuelPrice[]>([]);
@@ -54,10 +56,14 @@ export default function FuelPricesPage() {
       ]);
       const payload = currentRes.data;
       const pricesObj = payload?.prices ?? {};
-      const petrolRow = pricesObj.PETROL ?? pricesObj.petrol;
+      const gasolineRow =
+        pricesObj.GASOLINE ??
+        pricesObj.gasoline ??
+        pricesObj[LEGACY_GASOLINE_FUEL_TYPE] ??
+        pricesObj[LEGACY_GASOLINE_FUEL_TYPE.toLowerCase()];
       const dieselRow = pricesObj.DIESEL ?? pricesObj.diesel;
       setCurrentPrices({
-        petrol: petrolRow?.price_per_liter ?? petrolRow ?? 0,
+        gasoline: gasolineRow?.price_per_liter ?? gasolineRow ?? 0,
         diesel: dieselRow?.price_per_liter ?? dieselRow ?? 0,
       });
       const historyPayload = historyRes.data as { data?: unknown[] };
@@ -69,7 +75,7 @@ export default function FuelPricesPage() {
           return {
             id: r.id as string,
             stationId: r.station_id as string,
-            fuelType: (r.fuel_type as FuelPrice['fuelType']) ?? 'PETROL',
+            fuelType: normalizeTransactionFuelType(r.fuel_type as string | undefined),
             price: Number(r.price_per_liter) ?? 0,
             previousPrice: undefined,
             effectiveDate: (r.set_at as string) ?? (r.effectiveDate as string) ?? '',
@@ -80,7 +86,7 @@ export default function FuelPricesPage() {
         }),
       );
     } catch {
-      setCurrentPrices({ petrol: 0, diesel: 0 });
+      setCurrentPrices({ gasoline: 0, diesel: 0 });
       setHistory([]);
     } finally {
       setLoading(false);
@@ -127,9 +133,11 @@ export default function FuelPricesPage() {
       render: (type: string) => (
         <span
           className="font-semibold"
-          style={{ color: type === 'PETROL' ? '#F97316' : '#3B82F6' }}
+          style={{
+            color: isGasolineFuelType(type) ? '#F97316' : '#3B82F6',
+          }}
         >
-          {type}
+          {fuelTypeLabel(type)}
         </span>
       ),
     },
@@ -138,7 +146,7 @@ export default function FuelPricesPage() {
       dataIndex: 'previousPrice',
       key: 'previousPrice',
       align: 'right',
-      render: (v: number | undefined) => (v ? formatRWF(v) : '—'),
+      render: (v: number | undefined) => (v ? formatRWF(v) : 'N/A'),
     },
     {
       title: 'New Price',
@@ -152,7 +160,7 @@ export default function FuelPricesPage() {
       key: 'change',
       align: 'right',
       render: (_: unknown, record: FuelPrice) => {
-        if (!record.previousPrice) return '—';
+        if (!record.previousPrice) return 'N/A';
         const diff = record.price - record.previousPrice;
         const pct = ((diff / record.previousPrice) * 100).toFixed(1);
         return (
@@ -172,12 +180,12 @@ export default function FuelPricesPage() {
     {
       title: 'Changed By',
       key: 'changedBy',
-      render: (_: unknown, record: FuelPrice) => record.changedBy?.name || '—',
+      render: (_: unknown, record: FuelPrice) => record.changedBy?.name || 'N/A',
     },
   ];
 
   const priceChartData = history
-    .filter((h) => h.fuelType === 'PETROL')
+    .filter((h) => isGasolineFuelType(h.fuelType))
     .map((h) => ({
       hour: dayjs(h.effectiveDate).format('MMM D'),
       revenue: h.price,
@@ -207,10 +215,10 @@ export default function FuelPricesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <Text className="text-sm uppercase tracking-wider font-semibold" style={{ color: '#F97316' }}>
-                  Petrol
+                  Gasoline
                 </Text>
                 <Statistic
-                  value={currentPrices.petrol}
+                  value={currentPrices.gasoline}
                   prefix="RWF"
                   valueStyle={{ color: '#F97316', fontSize: 36, fontWeight: 800 }}
                 />
@@ -287,7 +295,7 @@ export default function FuelPricesPage() {
           >
             <Select
               options={[
-                { value: 'PETROL', label: 'Petrol' },
+                { value: 'GASOLINE', label: 'Gasoline' },
                 { value: 'DIESEL', label: 'Diesel' },
               ]}
             />

@@ -19,6 +19,12 @@ import { PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import api from '@/lib/api';
 import { formatRWF } from '@/lib/format';
+import {
+  fuelTypeLabel,
+  isGasolineFuelType,
+  normalizePumpFuelType,
+  normalizeTransactionFuelType,
+} from '@/lib/fuel-type-labels';
 import { useStationStore } from '@/store/station-store';
 import ExportButton from '@/components/ExportButton';
 import PumpPerformanceChart from '@/components/charts/PumpPerformanceChart';
@@ -51,7 +57,7 @@ export default function PumpsPage() {
         id: p.id as string,
         stationId: p.station_id as string,
         pumpNumber: Number(p.pump_number) ?? 0,
-        fuelType: (p.fuel_type as Pump['fuelType']) ?? 'BOTH',
+        fuelType: normalizePumpFuelType(p.fuel_type as string | undefined),
         status: (String(p.status ?? 'active').toUpperCase() === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE') as Pump['status'],
         createdAt: (p.created_at as string) ?? '',
         updatedAt: (p.updated_at as string) ?? '',
@@ -87,10 +93,10 @@ export default function PumpsPage() {
       const totalLiters = tx.reduce((s, t) => s + parseFloat(String(t.liters ?? 0)), 0);
       const totalRev = tx.reduce((s, t) => s + (t.total_amount ?? 0), 0);
       const summaryRow: PumpReport = {
-        date: from.toISOString().slice(0, 10) + ' – ' + to.toISOString().slice(0, 10),
+        date: `${from.toISOString().slice(0, 10)} to ${to.toISOString().slice(0, 10)}`,
         pumpId: selectedPumpId,
         pumpNumber: pump?.pumpNumber ?? 0,
-        fuelType: (pump?.fuelType as PumpReport['fuelType']) ?? 'BOTH',
+        fuelType: (pump?.fuelType as PumpReport['fuelType']) ?? 'GASOLINE',
         litersDispensed: totalLiters,
         expectedRevenue: totalRev,
         recordedRevenue: totalRev,
@@ -104,7 +110,8 @@ export default function PumpsPage() {
           date: dateStr,
           pumpId: selectedPumpId,
           pumpNumber: pump?.pumpNumber ?? 0,
-          fuelType: (t.fuel_type as PumpReport['fuelType']) ?? pump?.fuelType ?? 'BOTH',
+          fuelType:
+          normalizeTransactionFuelType(t.fuel_type as string | undefined) as PumpReport['fuelType'],
           litersDispensed: liters,
           expectedRevenue: amt,
           recordedRevenue: amt,
@@ -133,11 +140,11 @@ export default function PumpsPage() {
       api.get<{ nextNumber: number }>('/pumps/next-number', { params: { stationId: currentStation.id } })
         .then((res) => {
           const next = res.data?.nextNumber ?? (pumps.length > 0 ? Math.max(...pumps.map((p) => p.pumpNumber), 0) + 1 : 1);
-          form.setFieldsValue({ pumpNumber: next, fuelType: 'PETROL' });
+          form.setFieldsValue({ pumpNumber: next, fuelType: 'GASOLINE' });
         })
         .catch(() => {
           const nextNum = pumps.length > 0 ? Math.max(...pumps.map((p) => p.pumpNumber), 0) + 1 : 1;
-          form.setFieldsValue({ pumpNumber: nextNum, fuelType: 'PETROL' });
+          form.setFieldsValue({ pumpNumber: nextNum, fuelType: 'GASOLINE' });
         });
     }
   }, [addModalOpen, currentStation?.id, pumps, form]);
@@ -149,7 +156,7 @@ export default function PumpsPage() {
       await api.post('/pumps', {
         station_id: currentStation.id,
         pump_number: Number(values.pumpNumber) ?? 1,
-        fuel_type: values.fuelType ?? 'PETROL',
+        fuel_type: values.fuelType ?? 'GASOLINE',
       });
       message.success('Pump added.');
       setAddModalOpen(false);
@@ -179,8 +186,12 @@ export default function PumpsPage() {
       render: (_: unknown, record: PumpReport) => (
         <Space>
           <Text strong>#{record.pumpNumber}</Text>
-          <Tag color={record.fuelType === 'PETROL' ? 'orange' : record.fuelType === 'DIESEL' ? 'blue' : 'green'}>
-            {record.fuelType === 'BOTH' ? 'Petrol & Diesel' : record.fuelType}
+          <Tag
+            color={
+              isGasolineFuelType(record.fuelType) ? 'orange' : 'blue'
+            }
+          >
+            {fuelTypeLabel(record.fuelType)}
           </Tag>
         </Space>
       ),
@@ -220,7 +231,7 @@ export default function PumpsPage() {
           strong
           className={Math.abs(v) > 0 ? '!text-red-500' : '!text-green-600'}
         >
-          {v === 0 ? '—' : formatRWF(v)}
+          {formatRWF(v)}
         </Text>
       ),
     },
@@ -258,12 +269,13 @@ export default function PumpsPage() {
           <Form.Item name="pumpNumber" label="Pump Number" rules={[{ required: true, type: 'number', min: 1 }]}>
             <InputNumber className="!w-full" placeholder="e.g. 1" min={1} />
           </Form.Item>
-          <Form.Item name="fuelType" label="Fuel Type" rules={[{ required: true }]} initialValue="BOTH">
-            <Select options={[
-              { value: 'BOTH', label: 'Petrol & Diesel' },
-              { value: 'PETROL', label: 'Petrol only' },
-              { value: 'DIESEL', label: 'Diesel only' },
-            ]} />
+          <Form.Item name="fuelType" label="Fuel Type" rules={[{ required: true }]} initialValue="GASOLINE">
+            <Select
+              options={[
+                { value: 'GASOLINE', label: 'Gasoline' },
+                { value: 'DIESEL', label: 'Diesel' },
+              ]}
+            />
           </Form.Item>
           <div className="flex justify-end gap-2">
             <Button onClick={() => setAddModalOpen(false)}>Cancel</Button>
@@ -291,7 +303,7 @@ export default function PumpsPage() {
             className="w-44"
             options={pumps.map((p) => ({
               value: p.id,
-              label: `Pump #${p.pumpNumber} (${p.fuelType})`,
+              label: `Pump #${p.pumpNumber} (${fuelTypeLabel(p.fuelType)})`,
             }))}
           />
         </div>

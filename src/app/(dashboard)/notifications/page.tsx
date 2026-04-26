@@ -26,20 +26,18 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import api from '@/lib/api';
 import type { Notification } from '@/types';
+import {
+  NotificationDetailModal,
+  notificationTypeVisuals,
+} from '@/components/NotificationDetailModal';
 
 dayjs.extend(relativeTime);
 
 const { Title, Text } = Typography;
 
-const typeConfig: Record<string, { icon: React.ReactNode; color: string; tagColor: string }> = {
-  ALERT: { icon: <ExclamationCircleOutlined />, color: '#EF4444', tagColor: 'red' },
-  WARNING: { icon: <WarningOutlined />, color: '#F97316', tagColor: 'orange' },
-  INFO: { icon: <InfoCircleOutlined />, color: '#3B82F6', tagColor: 'blue' },
-  SUCCESS: { icon: <CheckCircleOutlined />, color: '#10B981', tagColor: 'green' },
-};
-
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [detailNotification, setDetailNotification] = useState<Notification | null>(null);
   const [loading, setLoading] = useState(false);
   const [typeFilter, setTypeFilter] = useState<string | undefined>();
   const [search, setSearch] = useState('');
@@ -82,6 +80,7 @@ export default function NotificationsPage() {
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
       );
+      setDetailNotification((d) => (d?.id === id ? { ...d, isRead: true } : d));
     } catch {
       message.error('Failed to mark notification as read');
     }
@@ -161,13 +160,16 @@ export default function NotificationsPage() {
           dataSource={filteredNotifications}
           locale={{ emptyText: <Empty description="No notifications" className="py-12" /> }}
           renderItem={(notification) => {
-            const config = typeConfig[notification.type] || typeConfig.INFO;
+            const config = notificationTypeVisuals[notification.type] || notificationTypeVisuals.INFO;
             return (
               <List.Item
                 className={`!px-6 !py-4 cursor-pointer hover:bg-gray-50 transition-colors ${
                   !notification.isRead ? 'bg-orange-50/50' : ''
                 }`}
-                onClick={() => !notification.isRead && markAsRead(notification.id)}
+                onClick={() => {
+                  setDetailNotification(notification);
+                  if (!notification.isRead) void markAsRead(notification.id);
+                }}
                 actions={[
                   !notification.isRead && (
                     <Button
@@ -176,7 +178,7 @@ export default function NotificationsPage() {
                       size="small"
                       onClick={(e) => {
                         e.stopPropagation();
-                        markAsRead(notification.id);
+                        void markAsRead(notification.id);
                       }}
                     >
                       Mark read
@@ -217,6 +219,12 @@ export default function NotificationsPage() {
           }}
         />
       </Card>
+
+      <NotificationDetailModal
+        open={!!detailNotification}
+        notification={detailNotification}
+        onClose={() => setDetailNotification(null)}
+      />
     </div>
   );
 }

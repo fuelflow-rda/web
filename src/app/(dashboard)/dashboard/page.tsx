@@ -12,6 +12,12 @@ import {
 import dayjs from 'dayjs';
 import { useStationStore } from '@/store/station-store';
 import api from '@/lib/api';
+import {
+  fuelTypeLabel,
+  normalizePumpFuelType,
+  normalizeTransactionFuelType,
+} from '@/lib/fuel-type-labels';
+import { legacyOverviewTotalGasLitersProperty } from '@/lib/legacy-gasoline-fuel-type';
 import type { DashboardStats, Pump, Transaction } from '@/types';
 import StatsCard from '@/components/StatsCard';
 import PumpCard from '@/components/PumpCard';
@@ -76,15 +82,23 @@ export default function DashboardPage() {
         station?: { pumps?: unknown[] };
         today?: {
           total_revenue: number;
-          total_liters_petrol: number;
+          total_liters_gasoline?: number;
           total_liters_diesel: number;
           total_transactions: number;
         };
         active_shifts?: Array<{ pump_id: string; attendant_id: string; users?: { id: string; name: string } | null }>;
         revenue_by_hour?: { hour: string; revenue: number; liters: number }[];
       };
-      const today = (overview?.today ?? {}) as { total_liters_petrol?: number; total_liters_diesel?: number; total_revenue?: number; total_transactions?: number };
-      const totalLiters = (today.total_liters_petrol ?? 0) + (today.total_liters_diesel ?? 0);
+      const today = (overview?.today ?? {}) as {
+        total_liters_gasoline?: number;
+        total_liters_diesel?: number;
+        total_revenue?: number;
+        total_transactions?: number;
+      };
+      const legacyGas = (today as Record<string, number | undefined>)[legacyOverviewTotalGasLitersProperty()];
+      const gasLiters = today.total_liters_gasoline ?? legacyGas ?? 0;
+      const dieselLiters = today.total_liters_diesel ?? 0;
+      const totalLiters = gasLiters + dieselLiters;
       const pumpsPayload = pumpsRes.data as { data?: unknown[] };
       const rawPumps = pumpsPayload?.data ?? (Array.isArray(pumpsRes.data) ? pumpsRes.data : []);
       const activeShiftByPumpId: Record<string, { attendantId: string; attendantName: string }> = {};
@@ -106,7 +120,7 @@ export default function DashboardPage() {
           id: pumpId,
           stationId: r.station_id as string,
           pumpNumber: Number(r.pump_number) ?? 0,
-          fuelType: (r.fuel_type as Pump['fuelType']) ?? 'PETROL',
+          fuelType: normalizePumpFuelType(r.fuel_type as string | undefined),
           status: (r.status as Pump['status']) ?? 'ACTIVE',
           currentAttendantId: activeShift?.attendantId,
           currentAttendant: activeShift ? { id: activeShift.attendantId, name: activeShift.attendantName, email: '', role: 'ATTENDANT' as const, isActive: true, createdAt: '', updatedAt: '' } : undefined,
@@ -119,6 +133,8 @@ export default function DashboardPage() {
       setStats({
         totalRevenue: today.total_revenue ?? 0,
         totalLiters,
+        gasolineLiters: gasLiters,
+        dieselLiters,
         totalTransactions: today.total_transactions ?? 0,
         activePumps: Array.isArray(overview?.active_shifts) ? overview.active_shifts.length : 0,
         totalPumps: pumpsMapped.length,
@@ -134,7 +150,7 @@ export default function DashboardPage() {
           stationId: r.station_id as string,
           pumpId: r.pump_id as string,
           attendantId: r.attendant_id as string,
-          fuelType: (r.fuel_type as Transaction['fuelType']) ?? 'PETROL',
+          fuelType: normalizeTransactionFuelType(r.fuel_type as string | undefined),
           liters: Number(r.liters) ?? 0,
           pricePerLiter: Number(r.price_per_liter) ?? 0,
           totalAmount: Number(r.total_amount) ?? 0,
@@ -234,10 +250,27 @@ export default function DashboardPage() {
           <StatsCard
             title="Total Liters"
             value={stats?.totalLiters || 0}
+            maximumFractionDigits={2}
             suffix="L"
             icon={<DashboardOutlined />}
             color="#3B82F6"
             trend={8.2}
+            detail={
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs leading-relaxed">
+                <span>
+                  <span className="text-slate-400">{fuelTypeLabel('GASOLINE')} </span>
+                  <span className="font-semibold text-orange-600 tabular-nums">
+                    {(stats?.gasolineLiters ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} L
+                  </span>
+                </span>
+                <span>
+                  <span className="text-slate-400">{fuelTypeLabel('DIESEL')} </span>
+                  <span className="font-semibold text-blue-700 tabular-nums">
+                    {(stats?.dieselLiters ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} L
+                  </span>
+                </span>
+              </div>
+            }
           />
         </Col>
         <Col xs={24} sm={12} lg={6}>

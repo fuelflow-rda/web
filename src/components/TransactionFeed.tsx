@@ -4,6 +4,7 @@ import React from 'react';
 import { Typography, Empty } from 'antd';
 import dayjs from 'dayjs';
 import { formatRWF } from '@/lib/format';
+import { fuelTypeLabel, isGasolineFuelType } from '@/lib/fuel-type-labels';
 import type { Transaction } from '@/types';
 
 const { Text } = Typography;
@@ -36,7 +37,7 @@ export default function TransactionFeed({ transactions }: TransactionFeedProps) 
     <div className="transaction-feed">
       {transactions.map((tx, index) => {
         const payment = paymentConfig[tx.paymentMethod] || paymentConfig.CASH;
-        const isPetrol = tx.fuelType === 'PETROL';
+        const isGasoline = isGasolineFuelType(tx.fuelType);
         return (
           <div
             key={tx.id}
@@ -54,11 +55,11 @@ export default function TransactionFeed({ transactions }: TransactionFeedProps) 
                   <span
                     className="text-[10px] font-bold px-1.5 py-0.5 rounded"
                     style={{
-                      background: isPetrol ? '#FFF7ED' : '#EFF6FF',
-                      color: isPetrol ? '#EA580C' : '#2563EB',
+                      background: isGasoline ? '#FFF7ED' : '#EFF6FF',
+                      color: isGasoline ? '#EA580C' : '#2563EB',
                     }}
                   >
-                    {tx.fuelType}
+                    {fuelTypeLabel(tx.fuelType)}
                   </span>
                   <Text className="!text-xs !text-slate-500 !font-medium">
                     {tx.liters.toFixed(1)} L

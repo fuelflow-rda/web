@@ -32,7 +32,13 @@ npm install
 
 ### Environment Variables
 
-Copy the example env file and fill in your values:
+**Recommended for local dev (API + staging Supabase):**
+
+```bash
+cp .env.staging.local.example .env.local
+```
+
+Or use the generic template:
 
 ```bash
 cp .env.local.example .env.local
@@ -41,8 +47,10 @@ cp .env.local.example .env.local
 | Variable | Description |
 |---|---|
 | `NEXT_PUBLIC_API_URL` | Backend API URL (default: `http://localhost:3000`) |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL (use **staging** with `.env.staging.local.example`) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key (same **staging** project as the API) |
+
+Do not use production Supabase keys in `.env.local` for day-to-day development.
 
 ### Running the App
 
@@ -62,19 +70,19 @@ npm start
 ## Features
 
 ### Manager Dashboard
-- **Live Station Overview** — Real-time stats, pump status, revenue charts
-- **Transaction Log** — Filterable, sortable, exportable transaction table
-- **Attendant Reports** — Performance breakdown with comparison mode
-- **Pump Reports** — Daily/weekly/monthly pump metrics with discrepancy tracking
-- **Reconciliation** — End-of-day expected vs recorded revenue reports
-- **Fuel Prices** — Price management with history and trend charts
-- **Notifications** — Alert system with read/unread management
+- **Live Station Overview:** real-time stats, pump status, revenue charts
+- **Transaction Log:** filterable, sortable, exportable transaction table
+- **Attendant Reports:** performance breakdown with comparison mode
+- **Pump Reports:** daily/weekly/monthly pump metrics with discrepancy tracking
+- **Reconciliation:** end-of-day expected vs recorded revenue reports
+- **Fuel Prices:** price management with history and trend charts
+- **Notifications:** alert system with read/unread management
 
 ### Admin Dashboard
-- **Company Overview** — Cross-station performance comparison
-- **Station Management** — CRUD operations for stations
-- **User Management** — Create/edit managers and attendants, role assignment
-- **Pump Management** — Manage pumps across all stations
+- **Company Overview:** cross-station performance comparison
+- **Station Management:** CRUD operations for stations
+- **User Management:** create/edit managers and attendants, role assignment
+- **Pump Management:** manage pumps across all stations
 
 ### Export
 - PDF and Excel export on all major tables

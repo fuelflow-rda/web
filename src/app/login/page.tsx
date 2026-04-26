@@ -19,7 +19,7 @@ export default function LoginPage() {
     try {
       const user = await login(values.email, values.password);
       message.success(`Welcome back, ${user.name}!`);
-      if (user.role === 'ADMIN') {
+      if (user.role === 'ADMIN' || user.role === 'SUPERADMIN') {
         router.push('/admin');
       } else {
         router.push('/dashboard');
@@ -64,7 +64,7 @@ export default function LoginPage() {
             </h1>
             <p className="text-slate-400 text-lg leading-relaxed mb-10">
               Real-time monitoring, smart reconciliation, and complete oversight
-              of your fuel operations — all in one powerful platform.
+              of your fuel operations all in one powerful platform.
             </p>
             <div className="flex items-center gap-8">
               <div>
@@ -143,11 +143,18 @@ export default function LoginPage() {
             </Form.Item>
 
             {error && (
-              <div className="mb-4 p-3.5 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium flex items-center gap-2">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1Zm-.75 4a.75.75 0 0 1 1.5 0v3a.75.75 0 0 1-1.5 0V5Zm.75 6.25a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" />
-                </svg>
-                {error}
+              <div className="mb-4 p-3.5 bg-red-50 border border-red-100 rounded-xl text-red-600 text-sm font-medium">
+                <div className="flex items-center gap-2">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1Zm-.75 4a.75.75 0 0 1 1.5 0v3a.75.75 0 0 1-1.5 0V5Zm.75 6.25a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" />
+                  </svg>
+                  {error}
+                </div>
+                {error === 'Invalid email or password' && (
+                  <p className="mt-2 text-xs font-normal text-red-700/90 leading-relaxed">
+                    Email sign-in uses Supabase Auth for this project. If you reset the database, only accounts still present in Authentication can sign in here (e.g. superadmin after seeds). Phone + PIN on mobile is a separate flow.
+                  </p>
+                )}
               </div>
             )}
 

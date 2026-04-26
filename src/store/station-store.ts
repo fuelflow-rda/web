@@ -20,7 +20,7 @@ export const useStationStore = create<StationState>((set, get) => ({
   fetchStations: async () => {
     set({ loading: true });
     try {
-      const response = await api.get('/stations');
+      const response = await api.get('/stations', { params: { limit: 500 } });
       const payload = response.data as { data?: unknown[] };
       const raw = payload?.data ?? (Array.isArray(response.data) ? response.data : []);
       const stations: Station[] = raw.map((s: Record<string, unknown>) => ({

@@ -21,11 +21,12 @@ import {
   message,
   Tooltip,
 } from 'antd';
-import { UserOutlined, BarChartOutlined, PlusOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { UserOutlined, BarChartOutlined, PlusOutlined, ThunderboltOutlined, PhoneOutlined, CalendarOutlined, LockOutlined, SafetyOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { Dayjs } from 'dayjs';
 import api from '@/lib/api';
 import { formatRWF } from '@/lib/format';
+import { fuelTypeLabel } from '@/lib/fuel-type-labels';
 import { useStationStore } from '@/store/station-store';
 import { useAuthStore } from '@/store/auth-store';
 import ExportButton from '@/components/ExportButton';
@@ -52,8 +53,10 @@ export default function AttendantsPage() {
   const [assigningAttendant, setAssigningAttendant] = useState<AttendantReport | null>(null);
   const [pumps, setPumps] = useState<Array<{ id: string; pumpNumber: number; fuelType: string }>>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [pinResetLoading, setPinResetLoading] = useState(false);
   const [form] = Form.useForm();
   const [assignPumpForm] = Form.useForm();
+  const [pinResetForm] = Form.useForm();
 
   const fetchPumps = useCallback(async () => {
     if (!currentStation) return;
@@ -84,6 +87,9 @@ export default function AttendantsPage() {
       const attendants = (Array.isArray(attendantsRes.data) ? attendantsRes.data : []) as Array<{
         id: string;
         name: string;
+        phone?: string | null;
+        is_active?: boolean;
+        created_at?: string | null;
         assigned_pump_id?: string | null;
         pumps?: { id: string; pump_number: number; fuel_type: string } | null;
       }>;
@@ -102,14 +108,17 @@ export default function AttendantsPage() {
         const p = perfByAtt.get(att.id);
         const pump = att.pumps;
         const assignedPumpLabel = pump
-          ? `Pump #${pump.pump_number} (${pump.fuel_type === 'BOTH' ? 'Petrol & Diesel' : pump.fuel_type})`
+          ? `Pump #${pump.pump_number} (${fuelTypeLabel(String(pump.fuel_type))})`
           : att.assigned_pump_id
             ? 'Assigned'
             : null;
         const assignedPumpShort = pump ? `#${pump.pump_number}` : att.assigned_pump_id ? 'Assigned' : null;
         return {
           attendantId: att.id,
-          attendantName: att.name ?? '—',
+          attendantName: att.name ?? 'Unknown',
+          phone: att.phone ?? null,
+          isActive: att.is_active ?? true,
+          createdAt: att.created_at ?? null,
           assignedPumpId: att.assigned_pump_id ?? null,
           assignedPumpLabel: assignedPumpLabel ?? null,
           assignedPumpShort: assignedPumpShort ?? null,
@@ -197,6 +206,23 @@ export default function AttendantsPage() {
     }
   };
 
+  const handleResetPin = async (values: { newPin: string }) => {
+    if (!selectedAttendant) return;
+    setPinResetLoading(true);
+    try {
+      await api.patch(`/users/${selectedAttendant.attendantId}`, {
+        pin: values.newPin,
+      });
+      message.success(`PIN updated for ${selectedAttendant.attendantName}.`);
+      pinResetForm.resetFields();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to reset PIN';
+      message.error(msg);
+    } finally {
+      setPinResetLoading(false);
+    }
+  };
+
   const toggleCompare = (id: string) => {
     setCompareIds((prev) => {
       if (prev.includes(id)) return prev.filter((i) => i !== id);
@@ -209,7 +235,7 @@ export default function AttendantsPage() {
     {
       title: '',
       key: 'compare',
-      width: 50,
+      width: 40,
       render: (_: unknown, record: AttendantReport) => (
         <Checkbox
           checked={compareIds.includes(record.attendantId)}
@@ -221,27 +247,36 @@ export default function AttendantsPage() {
       title: 'Attendant',
       dataIndex: 'attendantName',
       key: 'attendantName',
+      width: 180,
+      ellipsis: true,
       sorter: (a, b) => a.attendantName.localeCompare(b.attendantName),
-      render: (name: string) => (
-        <Space>
-          <UserOutlined />
-          <Text strong>{name}</Text>
-        </Space>
+      render: (name: string, record: AttendantReport) => (
+        <div>
+          <Space>
+            <UserOutlined />
+            <Text strong>{name}</Text>
+          </Space>
+          {record.phone && (
+            <div className="text-xs text-slate-400 mt-0.5 ml-5">{record.phone}</div>
+          )}
+        </div>
       ),
     },
     {
-      title: 'Transactions',
+      title: 'Txns',
       dataIndex: 'totalTransactions',
       key: 'totalTransactions',
       sorter: (a, b) => a.totalTransactions - b.totalTransactions,
       align: 'right',
+      width: 80,
     },
     {
-      title: 'Total Liters',
+      title: 'Liters',
       dataIndex: 'totalLiters',
       key: 'totalLiters',
       sorter: (a, b) => a.totalLiters - b.totalLiters,
       align: 'right',
+      width: 100,
       render: (v: number) => `${v.toLocaleString()} L`,
     },
     {
@@ -250,34 +285,13 @@ export default function AttendantsPage() {
       key: 'totalRevenue',
       sorter: (a, b) => a.totalRevenue - b.totalRevenue,
       align: 'right',
+      width: 130,
       render: (v: number) => <Text strong>{formatRWF(v)}</Text>,
-    },
-    {
-      title: 'Cash',
-      dataIndex: 'cashAmount',
-      key: 'cashAmount',
-      align: 'right',
-      render: (v: number) => formatRWF(v),
-    },
-    {
-      title: 'Card',
-      dataIndex: 'cardAmount',
-      key: 'cardAmount',
-      align: 'right',
-      render: (v: number) => formatRWF(v),
-    },
-    {
-      title: 'MoMo',
-      dataIndex: 'momoAmount',
-      key: 'momoAmount',
-      align: 'right',
-      render: (v: number) => formatRWF(v),
     },
     {
       title: 'Pump',
       key: 'assignedPump',
-      width: 120,
-      align: 'left',
+      width: 140,
       render: (_: unknown, record: AttendantReport) => (
         <div className="flex items-center gap-1 flex-nowrap">
           <span className="text-slate-500 shrink-0">
@@ -286,7 +300,7 @@ export default function AttendantsPage() {
                 {record.assignedPumpShort === 'Assigned' ? 'Assigned' : `Pump ${record.assignedPumpShort}`}
               </Tooltip>
             ) : (
-              '—'
+              'Not assigned'
             )}
           </span>
           <Button
@@ -302,9 +316,19 @@ export default function AttendantsPage() {
       ),
     },
     {
-      title: 'Actions',
+      title: 'Status',
+      key: 'status',
+      width: 80,
+      render: (_: unknown, record: AttendantReport) => (
+        <Tag color={record.isActive !== false ? 'green' : 'red'}>
+          {record.isActive !== false ? 'Active' : 'Inactive'}
+        </Tag>
+      ),
+    },
+    {
+      title: '',
       key: 'actions',
-      width: 100,
+      width: 80,
       render: (_: unknown, record: AttendantReport) => (
         <Button
           type="link"
@@ -360,7 +384,7 @@ export default function AttendantsPage() {
       </div>
 
       <Modal
-        title={assigningAttendant ? `Assign pump – ${assigningAttendant.attendantName}` : 'Assign pump'}
+        title={assigningAttendant ? `Assign pump: ${assigningAttendant.attendantName}` : 'Assign pump'}
         open={assignPumpModalOpen}
         onCancel={() => { setAssignPumpModalOpen(false); setAssigningAttendant(null); assignPumpForm.resetFields(); }}
         footer={null}
@@ -374,7 +398,7 @@ export default function AttendantsPage() {
               options={[
                 ...pumps.map((p) => ({
                   value: p.id,
-                  label: `Pump #${p.pumpNumber} (${p.fuelType === 'BOTH' ? 'Petrol & Diesel' : p.fuelType})`,
+                  label: `Pump #${p.pumpNumber} (${fuelTypeLabel(p.fuelType)})`,
                 })),
               ]}
             />
@@ -400,7 +424,7 @@ export default function AttendantsPage() {
           <Form.Item name="phone" label="Phone number" rules={[{ required: true }]}>
             <Input placeholder="e.g. +250 788 123 456" />
           </Form.Item>
-          <Form.Item name="pin" label="PIN (4–6 digits)" rules={[{ required: true, min: 4, max: 6, message: '4–6 digits' }]}>
+          <Form.Item name="pin" label="PIN (4 to 6 digits)" rules={[{ required: true, min: 4, max: 6, message: 'Enter 4 to 6 digits' }]}>
             <Input.Password placeholder="1234" maxLength={6} />
           </Form.Item>
           <div className="flex justify-end gap-2">
@@ -442,24 +466,60 @@ export default function AttendantsPage() {
           pagination={{ pageSize: 15, showTotal: (t) => `${t} attendants` }}
           size="middle"
           tableLayout="fixed"
-          scroll={{ x: 1100 }}
+          scroll={{ x: 800 }}
         />
       </Card>
 
       <Drawer
         title={selectedAttendant?.attendantName || 'Attendant Details'}
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onClose={() => { setDrawerOpen(false); pinResetForm.resetFields(); }}
         width={480}
       >
         {selectedAttendant && (
           <div className="space-y-6">
+            {/* Profile Info */}
+            <Card size="small" className="!rounded-lg">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <UserOutlined className="text-slate-400" />
+                  <Text className="w-24 text-slate-500">Name</Text>
+                  <Text strong>{selectedAttendant.attendantName}</Text>
+                </div>
+                <div className="flex items-center gap-2">
+                  <PhoneOutlined className="text-slate-400" />
+                  <Text className="w-24 text-slate-500">Phone</Text>
+                  <Text strong>{selectedAttendant.phone || 'Not set'}</Text>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ThunderboltOutlined className="text-slate-400" />
+                  <Text className="w-24 text-slate-500">Pump</Text>
+                  <Text strong>{selectedAttendant.assignedPumpLabel || 'Not assigned'}</Text>
+                </div>
+                <div className="flex items-center gap-2">
+                  <SafetyOutlined className="text-slate-400" />
+                  <Text className="w-24 text-slate-500">Status</Text>
+                  <Tag color={selectedAttendant.isActive !== false ? 'green' : 'red'}>
+                    {selectedAttendant.isActive !== false ? 'Active' : 'Inactive'}
+                  </Tag>
+                </div>
+                {selectedAttendant.createdAt && (
+                  <div className="flex items-center gap-2">
+                    <CalendarOutlined className="text-slate-400" />
+                    <Text className="w-24 text-slate-500">Joined</Text>
+                    <Text>{dayjs(selectedAttendant.createdAt).format('MMM D, YYYY')}</Text>
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Performance Stats */}
             <Row gutter={[16, 16]}>
               <Col span={12}>
                 <Statistic title="Total Revenue" value={selectedAttendant.totalRevenue} prefix="RWF" />
               </Col>
               <Col span={12}>
-                <Statistic title="Total Liters" value={selectedAttendant.totalLiters} suffix="L" />
+                <Statistic title="Total Liters" value={selectedAttendant.totalLiters} suffix="L" precision={1} />
               </Col>
               <Col span={12}>
                 <Statistic title="Transactions" value={selectedAttendant.totalTransactions} />
@@ -477,6 +537,7 @@ export default function AttendantsPage() {
               </Col>
             </Row>
 
+            {/* Payment Breakdown */}
             <Card title="Payment Breakdown" size="small" className="!rounded-lg">
               <div className="space-y-3">
                 <div className="flex justify-between">
@@ -492,6 +553,36 @@ export default function AttendantsPage() {
                   <Text strong>{formatRWF(selectedAttendant.momoAmount)}</Text>
                 </div>
               </div>
+            </Card>
+
+            {/* Reset PIN */}
+            <Card
+              title={<span><LockOutlined className="mr-2" />Reset PIN</span>}
+              size="small"
+              className="!rounded-lg"
+            >
+              <Form form={pinResetForm} layout="vertical" onFinish={handleResetPin}>
+                <Form.Item
+                  name="newPin"
+                  label="New PIN (4 to 6 digits)"
+                  rules={[
+                    { required: true, message: 'Enter a new PIN' },
+                    { min: 4, max: 6, message: 'PIN must be 4 to 6 digits' },
+                    { pattern: /^\d+$/, message: 'PIN must be numbers only' },
+                  ]}
+                >
+                  <Input.Password placeholder="e.g. 1234" maxLength={6} />
+                </Form.Item>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={pinResetLoading}
+                  danger
+                  block
+                >
+                  Reset PIN
+                </Button>
+              </Form>
             </Card>
           </div>
         )}

@@ -26,6 +26,7 @@ import {
   MenuUnfoldOutlined,
   ArrowLeftOutlined,
   BarChartOutlined,
+  ApartmentOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '@/store/auth-store';
 import { useStationStore } from '@/store/station-store';
@@ -35,10 +36,16 @@ const { Text } = Typography;
 
 const adminNavItems = [
   { key: '/admin', icon: <DashboardOutlined />, label: 'Overview' },
+  { key: '/admin/companies', icon: <ApartmentOutlined />, label: 'Companies' },
   { key: '/admin/stations', icon: <BankOutlined />, label: 'Stations' },
   { key: '/admin/users', icon: <TeamOutlined />, label: 'Users' },
   { key: '/admin/pumps', icon: <ToolOutlined />, label: 'Pumps' },
 ];
+
+const STATION_SCOPED_ADMIN_PATHS = ['/admin/stations', '/admin/pumps'];
+
+/** Global tenant list: superadmin only (company admins manage their org via Stations / Users / Pumps). */
+const SUPERADMIN_ONLY_PATHS = ['/admin/companies'];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -49,15 +56,34 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [managerViewModalOpen, setManagerViewModalOpen] = useState(false);
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
 
+  const isSuperAdmin = user?.role === 'SUPERADMIN';
+  const sidebarNavItems = isSuperAdmin
+    ? adminNavItems.filter((item) => !STATION_SCOPED_ADMIN_PATHS.includes(item.key))
+    : adminNavItems.filter((item) => !SUPERADMIN_ONLY_PATHS.includes(item.key));
+
   useEffect(() => {
     initialize();
   }, [initialize]);
 
   useEffect(() => {
-    if (initialized && (!user || user.role !== 'ADMIN')) {
+    if (initialized && (!user || (user.role !== 'ADMIN' && user.role !== 'SUPERADMIN'))) {
       router.replace(user ? '/dashboard' : '/login');
     }
   }, [initialized, user, router]);
+
+  useEffect(() => {
+    if (!initialized || !user || !isSuperAdmin) return;
+    if (STATION_SCOPED_ADMIN_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+      router.replace('/admin');
+    }
+  }, [initialized, user, isSuperAdmin, pathname, router]);
+
+  useEffect(() => {
+    if (!initialized || !user || isSuperAdmin) return;
+    if (SUPERADMIN_ONLY_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+      router.replace('/admin');
+    }
+  }, [initialized, user, isSuperAdmin, pathname, router]);
 
   if (!initialized || !user) {
     return (
@@ -76,14 +102,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   const selectedKey =
-    adminNavItems.find(
+    sidebarNavItems.find(
       (item) => item.key === pathname || (item.key !== '/admin' && pathname.startsWith(item.key))
     )?.key || '/admin';
 
-  const currentPageTitle = adminNavItems.find((item) => item.key === selectedKey)?.label || 'Admin';
+  const currentPageTitle = sidebarNavItems.find((item) => item.key === selectedKey)?.label || 'Admin';
 
   const userMenuItems = [
-    { key: 'dashboard', icon: <BarChartOutlined />, label: 'Manager View' },
+    ...(isSuperAdmin
+      ? []
+      : [{ key: 'dashboard', icon: <BarChartOutlined />, label: 'Manager View' }]),
     { key: 'settings', icon: <SettingOutlined />, label: 'Settings' },
     { type: 'divider' as const },
     { key: 'logout', icon: <LogoutOutlined />, label: 'Logout', danger: true },
@@ -91,7 +119,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const handleUserMenuClick = ({ key }: { key: string }) => {
     if (key === 'logout') logout();
-    else if (key === 'dashboard') openManagerViewModal();
+    else if (key === 'dashboard' && !isSuperAdmin) openManagerViewModal();
     else if (key === 'settings') router.push('/settings');
   };
 
@@ -156,7 +184,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Menu
               mode="inline"
               selectedKeys={[selectedKey]}
-              items={adminNavItems.map((item) => ({
+              items={sidebarNavItems.map((item) => ({
                 key: item.key,
                 icon: item.icon,
                 label: item.label,
@@ -168,14 +196,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {/* Bottom: switch to manager + user profile */}
           <div className="mt-auto">
             <div className="p-3 pt-3 space-y-1">
-              <Button
-                type="text"
-                icon={<ArrowLeftOutlined />}
-                onClick={openManagerViewModal}
-                className="!text-slate-400 hover:!text-white !w-full !justify-start !rounded-lg !h-9 !text-sm hover:!bg-white/[0.06]"
-              >
-                {!collapsed && 'Manager View'}
-              </Button>
+              {!isSuperAdmin && (
+                <Button
+                  type="text"
+                  icon={<ArrowLeftOutlined />}
+                  onClick={openManagerViewModal}
+                  className="!text-slate-400 hover:!text-white !w-full !justify-start !rounded-lg !h-9 !text-sm hover:!bg-white/[0.06]"
+                >
+                  {!collapsed && 'Manager View'}
+                </Button>
+              )}
               <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} trigger={['click']} placement="topRight">
                 <div className="flex items-center gap-3 cursor-pointer rounded-lg p-2.5 transition-all duration-200 hover:bg-white/[0.06]">
                   <div className="relative flex-shrink-0">

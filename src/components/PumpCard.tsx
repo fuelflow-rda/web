@@ -4,6 +4,7 @@ import React from 'react';
 import { Tag, Typography } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import type { Pump } from '@/types';
+import { fuelTypeLabel, isGasolineFuelType } from '@/lib/fuel-type-labels';
 
 const { Text } = Typography;
 
@@ -20,9 +21,8 @@ const statusConfig: Record<string, { color: string; bg: string; dotColor: string
 export default function PumpCard({ pump }: PumpCardProps) {
   const hasAttendantOnShift = Boolean(pump.currentAttendant?.name);
   const config = hasAttendantOnShift ? statusConfig.ACTIVE : statusConfig.INACTIVE;
-  const isPetrol = pump.fuelType === 'PETROL';
-  const isBoth = pump.fuelType === 'BOTH';
-  const fuelLabel = isBoth ? 'Petrol & Diesel' : pump.fuelType;
+  const isGasoline = isGasolineFuelType(pump.fuelType);
+  const fuelLabel = fuelTypeLabel(pump.fuelType);
 
   return (
     <div className="group bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-card-hover transition-all duration-300 hover:-translate-y-0.5 relative overflow-hidden">
@@ -30,11 +30,9 @@ export default function PumpCard({ pump }: PumpCardProps) {
       <div
         className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl"
         style={{
-          background: isBoth
-            ? 'linear-gradient(90deg, #F97316, #3B82F6)'
-            : isPetrol
-              ? 'linear-gradient(90deg, #F97316, #FB923C)'
-              : 'linear-gradient(90deg, #3B82F6, #60A5FA)',
+          background: isGasoline
+            ? 'linear-gradient(90deg, #F97316, #FB923C)'
+            : 'linear-gradient(90deg, #3B82F6, #60A5FA)',
         }}
       />
 
@@ -42,7 +40,11 @@ export default function PumpCard({ pump }: PumpCardProps) {
         <div className="flex items-center gap-2.5">
           <div
             className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-sm font-bold"
-            style={{ background: isPetrol ? 'linear-gradient(135deg, #F97316, #EA580C)' : 'linear-gradient(135deg, #3B82F6, #2563EB)' }}
+            style={{
+              background: isGasoline
+                ? 'linear-gradient(135deg, #F97316, #EA580C)'
+                : 'linear-gradient(135deg, #3B82F6, #2563EB)',
+            }}
           >
             {pump.pumpNumber}
           </div>
@@ -58,11 +60,11 @@ export default function PumpCard({ pump }: PumpCardProps) {
           </div>
         </div>
         <Tag
-          color={isPetrol ? 'orange' : isBoth ? 'green' : 'blue'}
+          color={isGasoline ? 'orange' : 'blue'}
           className="!font-semibold !text-xs !rounded-lg !border-0"
           style={{
-            background: isBoth ? '#ECFDF5' : isPetrol ? '#FFF7ED' : '#EFF6FF',
-            color: isBoth ? '#059669' : isPetrol ? '#EA580C' : '#2563EB',
+            background: isGasoline ? '#FFF7ED' : '#EFF6FF',
+            color: isGasoline ? '#EA580C' : '#2563EB',
           }}
         >
           {fuelLabel}

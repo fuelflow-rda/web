@@ -8,6 +8,10 @@ interface StatsCardProps {
   value: number;
   prefix?: string;
   suffix?: string;
+  /** Extra line under the main value (e.g. fuel-type breakdown). */
+  detail?: React.ReactNode;
+  /** When set, formats the main value with at most this many fraction digits. */
+  maximumFractionDigits?: number;
   icon: React.ReactNode;
   color: string;
   trend?: number;
@@ -41,6 +45,8 @@ export default function StatsCard({
   value,
   prefix,
   suffix,
+  detail,
+  maximumFractionDigits,
   icon,
   color,
   trend,
@@ -76,11 +82,17 @@ export default function StatsCard({
       <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">{title}</p>
       <div className="flex items-baseline gap-1.5">
         {prefix && <span className="text-sm font-medium text-slate-400">{prefix}</span>}
-        <span className="text-2xl font-extrabold text-slate-800">
-          {value.toLocaleString()}
+        <span className="text-2xl font-extrabold text-slate-800 tabular-nums">
+          {maximumFractionDigits !== undefined
+            ? value.toLocaleString(undefined, {
+                maximumFractionDigits: maximumFractionDigits,
+                minimumFractionDigits: 0,
+              })
+            : value.toLocaleString()}
         </span>
         {suffix && <span className="text-sm font-medium text-slate-400">{suffix}</span>}
       </div>
+      {detail ? <div className="mt-2">{detail}</div> : null}
     </div>
   );
 }

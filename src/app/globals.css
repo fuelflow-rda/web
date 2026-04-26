@@ -181,6 +181,34 @@ body {
 .sidebar-nav .ant-menu {
   background: transparent !important;
   border: none !important;
+  border-inline-end: none !important;
+}
+
+.ant-layout-sider .ant-menu-inline,
+.ant-layout-sider .ant-menu,
+.ant-layout-sider-children .ant-menu {
+  border-inline-end: none !important;
+  border-right: none !important;
+}
+
+.ant-layout-sider,
+.ant-layout-sider-children {
+  border-right: none !important;
+}
+
+.ant-layout-sider::after,
+.ant-layout-sider-children::after {
+  display: none !important;
+}
+
+.sidebar-nav {
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
+
+.sidebar-nav .ant-menu-root {
+  border: none !important;
+  border-inline-end: none !important;
 }
 
 .sidebar-nav .ant-menu-item {
@@ -208,7 +236,7 @@ body {
   display: none !important;
 }
 
-/* Sidebar station select – dark theme */
+/* Sidebar station select (dark theme) */
 .sidebar-station-select-wrapper {
   position: relative;
 }
@@ -248,7 +276,7 @@ body {
   color: #94A3B8 !important;
 }
 
-/* Dropdown panel – dark theme */
+/* Dropdown panel (dark theme) */
 .ant-select-dropdown.sidebar-station-select-dropdown {
   border-radius: 12px !important;
   overflow: hidden;

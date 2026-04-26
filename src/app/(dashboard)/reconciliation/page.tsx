@@ -26,6 +26,7 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs, { Dayjs } from 'dayjs';
 import api from '@/lib/api';
 import { formatRWF } from '@/lib/format';
+import { fuelTypeLabel, isGasolineFuelType } from '@/lib/fuel-type-labels';
 import { useStationStore } from '@/store/station-store';
 import ExportButton from '@/components/ExportButton';
 import type {
@@ -101,8 +102,8 @@ export default function ReconciliationPage() {
       render: (_: unknown, record: PumpReconciliation) => (
         <Space>
           <Text strong>#{record.pumpNumber}</Text>
-          <Tag color={record.fuelType === 'PETROL' ? 'orange' : 'blue'}>
-            {record.fuelType}
+          <Tag color={isGasolineFuelType(record.fuelType) ? 'orange' : 'blue'}>
+            {fuelTypeLabel(record.fuelType)}
           </Tag>
         </Space>
       ),
@@ -135,7 +136,7 @@ export default function ReconciliationPage() {
       align: 'right',
       render: (v: number) => (
         <Text strong className={v !== 0 ? '!text-red-500' : '!text-green-600'}>
-          {v === 0 ? '—' : formatRWF(v)}
+          {formatRWF(v)}
         </Text>
       ),
     },
