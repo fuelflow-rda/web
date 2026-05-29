@@ -1,4 +1,5 @@
 # Validate PRs: lint, test, build, Docker image build (no push).
+# Image: kayiganwa/stationiq_web
 name: StationIQ Web — Pull Request Checks
 on:
   pull_request:
@@ -29,12 +30,17 @@ jobs:
           node-version: "20"
 
       - name: Resolve pnpm store path
-        id: pnpm-store
-        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+        shell: bash
+        run: |
+          STORE_PATH="$(pnpm store path --silent 2>/dev/null || true)"
+          if [ -z "$STORE_PATH" ]; then
+            STORE_PATH="${HOME}/.local/share/pnpm/store"
+          fi
+          echo "STORE_PATH=${STORE_PATH}" >> "$GITHUB_ENV"
 
       - uses: actions/cache@v4
         with:
-          path: ${{ steps.pnpm-store.outputs.path }}
+          path: ${{ env.STORE_PATH }}
           key: ${{ runner.os }}-pnpm-web-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-web-

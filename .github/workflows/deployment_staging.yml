@@ -1,6 +1,9 @@
 # Staging: push to any branch except main — patch version bump, push to Docker Hub.
 # Tags: :<semver>, :staging, :sha-<commit>
-# Optional repo variables: NEXT_PUBLIC_API_URL, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
+#
+# GitHub Environment: staging
+# Required environment secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN
+# Optional environment variables: NEXT_PUBLIC_API_URL, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
 name: StationIQ Web — Deployment (Staging)
 on:
   push:
@@ -21,6 +24,7 @@ jobs:
   deploy-staging:
     name: Build, test & publish staging image
     runs-on: ubuntu-latest
+    environment: staging
     if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
     steps:
       - uses: actions/checkout@v4
@@ -34,12 +38,17 @@ jobs:
           node-version: "20"
 
       - name: Resolve pnpm store path
-        id: pnpm-store
-        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+        shell: bash
+        run: |
+          STORE_PATH="$(pnpm store path --silent 2>/dev/null || true)"
+          if [ -z "$STORE_PATH" ]; then
+            STORE_PATH="${HOME}/.local/share/pnpm/store"
+          fi
+          echo "STORE_PATH=${STORE_PATH}" >> "$GITHUB_ENV"
 
       - uses: actions/cache@v4
         with:
-          path: ${{ steps.pnpm-store.outputs.path }}
+          path: ${{ env.STORE_PATH }}
           key: ${{ runner.os }}-pnpm-web-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-web-

@@ -4,7 +4,7 @@
 # secrets are not required in the image; optional `.env` is supplied by Compose (env_file / mount).
 FROM node:20-alpine AS base
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@9 --activate
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
 # Full install (devDependencies required for `next build`)
 FROM base AS deps
