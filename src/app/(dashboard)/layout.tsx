@@ -230,7 +230,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             {!collapsed && (
               <div className="flex items-center gap-2">
-                <Text className="!text-white !text-lg !font-extrabold tracking-tight">FuelFlow</Text>
+                <Text className="!text-white !text-lg !font-extrabold tracking-tight">StationIQ</Text>
                 <span className="px-1.5 py-0.5 text-[10px] font-bold text-fuel-orange bg-fuel-orange/10 rounded-md">PRO</span>
               </div>
             )}

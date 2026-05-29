@@ -53,7 +53,7 @@ export default function LoginPage() {
                 <path d="M13 10h4a2 2 0 0 1 2 2v10" />
               </svg>
             </div>
-            <span className="text-white text-xl font-extrabold tracking-tight">FuelFlow</span>
+            <span className="text-white text-xl font-extrabold tracking-tight">StationIQ</span>
           </div>
 
           {/* Center - Hero content */}
@@ -86,7 +86,7 @@ export default function LoginPage() {
 
           {/* Bottom */}
           <div className="text-slate-600 text-sm">
-            &copy; {new Date().getFullYear()} FuelFlow. All rights reserved.
+            &copy; {new Date().getFullYear()} StationIQ. All rights reserved.
           </div>
         </div>
       </div>
@@ -102,7 +102,7 @@ export default function LoginPage() {
                 <path d="M13 10h4a2 2 0 0 1 2 2v10" />
               </svg>
             </div>
-            <span className="text-slate-800 text-xl font-extrabold tracking-tight">FuelFlow</span>
+            <span className="text-slate-800 text-xl font-extrabold tracking-tight">StationIQ</span>
           </div>
 
           <div className="mb-8">

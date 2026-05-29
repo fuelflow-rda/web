@@ -255,7 +255,7 @@ export default function AdminCompaniesPage() {
       >
         <Form form={createForm} layout="vertical" onFinish={handleCreate}>
           <Form.Item name="name" label="Company name" rules={[{ required: true }]}>
-            <Input placeholder="e.g. FuelFlow Rwanda Ltd" />
+            <Input placeholder="e.g. StationIQ Rwanda Ltd" />
           </Form.Item>
           <div className="flex justify-end gap-2">
             <Button onClick={() => setCreateOpen(false)}>Cancel</Button>

@@ -1,8 +1,8 @@
-# FuelFlow Web Dashboard
+# StationIQ Web Dashboard
 
 A comprehensive fuel station management dashboard built with **Next.js 14**, **Tailwind CSS**, **Ant Design**, and **Recharts**.
 
-This is the **Manager and Admin** web portal for the FuelFlow platform.
+This is the **Manager and Admin** web portal for the StationIQ platform.
 
 ## Tech Stack
 
@@ -26,7 +26,7 @@ This is the **Manager and Admin** web portal for the FuelFlow platform.
 ### Installation
 
 ```bash
-cd fuelflow-web
+cd stationiq-web
 npm install
 ```
 
