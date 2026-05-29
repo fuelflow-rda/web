@@ -4,6 +4,7 @@ import React from 'react';
 import { ConfigProvider } from 'antd';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import { AuthBootstrap } from '@/components/AuthBootstrap';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -57,6 +58,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} min-h-screen w-full m-0 p-0 overflow-x-hidden`} style={{ background: '#F8FAFC' }}>
         <ConfigProvider theme={theme}>
+          <AuthBootstrap />
           {children}
         </ConfigProvider>
       </body>

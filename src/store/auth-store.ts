@@ -25,6 +25,51 @@ interface AuthState {
   isManager: () => boolean;
 }
 
+const TOKEN_KEY = 'stationiq_token';
+const USER_KEY = 'stationiq_user';
+const LEGACY_TOKEN_KEY = 'fuelflow_token';
+const LEGACY_USER_KEY = 'fuelflow_user';
+
+function readStoredSession(): Pick<AuthState, 'user' | 'token'> {
+  if (typeof window === 'undefined') {
+    return { user: null, token: null };
+  }
+
+  let token = localStorage.getItem(TOKEN_KEY);
+  let userStr = localStorage.getItem(USER_KEY);
+
+  if (!token) {
+    const legacyToken = localStorage.getItem(LEGACY_TOKEN_KEY);
+    if (legacyToken) {
+      token = legacyToken;
+      localStorage.setItem(TOKEN_KEY, legacyToken);
+      localStorage.removeItem(LEGACY_TOKEN_KEY);
+    }
+  }
+
+  if (!userStr) {
+    const legacyUser = localStorage.getItem(LEGACY_USER_KEY);
+    if (legacyUser) {
+      userStr = legacyUser;
+      localStorage.setItem(USER_KEY, legacyUser);
+      localStorage.removeItem(LEGACY_USER_KEY);
+    }
+  }
+
+  if (!token || !userStr) {
+    return { user: null, token: null };
+  }
+
+  try {
+    const user = JSON.parse(userStr) as AuthUser;
+    return { user, token };
+  } catch {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    return { user: null, token: null };
+  }
+}
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: null,
@@ -52,9 +97,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         stationId: raw.station_id as string | undefined,
         companyId: raw.company_id as string | undefined,
       };
-      localStorage.setItem('stationiq_token', token);
-      localStorage.setItem('stationiq_user', JSON.stringify(user));
-      set({ user, token, loading: false });
+      localStorage.setItem(TOKEN_KEY, token);
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+      set({ user, token, loading: false, initialized: true });
       return user;
     } catch (error) {
       set({ loading: false });
@@ -63,27 +108,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
-    localStorage.removeItem('stationiq_token');
-    localStorage.removeItem('stationiq_user');
-    set({ user: null, token: null });
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(LEGACY_TOKEN_KEY);
+    localStorage.removeItem(LEGACY_USER_KEY);
+    set({ user: null, token: null, initialized: true });
     window.location.href = '/login';
   },
 
   initialize: () => {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('stationiq_token');
-      const userStr = localStorage.getItem('stationiq_user');
-      if (token && userStr) {
-        try {
-          const user = JSON.parse(userStr) as AuthUser;
-          set({ user, token, initialized: true });
-        } catch {
-          set({ initialized: true });
-        }
-      } else {
-        set({ initialized: true });
-      }
-    }
+    const { user, token } = readStoredSession();
+    set({ user, token, initialized: true });
   },
 
   isAdmin: () => {

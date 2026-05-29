@@ -1,33 +1,30 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Spin } from 'antd';
 import { useAuthStore } from '@/store/auth-store';
+import { getDefaultRouteForUser } from '@/lib/auth-routes';
+import { AppLoadingScreen } from '@/components/AppLoadingScreen';
 
 export default function Home() {
   const router = useRouter();
-  const { user, initialized, initialize } = useAuthStore();
+  const { user, initialized } = useAuthStore();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    initialize();
-  }, [initialize]);
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
-    if (!initialized) return;
+    if (!mounted || !initialized) return;
 
     if (!user) {
       router.replace('/login');
-    } else if (user.role === 'ADMIN' || user.role === 'SUPERADMIN') {
-      router.replace('/admin');
-    } else {
-      router.replace('/dashboard');
+      return;
     }
-  }, [user, initialized, router]);
 
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <Spin size="large" />
-    </div>
-  );
+    router.replace(getDefaultRouteForUser(user));
+  }, [mounted, initialized, user, router]);
+
+  return <AppLoadingScreen />;
 }

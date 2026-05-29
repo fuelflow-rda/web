@@ -1,35 +1,47 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Form, Input, Button, Typography, message } from 'antd';
 import { MailOutlined, LockOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@/store/auth-store';
+import { getDefaultRouteForUser } from '@/lib/auth-routes';
+import { AppLoadingScreen } from '@/components/AppLoadingScreen';
 
 const { Title, Text } = Typography;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, loading } = useAuthStore();
+  const { login, loading, user, initialized } = useAuthStore();
   const [form] = Form.useForm();
   const [error, setError] = useState('');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted || !initialized || !user) return;
+    router.replace(getDefaultRouteForUser(user));
+  }, [mounted, initialized, user, router]);
 
   const handleLogin = async (values: { email: string; password: string }) => {
     setError('');
     try {
-      const user = await login(values.email, values.password);
-      message.success(`Welcome back, ${user.name}!`);
-      if (user.role === 'ADMIN' || user.role === 'SUPERADMIN') {
-        router.push('/admin');
-      } else {
-        router.push('/dashboard');
-      }
+      const loggedInUser = await login(values.email, values.password);
+      message.success(`Welcome back, ${loggedInUser.name}!`);
+      router.replace(getDefaultRouteForUser(loggedInUser));
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
       setError(errorMessage);
       message.error(errorMessage);
     }
   };
+
+  if (!mounted || !initialized || user) {
+    return <AppLoadingScreen />;
+  }
 
   return (
     <div className="min-h-screen w-screen flex overflow-hidden fixed inset-0">
