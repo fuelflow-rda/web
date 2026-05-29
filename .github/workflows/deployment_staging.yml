@@ -3,7 +3,8 @@
 #
 # GitHub Environment: staging
 # Required environment secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN
-# Optional environment variables: NEXT_PUBLIC_API_URL, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
+# Optional environment variables: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
+# Required environment secret: NEXT_PUBLIC_API_URL
 name: StationIQ Web — Deployment (Staging)
 on:
   push:
@@ -67,12 +68,15 @@ jobs:
       - name: Resolve NEXT_PUBLIC_* for Docker build
         id: bake
         env:
-          V_API: ${{ vars.NEXT_PUBLIC_API_URL }}
+          V_API: ${{ secrets.NEXT_PUBLIC_API_URL }}
           V_SU: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           V_SK: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
-          API="${V_API:-http://localhost:3000}"
-          echo "api_url=${API}" >> "$GITHUB_OUTPUT"
+          if [ -z "$V_API" ]; then
+            echo "Missing NEXT_PUBLIC_API_URL — add it to the staging environment secrets." >&2
+            exit 1
+          fi
+          echo "api_url=${V_API}" >> "$GITHUB_OUTPUT"
           echo "supa_url=${V_SU}" >> "$GITHUB_OUTPUT"
           echo "supa_key=${V_SK}" >> "$GITHUB_OUTPUT"
 
