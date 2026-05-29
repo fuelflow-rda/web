@@ -1,0 +1,64 @@
+# Validate PRs: lint, test, build, Docker image build (no push).
+name: StationIQ Web — Pull Request Checks
+on:
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: web-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  DOCKERHUB_IMAGE: kayiganwa/stationiq_web
+
+jobs:
+  validate:
+    name: Lint, test, build & verify Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Resolve pnpm store path
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-pnpm-web-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-web-
+
+      - run: pnpm install --frozen-lockfile
+        env:
+          CI: "true"
+
+      - run: pnpm run lint
+      - run: pnpm test
+        env:
+          CI: "true"
+      - run: pnpm run build
+
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: ${{ env.DOCKERHUB_IMAGE }}:pr-${{ github.event.pull_request.number }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=http://localhost:3000
+            NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder
+          cache-from: type=gha,scope=web-pr
+          cache-to: type=gha,mode=max,scope=web-pr
