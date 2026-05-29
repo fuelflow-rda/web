@@ -52,8 +52,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <head>
-        <title>FuelFlow</title>
-        <meta name="description" content="FuelFlow fuel station management dashboard" />
+        <title>StationIQ</title>
+        <meta name="description" content="StationIQ fuel station management dashboard" />
       </head>
       <body className={`${inter.className} min-h-screen w-full m-0 p-0 overflow-x-hidden`} style={{ background: '#F8FAFC' }}>
         <ConfigProvider theme={theme}>

@@ -67,7 +67,7 @@ export default function ExportButton({ data, columns, filename }: ExportButtonPr
 
     doc.setFontSize(16);
     doc.setTextColor(249, 115, 22);
-    doc.text('FuelFlow Report', 14, 15);
+    doc.text('StationIQ Report', 14, 15);
 
     doc.setFontSize(10);
     doc.setTextColor(100);

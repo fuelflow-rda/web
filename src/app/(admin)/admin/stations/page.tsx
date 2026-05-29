@@ -350,7 +350,7 @@ export default function AdminStationsPage() {
             </Form.Item>
           )}
           <Form.Item name="name" label="Station Name" rules={[{ required: true }]}>
-            <Input placeholder="e.g. FuelFlow Kigali Central" />
+            <Input placeholder="e.g. StationIQ Kigali Central" />
           </Form.Item>
           <Form.Item name="location" label="Location" rules={[{ required: true }]}>
             <Input placeholder="e.g. Kigali, Nyarugenge" />

@@ -14,7 +14,7 @@ const api = axios.create({
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('fuelflow_token');
+      const token = localStorage.getItem('stationiq_token');
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -30,8 +30,8 @@ api.interceptors.response.use(
     const isLoginRequest = error.config?.url?.includes('/auth/login');
     if (error.response?.status === 401 && !isLoginRequest) {
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('fuelflow_token');
-        localStorage.removeItem('fuelflow_user');
+        localStorage.removeItem('stationiq_token');
+        localStorage.removeItem('stationiq_user');
         window.location.href = '/login';
       }
     }
