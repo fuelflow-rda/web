@@ -52,8 +52,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         stationId: raw.station_id as string | undefined,
         companyId: raw.company_id as string | undefined,
       };
-      localStorage.setItem('fuelflow_token', token);
-      localStorage.setItem('fuelflow_user', JSON.stringify(user));
+      localStorage.setItem('stationiq_token', token);
+      localStorage.setItem('stationiq_user', JSON.stringify(user));
       set({ user, token, loading: false });
       return user;
     } catch (error) {
@@ -63,16 +63,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
-    localStorage.removeItem('fuelflow_token');
-    localStorage.removeItem('fuelflow_user');
+    localStorage.removeItem('stationiq_token');
+    localStorage.removeItem('stationiq_user');
     set({ user: null, token: null });
     window.location.href = '/login';
   },
 
   initialize: () => {
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('fuelflow_token');
-      const userStr = localStorage.getItem('fuelflow_user');
+      const token = localStorage.getItem('stationiq_token');
+      const userStr = localStorage.getItem('stationiq_user');
       if (token && userStr) {
         try {
           const user = JSON.parse(userStr) as AuthUser;

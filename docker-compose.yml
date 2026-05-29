@@ -1,4 +1,4 @@
-# FuelFlow Web – Docker run from this folder
+# StationIQ Web – Docker run from this folder
 #
 # The image does not include `.env` (see .dockerignore). `NEXT_PUBLIC_*` is compiled into the
 # client bundle at **build** time (`build.args`); change those values, then rebuild:

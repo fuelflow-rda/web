@@ -1,4 +1,4 @@
-# FuelFlow Web – production image (Next.js standalone)
+# StationIQ Web – production image (Next.js standalone)
 #
 # NEXT_PUBLIC_* is set at **build** via Docker build-args (see docker-compose.yml). Runtime
 # secrets are not required in the image; optional `.env` is supplied by Compose (env_file / mount).
