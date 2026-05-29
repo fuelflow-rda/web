@@ -1,13 +1,17 @@
-# Web CI – lint & build
-# Standalone repo: run from this folder. Monorepo: copy to root .github/workflows/ci-web.yml
+# Standalone repo: run from this folder. Monorepo: use root `.github/workflows/ci.yml`.
 name: Web CI
 on:
   push:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  ci:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -23,5 +27,23 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+        env:
+          CI: "true"
       - run: pnpm run lint
+      - run: pnpm test
+        env:
+          CI: "true"
       - run: pnpm run build
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: stationiq-web:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=http://localhost:3000
+            NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
