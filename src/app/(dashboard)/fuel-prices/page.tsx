@@ -26,25 +26,39 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import api from '@/lib/api';
 import { formatRWF } from '@/lib/format';
-import { fuelTypeLabel, isGasolineFuelType, normalizeTransactionFuelType } from '@/lib/fuel-type-labels';
 import { LEGACY_GASOLINE_FUEL_TYPE } from '@/lib/legacy-gasoline-fuel-type';
+import {
+  PRODUCT_TYPES,
+  formatUnitPrice,
+  isEvProductType,
+  normalizeProductType,
+  productColor,
+  productLabel,
+  unitForProduct,
+  unitLabel,
+} from '@/lib/product-types';
 import { useStationStore } from '@/store/station-store';
 import RevenueChart from '@/components/charts/RevenueChart';
-import type { FuelPrice } from '@/types';
+import type { FuelPrice, ProductType } from '@/types';
 
 const { Title, Text } = Typography;
 
 export default function FuelPricesPage() {
   const { currentStation } = useStationStore();
-  const [currentPrices, setCurrentPrices] = useState<{ gasoline: number; diesel: number }>({
-    gasoline: 0,
-    diesel: 0,
-  });
+  const [currentPrices, setCurrentPrices] = useState<Record<ProductType, number>>(
+    () => Object.fromEntries(PRODUCT_TYPES.map((p) => [p, 0])) as Record<ProductType, number>,
+  );
   const [history, setHistory] = useState<FuelPrice[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [trendProduct, setTrendProduct] = useState<ProductType>('GASOLINE');
   const [form] = Form.useForm();
+
+  const emptyPrices = useCallback(
+    () => Object.fromEntries(PRODUCT_TYPES.map((p) => [p, 0])) as Record<ProductType, number>,
+    [],
+  );
 
   const fetchPrices = useCallback(async () => {
     if (!currentStation) return;
@@ -55,28 +69,39 @@ export default function FuelPricesPage() {
         api.get(`/fuel-prices/${currentStation.id}/history`),
       ]);
       const payload = currentRes.data;
-      const pricesObj = payload?.prices ?? {};
-      const gasolineRow =
-        pricesObj.GASOLINE ??
-        pricesObj.gasoline ??
-        pricesObj[LEGACY_GASOLINE_FUEL_TYPE] ??
-        pricesObj[LEGACY_GASOLINE_FUEL_TYPE.toLowerCase()];
-      const dieselRow = pricesObj.DIESEL ?? pricesObj.diesel;
-      setCurrentPrices({
-        gasoline: gasolineRow?.price_per_liter ?? gasolineRow ?? 0,
-        diesel: dieselRow?.price_per_liter ?? dieselRow ?? 0,
-      });
+      const pricesObj = (payload?.prices ?? {}) as Record<string, unknown>;
+
+      const next = emptyPrices();
+      for (const product of PRODUCT_TYPES) {
+        const row = (pricesObj[product] ??
+          pricesObj[product.toLowerCase()] ??
+          (product === 'GASOLINE'
+            ? pricesObj[LEGACY_GASOLINE_FUEL_TYPE] ?? pricesObj[LEGACY_GASOLINE_FUEL_TYPE.toLowerCase()]
+            : undefined)) as Record<string, unknown> | number | undefined;
+        if (typeof row === 'number') {
+          next[product] = row;
+        } else if (row) {
+          next[product] = Number(row.price_per_unit ?? row.price_per_liter ?? 0);
+        }
+      }
+      setCurrentPrices(next);
+
       const historyPayload = historyRes.data as { data?: unknown[] };
       const rawHistory = historyPayload?.data ?? (Array.isArray(historyRes.data) ? historyRes.data : []);
       setHistory(
         rawHistory.map((h) => {
           const r = h as Record<string, unknown>;
           const userRef = r.users as { id: string; name: string } | undefined;
+          const productType = normalizeProductType(
+            (r.product_type as string | undefined) ?? (r.fuel_type as string | undefined),
+          );
           return {
             id: r.id as string,
             stationId: r.station_id as string,
-            fuelType: normalizeTransactionFuelType(r.fuel_type as string | undefined),
-            price: Number(r.price_per_liter) ?? 0,
+            productType,
+            fuelType: productType,
+            unit: unitForProduct(productType),
+            price: Number(r.price_per_unit ?? r.price_per_liter) || 0,
             previousPrice: undefined,
             effectiveDate: (r.set_at as string) ?? (r.effectiveDate as string) ?? '',
             changedById: (r.set_by as string) ?? '',
@@ -86,27 +111,27 @@ export default function FuelPricesPage() {
         }),
       );
     } catch {
-      setCurrentPrices({ gasoline: 0, diesel: 0 });
+      setCurrentPrices(emptyPrices());
       setHistory([]);
     } finally {
       setLoading(false);
     }
-  }, [currentStation]);
+  }, [currentStation, emptyPrices]);
 
   useEffect(() => {
     fetchPrices();
   }, [fetchPrices]);
 
-  const handleUpdatePrice = async (values: { fuelType: string; price: number }) => {
+  const handleUpdatePrice = async (values: { productType: ProductType; price: number }) => {
     if (!currentStation) return;
     setSubmitting(true);
     try {
       await api.post('/fuel-prices', {
         station_id: currentStation.id,
-        fuel_type: values.fuelType,
-        price_per_liter: Math.round(Number(values.price)) || 0,
+        product_type: values.productType,
+        price_per_unit: Math.round(Number(values.price)) || 0,
       });
-      message.success('Fuel price updated successfully');
+      message.success(`${productLabel(values.productType)} price updated successfully`);
       setModalOpen(false);
       form.resetFields();
       fetchPrices();
@@ -127,17 +152,14 @@ export default function FuelPricesPage() {
       render: (date: string) => dayjs(date).format('MMM D, YYYY HH:mm'),
     },
     {
-      title: 'Fuel Type',
-      dataIndex: 'fuelType',
-      key: 'fuelType',
+      title: 'Product',
+      dataIndex: 'productType',
+      key: 'productType',
+      filters: PRODUCT_TYPES.map((p) => ({ text: productLabel(p), value: p })),
+      onFilter: (value, record) => record.productType === value,
       render: (type: string) => (
-        <span
-          className="font-semibold"
-          style={{
-            color: isGasolineFuelType(type) ? '#F97316' : '#3B82F6',
-          }}
-        >
-          {fuelTypeLabel(type)}
+        <span className="font-semibold" style={{ color: productColor(type) }}>
+          {productLabel(type)}
         </span>
       ),
     },
@@ -150,10 +172,17 @@ export default function FuelPricesPage() {
     },
     {
       title: 'New Price',
-      dataIndex: 'price',
       key: 'price',
       align: 'right',
-      render: (v: number) => <Text strong>{formatRWF(v)}</Text>,
+      render: (_: unknown, record: FuelPrice) => (
+        <Text strong>
+          {formatRWF(record.price)}
+          <Text type="secondary" className="!text-xs">
+            {' '}
+            /{unitLabel(record.unit)}
+          </Text>
+        </Text>
+      ),
     },
     {
       title: 'Change',
@@ -166,11 +195,11 @@ export default function FuelPricesPage() {
         return (
           <Space>
             {diff > 0 ? (
-              <ArrowUpOutlined className="text-red-500" />
+              <ArrowUpOutlined className="text-danger" />
             ) : (
-              <ArrowDownOutlined className="text-green-500" />
+              <ArrowDownOutlined className="text-accent" />
             )}
-            <Text className={diff > 0 ? '!text-red-500' : '!text-green-500'}>
+            <Text className={diff > 0 ? '!text-danger' : '!text-accent'}>
               {formatRWF(Math.abs(diff))} ({pct}%)
             </Text>
           </Space>
@@ -185,11 +214,12 @@ export default function FuelPricesPage() {
   ];
 
   const priceChartData = history
-    .filter((h) => isGasolineFuelType(h.fuelType))
+    .filter((h) => h.productType === trendProduct)
     .map((h) => ({
       hour: dayjs(h.effectiveDate).format('MMM D'),
       revenue: h.price,
       liters: 0,
+      kwh: 0,
     }))
     .reverse();
 
@@ -197,8 +227,10 @@ export default function FuelPricesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <Title level={3} className="!mb-0">Fuel Prices</Title>
-          <Text type="secondary">Manage and track fuel price changes</Text>
+          <Title level={3} className="!mb-0">Prices</Title>
+          <Text type="secondary">
+            Fuel is priced per liter, EV charging per kWh — fast charging carries its own rate.
+          </Text>
         </div>
         <Button type="primary" icon={<EditOutlined />} onClick={() => setModalOpen(true)}>
           Update Price
@@ -206,67 +238,67 @@ export default function FuelPricesPage() {
       </div>
 
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12}>
-          <Card
-            className="!rounded-xl !border-2"
-            style={{ borderColor: '#F97316' }}
-            bodyStyle={{ padding: '24px' }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <Text className="text-sm uppercase tracking-wider font-semibold" style={{ color: '#F97316' }}>
-                  Gasoline
-                </Text>
-                <Statistic
-                  value={currentPrices.gasoline}
-                  prefix="RWF"
-                  valueStyle={{ color: '#F97316', fontSize: 36, fontWeight: 800 }}
-                />
-                <Text type="secondary">per liter</Text>
-              </div>
-              <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                style={{ background: '#FFF7ED' }}
+        {PRODUCT_TYPES.map((product) => {
+          const color = productColor(product);
+          const isEv = isEvProductType(product);
+          const price = currentPrices[product] ?? 0;
+          return (
+            <Col key={product} xs={24} sm={12} lg={8}>
+              <Card
+                className="!rounded-xl !border-2 h-full"
+                style={{ borderColor: price > 0 ? color : 'var(--line)' }}
+                bodyStyle={{ padding: '20px' }}
               >
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="#F97316">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                </svg>
-              </div>
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12}>
-          <Card
-            className="!rounded-xl !border-2"
-            style={{ borderColor: '#3B82F6' }}
-            bodyStyle={{ padding: '24px' }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <Text className="text-sm uppercase tracking-wider font-semibold" style={{ color: '#3B82F6' }}>
-                  Diesel
-                </Text>
-                <Statistic
-                  value={currentPrices.diesel}
-                  prefix="RWF"
-                  valueStyle={{ color: '#3B82F6', fontSize: 36, fontWeight: 800 }}
-                />
-                <Text type="secondary">per liter</Text>
-              </div>
-              <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                style={{ background: '#EFF6FF' }}
-              >
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="#3B82F6">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                </svg>
-              </div>
-            </div>
-          </Card>
-        </Col>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <Text
+                      className="text-xs uppercase tracking-wider font-semibold block"
+                      style={{ color }}
+                    >
+                      {productLabel(product)}
+                    </Text>
+                    {price > 0 ? (
+                      <Statistic
+                        value={price}
+                        prefix="RWF"
+                        valueStyle={{ color, fontSize: 30, fontWeight: 800 }}
+                      />
+                    ) : (
+                      <Text type="secondary" className="block !text-2xl !font-bold !mt-2">
+                        Not set
+                      </Text>
+                    )}
+                    <Text type="secondary">per {unitLabel(unitForProduct(product))}</Text>
+                  </div>
+                  <div
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 text-xl"
+                    style={{ background: `${color}1A` }}
+                    aria-hidden
+                  >
+                    {isEv ? '⚡' : '⛽'}
+                  </div>
+                </div>
+              </Card>
+            </Col>
+          );
+        })}
       </Row>
 
-      <Card title="Price Trend" className="!rounded-xl" extra={<HistoryOutlined />}>
+      <Card
+        title="Price Trend"
+        className="!rounded-xl"
+        extra={
+          <Space>
+            <Select
+              value={trendProduct}
+              onChange={setTrendProduct}
+              className="w-48"
+              options={PRODUCT_TYPES.map((p) => ({ value: p, label: productLabel(p) }))}
+            />
+            <HistoryOutlined />
+          </Space>
+        }
+      >
         <RevenueChart data={priceChartData} />
       </Card>
 
@@ -282,38 +314,69 @@ export default function FuelPricesPage() {
       </Card>
 
       <Modal
-        title="Update Fuel Price"
+        title="Update Price"
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
         footer={null}
+        destroyOnClose
       >
-        <Form form={form} onFinish={handleUpdatePrice} layout="vertical">
+        <Form
+          form={form}
+          onFinish={handleUpdatePrice}
+          layout="vertical"
+          initialValues={{ productType: 'GASOLINE' }}
+        >
           <Form.Item
-            name="fuelType"
-            label="Fuel Type"
-            rules={[{ required: true, message: 'Select fuel type' }]}
+            name="productType"
+            label="Product"
+            rules={[{ required: true, message: 'Select a product' }]}
           >
             <Select
               options={[
-                { value: 'GASOLINE', label: 'Gasoline' },
-                { value: 'DIESEL', label: 'Diesel' },
+                {
+                  label: 'Fuel',
+                  options: PRODUCT_TYPES.filter((p) => !isEvProductType(p)).map((p) => ({
+                    value: p,
+                    label: productLabel(p),
+                  })),
+                },
+                {
+                  label: 'EV Charging',
+                  options: PRODUCT_TYPES.filter(isEvProductType).map((p) => ({
+                    value: p,
+                    label: productLabel(p),
+                  })),
+                },
               ]}
             />
           </Form.Item>
-          <Form.Item
-            name="price"
-            label="New Price (RWF per liter)"
-            rules={[
-              { required: true, message: 'Enter the new price' },
-              { type: 'number', min: 1, message: 'Price must be greater than 0' },
-            ]}
-          >
-            <InputNumber
-              className="!w-full"
-              formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={(value) => Number(value!.replace(/,/g, ''))}
-              placeholder="e.g. 1,350"
-            />
+          <Form.Item noStyle shouldUpdate={(prev, next) => prev.productType !== next.productType}>
+            {({ getFieldValue }) => {
+              const product = (getFieldValue('productType') ?? 'GASOLINE') as ProductType;
+              const unit = unitLabel(unitForProduct(product));
+              return (
+                <Form.Item
+                  name="price"
+                  label={`New Price (RWF per ${unit})`}
+                  extra={
+                    currentPrices[product] > 0
+                      ? `Current: ${formatUnitPrice(currentPrices[product], unitForProduct(product))}`
+                      : `No ${productLabel(product)} price set for this station yet.`
+                  }
+                  rules={[
+                    { required: true, message: 'Enter the new price' },
+                    { type: 'number', min: 1, message: 'Price must be greater than 0' },
+                  ]}
+                >
+                  <InputNumber
+                    className="!w-full"
+                    formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    parser={(value) => Number(value!.replace(/,/g, ''))}
+                    placeholder={isEvProductType(product) ? 'e.g. 420' : 'e.g. 1,350'}
+                  />
+                </Form.Item>
+              );
+            }}
           </Form.Item>
           <Form.Item className="!mb-0 text-right">
             <Space>

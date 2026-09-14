@@ -1,186 +1,219 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { Row, Col, Card, Alert, Typography, Spin, Segmented } from 'antd';
-import {
-  DollarOutlined,
-  DashboardOutlined,
-  ShoppingCartOutlined,
-  ThunderboltOutlined,
-  WarningOutlined,
-} from '@ant-design/icons';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Card, Col, Empty, Progress, Row, Segmented, Spin, Table, Tag, Typography } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
-import { useStationStore } from '@/store/station-store';
 import api from '@/lib/api';
-import {
-  fuelTypeLabel,
-  normalizePumpFuelType,
-  normalizeTransactionFuelType,
-} from '@/lib/fuel-type-labels';
-import { legacyOverviewTotalGasLitersProperty } from '@/lib/legacy-gasoline-fuel-type';
-import type { DashboardStats, Pump, Transaction } from '@/types';
-import StatsCard from '@/components/StatsCard';
-import PumpCard from '@/components/PumpCard';
-import TransactionFeed from '@/components/TransactionFeed';
+import { formatRWF } from '@/lib/format';
+import { formatQuantity, isEvProductType, productColor, productLabel } from '@/lib/product-types';
+import { useStationStore } from '@/store/station-store';
+import MetricTile from '@/components/metrics/MetricTile';
+import ActivityHeatmap, { type HeatCell } from '@/components/metrics/ActivityHeatmap';
+import ProductMixBar, { type ProductMixRow } from '@/components/metrics/ProductMixBar';
 import RevenueChart from '@/components/charts/RevenueChart';
+import type { ProductType, ProductUnit } from '@/types';
 
 const { Title, Text } = Typography;
 
-export type OverviewPeriod = 'today' | 'week' | 'month' | 'year';
+type Period = 'today' | 'week' | 'month' | 'quarter';
 
-function getRange(period: OverviewPeriod): { from: string; to: string } {
-  const to = dayjs().format('YYYY-MM-DD');
-  if (period === 'today') return { from: to, to };
-  if (period === 'week') return { from: dayjs().subtract(6, 'day').format('YYYY-MM-DD'), to };
-  if (period === 'month') return { from: dayjs().subtract(29, 'day').format('YYYY-MM-DD'), to };
-  return { from: dayjs().subtract(11, 'month').startOf('month').format('YYYY-MM-DD'), to };
+const PERIODS: { value: Period; label: string }[] = [
+  { value: 'today', label: 'Today' },
+  { value: 'week', label: '7 days' },
+  { value: 'month', label: '30 days' },
+  { value: 'quarter', label: '90 days' },
+];
+
+function windowFor(period: Period): { from: string; to: string } {
+  const to = dayjs();
+  const from =
+    period === 'today'
+      ? to.startOf('day')
+      : period === 'week'
+        ? to.subtract(6, 'day').startOf('day')
+        : period === 'month'
+          ? to.subtract(29, 'day').startOf('day')
+          : to.subtract(89, 'day').startOf('day');
+  return { from: from.toISOString(), to: to.toISOString() };
 }
 
-function periodLabel(period: OverviewPeriod): string {
-  switch (period) {
-    case 'today': return "Today's Performance";
-    case 'week': return "This Week's Performance";
-    case 'month': return "This Month's Performance";
-    case 'year': return "This Year's Performance";
-  }
+interface DashboardPayload {
+  window: { from: string; to: string; bucket: string; tz: string };
+  totals: {
+    revenue: number;
+    transactions: number;
+    liters: number;
+    kwh: number;
+    avgTicket: number;
+    flagged: number;
+    offline: number;
+  };
+  deltas: {
+    revenue: number | null;
+    transactions: number | null;
+    liters: number | null;
+    kwh: number | null;
+    avgTicket: number | null;
+  };
+  payments: { method: string; amount: number }[];
+  series: { bucket: string; revenue: number; transactions: number; liters: number; kwh: number }[];
+  heatmap: HeatCell[];
+  productMix: ProductMixRow[];
+  attendants: {
+    attendantId: string | null;
+    name: string;
+    revenue: number;
+    transactions: number;
+    liters: number;
+    kwh: number;
+    avgTicket: number;
+    flagged: number;
+  }[];
+  pumps: {
+    pumpId: string;
+    pumpNumber: number;
+    productType: ProductType;
+    label: string;
+    connectorType: string | null;
+    powerKw: number | null;
+    unit: ProductUnit;
+    revenue: number;
+    transactions: number;
+    quantity: number;
+    utilisation: number | null;
+  }[];
 }
 
-function chartTitle(period: OverviewPeriod): string {
-  switch (period) {
-    case 'today': return 'Revenue Today';
-    case 'week': return 'Revenue This Week';
-    case 'month': return 'Revenue This Month';
-    case 'year': return 'Revenue This Year';
-  }
+/** Compact money for tiles, where the full figure would dominate the layout. */
+function compactRWF(amount: number): string {
+  if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)}M`;
+  if (amount >= 1_000) return `${(amount / 1_000).toFixed(0)}K`;
+  return String(Math.round(amount));
 }
 
 export default function DashboardPage() {
   const { currentStation } = useStationStore();
-  const [period, setPeriod] = useState<OverviewPeriod>('today');
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [pumps, setPumps] = useState<Pump[]>([]);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [period, setPeriod] = useState<Period>('month');
+  const [data, setData] = useState<DashboardPayload | null>(null);
   const [loading, setLoading] = useState(true);
-  const [inactivePumps, setInactivePumps] = useState<Pump[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchDashboardData = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     if (!currentStation) {
       setLoading(false);
       return;
     }
     setLoading(true);
-    const { from, to } = getRange(period);
+    setError(null);
     try {
-      const [overviewRes, pumpsRes, txRes] = await Promise.all([
-        api.get(`/stations/${currentStation.id}/overview`, { params: { from, to } }),
-        api.get(`/pumps`, { params: { stationId: currentStation.id } }),
-        api.get(`/transactions`, {
-          params: { station_id: currentStation.id, limit: 20, page: 1, sortBy: 'timestamp', sortOrder: 'desc' },
-        }),
-      ]);
-      const overview = overviewRes.data as {
-        station?: { pumps?: unknown[] };
-        today?: {
-          total_revenue: number;
-          total_liters_gasoline?: number;
-          total_liters_diesel: number;
-          total_transactions: number;
-        };
-        active_shifts?: Array<{ pump_id: string; attendant_id: string; users?: { id: string; name: string } | null }>;
-        revenue_by_hour?: { hour: string; revenue: number; liters: number }[];
-      };
-      const today = (overview?.today ?? {}) as {
-        total_liters_gasoline?: number;
-        total_liters_diesel?: number;
-        total_revenue?: number;
-        total_transactions?: number;
-      };
-      const legacyGas = (today as Record<string, number | undefined>)[legacyOverviewTotalGasLitersProperty()];
-      const gasLiters = today.total_liters_gasoline ?? legacyGas ?? 0;
-      const dieselLiters = today.total_liters_diesel ?? 0;
-      const totalLiters = gasLiters + dieselLiters;
-      const pumpsPayload = pumpsRes.data as { data?: unknown[] };
-      const rawPumps = pumpsPayload?.data ?? (Array.isArray(pumpsRes.data) ? pumpsRes.data : []);
-      const activeShiftByPumpId: Record<string, { attendantId: string; attendantName: string }> = {};
-      for (const shift of overview?.active_shifts ?? []) {
-        const pumpId = (shift as { pump_id?: string }).pump_id;
-        if (pumpId) {
-          const users = (shift as { users?: { id: string; name: string } | null }).users;
-          activeShiftByPumpId[pumpId] = {
-            attendantId: (shift as { attendant_id: string }).attendant_id,
-            attendantName: users?.name ?? 'Attendant',
-          };
-        }
-      }
-      const pumpsMapped: Pump[] = rawPumps.map((p) => {
-        const r = p as Record<string, unknown>;
-        const pumpId = r.id as string;
-        const activeShift = activeShiftByPumpId[pumpId];
-        return {
-          id: pumpId,
-          stationId: r.station_id as string,
-          pumpNumber: Number(r.pump_number) ?? 0,
-          fuelType: normalizePumpFuelType(r.fuel_type as string | undefined),
-          status: (r.status as Pump['status']) ?? 'ACTIVE',
-          currentAttendantId: activeShift?.attendantId,
-          currentAttendant: activeShift ? { id: activeShift.attendantId, name: activeShift.attendantName, email: '', role: 'ATTENDANT' as const, isActive: true, createdAt: '', updatedAt: '' } : undefined,
-          createdAt: (r.created_at as string) ?? '',
-          updatedAt: (r.updated_at as string) ?? '',
-        };
+      const { from, to } = windowFor(period);
+      const res = await api.get(`/analytics/station/${currentStation.id}/dashboard`, {
+        params: { from, to },
       });
-      setPumps(pumpsMapped);
-
-      setStats({
-        totalRevenue: today.total_revenue ?? 0,
-        totalLiters,
-        gasolineLiters: gasLiters,
-        dieselLiters,
-        totalTransactions: today.total_transactions ?? 0,
-        activePumps: Array.isArray(overview?.active_shifts) ? overview.active_shifts.length : 0,
-        totalPumps: pumpsMapped.length,
-        revenueByHour: Array.isArray(overview?.revenue_by_hour) ? overview.revenue_by_hour : [],
-      });
-
-      const txPayload = txRes.data as { data?: unknown[] } | unknown[];
-      const rawTx = Array.isArray(txPayload) ? txPayload : txPayload?.data ?? [];
-      const txMapped: Transaction[] = rawTx.map((t) => {
-        const r = t as Record<string, unknown>;
-        return {
-          id: r.id as string,
-          stationId: r.station_id as string,
-          pumpId: r.pump_id as string,
-          attendantId: r.attendant_id as string,
-          fuelType: normalizeTransactionFuelType(r.fuel_type as string | undefined),
-          liters: Number(r.liters) ?? 0,
-          pricePerLiter: Number(r.price_per_liter) ?? 0,
-          totalAmount: Number(r.total_amount) ?? 0,
-          paymentMethod: (r.payment_method as Transaction['paymentMethod']) ?? 'CASH',
-          isFlagged: Boolean(r.is_flagged),
-          createdAt: (r.timestamp ?? r.created_at) as string,
-          updatedAt: (r.updated_at ?? r.timestamp) as string,
-        };
-      });
-      setRecentTransactions(txMapped);
-
-      const inactive = pumpsMapped.filter((p) => p.status === 'ACTIVE' && !p.currentAttendantId);
-      setInactivePumps(inactive);
-    } catch {
-      setStats(null);
-      setPumps([]);
-      setRecentTransactions([]);
-      setInactivePumps([]);
+      setData(res.data as DashboardPayload);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not load analytics');
+      setData(null);
     } finally {
       setLoading(false);
     }
   }, [currentStation, period]);
 
   useEffect(() => {
-    fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 60000);
-    return () => clearInterval(interval);
-  }, [fetchDashboardData]);
+    fetchData();
+  }, [fetchData]);
 
-  if (loading && !stats) {
+  // Refresh while the tab is visible; a background tab does not need to poll.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchData();
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [fetchData]);
+
+  const revenueSpark = useMemo(() => data?.series.map((s) => s.revenue) ?? [], [data]);
+  const txSpark = useMemo(() => data?.series.map((s) => s.transactions) ?? [], [data]);
+  const litersSpark = useMemo(() => data?.series.map((s) => s.liters) ?? [], [data]);
+  const kwhSpark = useMemo(() => data?.series.map((s) => s.kwh) ?? [], [data]);
+
+  const chartData = useMemo(
+    () =>
+      (data?.series ?? []).map((s) => ({
+        hour: dayjs(s.bucket).format(data?.window.bucket === 'hour' ? 'HH:mm' : 'MMM D'),
+        revenue: s.revenue,
+        liters: s.liters,
+        kwh: s.kwh,
+      })),
+    [data],
+  );
+
+  const totalPayments = (data?.payments ?? []).reduce((sum, p) => sum + p.amount, 0);
+  const evPumps = (data?.pumps ?? []).filter((p) => isEvProductType(p.productType));
+
+  const attendantColumns: ColumnsType<DashboardPayload['attendants'][number]> = [
+    {
+      title: '#',
+      key: 'rank',
+      width: 44,
+      render: (_: unknown, __: unknown, index: number) => (
+        <span className="text-ink-muted tabular-nums text-xs">{index + 1}</span>
+      ),
+    },
+    {
+      title: 'Attendant',
+      dataIndex: 'name',
+      key: 'name',
+      render: (name: string, r) => (
+        <span className="font-medium text-ink">
+          {name}
+          {r.flagged > 0 && (
+            <Tag className="!ml-2 !text-[10px]" color="warning">
+              {r.flagged} flagged
+            </Tag>
+          )}
+        </span>
+      ),
+    },
+    {
+      title: 'Sales',
+      dataIndex: 'transactions',
+      key: 'transactions',
+      align: 'right',
+      width: 80,
+      sorter: (a, b) => a.transactions - b.transactions,
+      render: (v: number) => <span className="tabular-nums">{v.toLocaleString()}</span>,
+    },
+    {
+      title: 'Avg ticket',
+      dataIndex: 'avgTicket',
+      key: 'avgTicket',
+      align: 'right',
+      width: 120,
+      sorter: (a, b) => a.avgTicket - b.avgTicket,
+      render: (v: number) => <span className="tabular-nums text-ink-muted">{formatRWF(v)}</span>,
+    },
+    {
+      title: 'Revenue',
+      dataIndex: 'revenue',
+      key: 'revenue',
+      align: 'right',
+      width: 140,
+      defaultSortOrder: 'descend',
+      sorter: (a, b) => a.revenue - b.revenue,
+      render: (v: number) => <span className="font-semibold tabular-nums">{formatRWF(v)}</span>,
+    },
+  ];
+
+  if (!currentStation) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Empty description={<span className="text-ink-muted">Select a station to see its dashboard</span>} />
+      </div>
+    );
+  }
+
+  if (loading && !data) {
     return (
       <div className="flex items-center justify-center h-96">
         <Spin size="large" />
@@ -189,163 +222,221 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <Title level={3} className="!mb-0 !text-slate-800">
-              Station Overview
+          <div className="flex items-center gap-2.5">
+            <Title level={3} className="!mb-0">
+              {currentStation.name}
             </Title>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 rounded-full">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-xs font-semibold text-emerald-600">Live</span>
-            </div>
+            <span className="flex items-center gap-1.5 px-2.5 py-1 bg-accent-tint rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+              <span className="text-xs font-semibold text-accent">Live</span>
+            </span>
           </div>
-          <Text className="!text-slate-400">
-            {currentStation?.name || 'Select a station'} &mdash; {periodLabel(period)}
+          <Text type="secondary" className="!text-sm">
+            {data
+              ? `${dayjs(data.window.from).format('MMM D')} – ${dayjs(data.window.to).format('MMM D, YYYY')}`
+              : 'Loading…'}
           </Text>
         </div>
-        <Segmented
-          value={period}
-          onChange={(v) => setPeriod((v as OverviewPeriod) || 'today')}
-          options={[
-            { label: 'Today', value: 'today' },
-            { label: 'This Week', value: 'week' },
-            { label: 'This Month', value: 'month' },
-            { label: 'This Year', value: 'year' },
-          ]}
-          className="!rounded-xl"
-        />
+        <Segmented value={period} onChange={(v) => setPeriod(v as Period)} options={PERIODS} />
       </div>
 
-      {/* Inactive Pump Alert */}
-      {inactivePumps.length > 0 && (
-        <Alert
-          message={
-            <span className="font-semibold">Inactive Pump Alert</span>
-          }
-          description={`${inactivePumps.length} pump(s) have had no activity for 30+ minutes: ${inactivePumps.map((p) => `Pump #${p.pumpNumber}`).join(', ')}`}
-          type="warning"
-          showIcon
-          icon={<WarningOutlined />}
-          closable
-          className="!rounded-2xl !border-orange-200 !bg-orange-50/80"
-        />
+      {error && (
+        <Card className="!rounded-card" size="small">
+          <Text type="danger">{error}</Text>
+        </Card>
       )}
 
-      {/* Stats Cards */}
+      {/* Headline metrics. Deltas compare with the previous window of equal length. */}
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={6}>
-          <StatsCard
-            title="Total Revenue"
-            value={stats?.totalRevenue || 0}
-            prefix="RWF"
-            icon={<DollarOutlined />}
-            color="#F97316"
-            trend={12.5}
+        <Col xs={24} sm={12} xl={6}>
+          <MetricTile
+            label="Revenue"
+            value={`RWF ${compactRWF(data?.totals.revenue ?? 0)}`}
+            delta={data?.deltas.revenue}
+            spark={revenueSpark}
+            accent="var(--accent)"
+            detail={`${(data?.totals.transactions ?? 0).toLocaleString()} sales · avg ${formatRWF(data?.totals.avgTicket ?? 0)}`}
           />
         </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <StatsCard
-            title="Total Liters"
-            value={stats?.totalLiters || 0}
-            maximumFractionDigits={2}
-            suffix="L"
-            icon={<DashboardOutlined />}
-            color="#3B82F6"
-            trend={8.2}
+        <Col xs={24} sm={12} xl={6}>
+          <MetricTile
+            label="Fuel dispensed"
+            value={`${Math.round(data?.totals.liters ?? 0).toLocaleString()} L`}
+            delta={data?.deltas.liters}
+            spark={litersSpark}
+            accent="var(--product-diesel)"
+            detail="Gasoline and diesel combined"
+          />
+        </Col>
+        <Col xs={24} sm={12} xl={6}>
+          <MetricTile
+            label="Energy delivered"
+            value={`${Math.round(data?.totals.kwh ?? 0).toLocaleString()} kWh`}
+            delta={data?.deltas.kwh}
+            spark={kwhSpark}
+            accent="var(--product-ev-dc-fast)"
             detail={
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs leading-relaxed">
-                <span>
-                  <span className="text-slate-400">{fuelTypeLabel('GASOLINE')} </span>
-                  <span className="font-semibold text-orange-600 tabular-nums">
-                    {(stats?.gasolineLiters ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} L
-                  </span>
-                </span>
-                <span>
-                  <span className="text-slate-400">{fuelTypeLabel('DIESEL')} </span>
-                  <span className="font-semibold text-blue-700 tabular-nums">
-                    {(stats?.dieselLiters ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} L
-                  </span>
-                </span>
-              </div>
+              evPumps.length > 0
+                ? `${evPumps.length} charge point${evPumps.length === 1 ? '' : 's'}`
+                : 'No charge points yet'
             }
           />
         </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <StatsCard
-            title="Transactions"
-            value={stats?.totalTransactions || 0}
-            icon={<ShoppingCartOutlined />}
-            color="#8B5CF6"
-            trend={5.1}
-          />
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <StatsCard
-            title="Active Pumps"
-            value={stats?.activePumps || 0}
-            suffix={`/ ${stats?.totalPumps || 0}`}
-            icon={<ThunderboltOutlined />}
-            color="#10B981"
+        <Col xs={24} sm={12} xl={6}>
+          <MetricTile
+            label="Transactions"
+            value={(data?.totals.transactions ?? 0).toLocaleString()}
+            delta={data?.deltas.transactions}
+            spark={txSpark}
+            accent="var(--chart-5)"
+            detail={
+              <>
+                {data?.totals.flagged ? `${data.totals.flagged} flagged · ` : ''}
+                {data?.totals.offline ? `${data.totals.offline} synced offline` : 'all synced live'}
+              </>
+            }
           />
         </Col>
       </Row>
 
-      {/* Charts + Feed Row */}
+      {/* Trend + product mix */}
       <Row gutter={[16, 16]}>
-        <Col xs={24} lg={16}>
-          <Card
-            title={
-              <div className="flex items-center gap-2">
-                <div className="w-1 h-4 rounded-full bg-gradient-to-b from-orange-400 to-orange-600" />
-                <span>{chartTitle(period)}</span>
-              </div>
-            }
-            className="!rounded-2xl"
-          >
-            <RevenueChart data={stats?.revenueByHour || []} />
+        <Col xs={24} xl={16}>
+          <Card title="Revenue trend" className="!rounded-card h-full" size="small">
+            <RevenueChart data={chartData} />
           </Card>
         </Col>
-        <Col xs={24} lg={8}>
-          <Card
-            title={
-              <div className="flex items-center gap-2">
-                <div className="w-1 h-4 rounded-full bg-gradient-to-b from-blue-400 to-blue-600" />
-                <span>Recent Transactions</span>
-              </div>
-            }
-            className="!rounded-2xl"
-            bodyStyle={{ padding: 0 }}
-          >
-            <TransactionFeed transactions={recentTransactions} />
+        <Col xs={24} xl={8}>
+          <Card title="Product mix" className="!rounded-card h-full" size="small">
+            <ProductMixBar data={data?.productMix ?? []} />
           </Card>
         </Col>
       </Row>
 
-      {/* Pump Status */}
-      <div>
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-1 h-4 rounded-full bg-gradient-to-b from-emerald-400 to-emerald-600" />
-          <Title level={4} className="!mb-0 !text-slate-800">Pump Status</Title>
-        </div>
+      {/* When the forecourt is actually busy */}
+      <Card
+        title="Activity by hour"
+        className="!rounded-card"
+        size="small"
+        extra={
+          <Text type="secondary" className="!text-xs">
+            Local time · darker is busier
+          </Text>
+        }
+      >
+        <ActivityHeatmap data={data?.heatmap ?? []} />
+      </Card>
+
+      {/* Rankings */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} xl={12}>
+          <Card title="Attendant performance" className="!rounded-card h-full" size="small">
+            <Table
+              columns={attendantColumns}
+              dataSource={data?.attendants ?? []}
+              rowKey={(r) => r.attendantId ?? r.name}
+              size="small"
+              pagination={false}
+              scroll={(data?.attendants.length ?? 0) > 8 ? { y: 320 } : undefined}
+              locale={{ emptyText: 'No attendant activity in this period' }}
+            />
+          </Card>
+        </Col>
+
+        <Col xs={24} xl={12}>
+          <Card
+            title="Dispensing points"
+            className="!rounded-card h-full"
+            size="small"
+            extra={
+              <Text type="secondary" className="!text-xs">
+                Utilisation shown for chargers
+              </Text>
+            }
+          >
+            <div className="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
+              {(data?.pumps ?? []).length === 0 && (
+                <Empty description={<span className="text-ink-muted">No pumps configured</span>} />
+              )}
+              {(data?.pumps ?? []).map((pump) => {
+                const isEv = isEvProductType(pump.productType);
+                return (
+                  <div
+                    key={pump.pumpId}
+                    className="flex items-center gap-3 py-2 border-b border-line-subtle last:border-0"
+                  >
+                    <span
+                      className="w-1 h-9 rounded-full shrink-0"
+                      style={{ background: productColor(pump.productType) }}
+                      aria-hidden
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-ink truncate">
+                        {isEv ? 'Charger' : 'Pump'} #{pump.pumpNumber}
+                        <span className="text-ink-muted font-normal">
+                          {' · '}
+                          {productLabel(pump.productType)}
+                        </span>
+                      </div>
+                      <div className="text-xs text-ink-muted tabular-nums">
+                        {pump.transactions.toLocaleString()} sales ·{' '}
+                        {formatQuantity(pump.quantity, pump.unit, 0)}
+                        {isEv && pump.powerKw ? ` · ${pump.powerKw} kW` : ''}
+                      </div>
+                    </div>
+
+                    {/* Only chargers have a rated capacity to be measured against. */}
+                    {isEv && pump.utilisation != null && (
+                      <div className="w-20 shrink-0">
+                        <Progress
+                          percent={Math.min(pump.utilisation, 100)}
+                          size="small"
+                          strokeColor={productColor(pump.productType)}
+                          format={(p) => <span className="text-[10px] tabular-nums">{p}%</span>}
+                        />
+                      </div>
+                    )}
+
+                    <span className="text-sm font-semibold tabular-nums text-ink w-24 text-right shrink-0">
+                      {formatRWF(pump.revenue)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Payment split */}
+      <Card title="How customers paid" className="!rounded-card" size="small">
         <Row gutter={[16, 16]}>
-          {pumps.map((pump) => (
-            <Col xs={24} sm={12} lg={8} xl={6} key={pump.id}>
-              <PumpCard pump={pump} />
-            </Col>
-          ))}
-          {pumps.length === 0 && (
-            <Col span={24}>
-              <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
-                <ThunderboltOutlined className="text-4xl text-slate-200 mb-3" />
-                <Text className="!text-slate-400 block">No pumps configured for this station.</Text>
-              </div>
-            </Col>
-          )}
+          {(data?.payments ?? []).map((p) => {
+            const share = totalPayments > 0 ? (p.amount / totalPayments) * 100 : 0;
+            return (
+              <Col xs={24} sm={8} key={p.method}>
+                <div className="flex items-baseline justify-between mb-1.5">
+                  <span className="text-sm font-medium text-ink">{p.method}</span>
+                  <span className="text-xs text-ink-muted tabular-nums">{share.toFixed(1)}%</span>
+                </div>
+                <div className="h-2 rounded-full bg-surface-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${share}%`, background: 'var(--accent)' }}
+                  />
+                </div>
+                <div className="text-sm font-semibold tabular-nums text-ink mt-1.5">
+                  {formatRWF(p.amount)}
+                </div>
+              </Col>
+            );
+          })}
         </Row>
-      </div>
+      </Card>
     </div>
   );
 }

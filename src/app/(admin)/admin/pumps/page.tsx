@@ -24,7 +24,15 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import api from '@/lib/api';
-import { fuelTypeLabel, isGasolineFuelType, normalizePumpFuelType } from '@/lib/fuel-type-labels';
+import {
+  CONNECTOR_TYPES,
+  PRODUCT_TYPES,
+  connectorLabel,
+  isEvProductType,
+  normalizeProductType,
+  productLabel,
+  productTagColor,
+} from '@/lib/product-types';
 import type { Pump, Station } from '@/types';
 
 const { Title, Text } = Typography;
@@ -52,11 +60,17 @@ export default function AdminPumpsPage() {
   const unwrapPumps = (raw: unknown[]): Pump[] =>
     raw.map((p) => {
       const r = p as Record<string, unknown>;
+      const productType = normalizeProductType(
+        (r.product_type as string | undefined) ?? (r.fuel_type as string | undefined),
+      );
       return {
         id: r.id as string,
         stationId: r.station_id as string,
         pumpNumber: Number(r.pump_number) ?? 0,
-        fuelType: normalizePumpFuelType(r.fuel_type as string | undefined),
+        productType,
+        fuelType: productType,
+        connectorType: (r.connector_type as Pump['connectorType']) ?? null,
+        powerKw: r.power_kw == null ? null : Number(r.power_kw),
         status: (String(r.status ?? 'active').toUpperCase() === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE') as Pump['status'],
         createdAt: (r.created_at as string) ?? '',
         updatedAt: (r.updated_at as string) ?? '',
@@ -123,7 +137,7 @@ export default function AdminPumpsPage() {
     if (stationFilter) {
       form.setFieldsValue({ stationId: stationFilter });
       api.get<{ nextNumber: number }>('/pumps/next-number', { params: { stationId: stationFilter } })
-        .then((res) => form.setFieldsValue({ pumpNumber: res.data?.nextNumber ?? 1, fuelType: 'GASOLINE' }))
+        .then((res) => form.setFieldsValue({ pumpNumber: res.data?.nextNumber ?? 1, productType: 'GASOLINE' }))
         .catch(() => {});
     }
   };
@@ -133,7 +147,9 @@ export default function AdminPumpsPage() {
     form.setFieldsValue({
       stationId: pump.stationId,
       pumpNumber: pump.pumpNumber,
-      fuelType: pump.fuelType,
+      productType: pump.productType,
+      connectorType: pump.connectorType ?? undefined,
+      powerKw: pump.powerKw ?? undefined,
       status: pump.status,
     });
     setModalOpen(true);
@@ -142,19 +158,29 @@ export default function AdminPumpsPage() {
   const handleSubmit = async (values: Record<string, unknown>) => {
     setSubmitting(true);
     try {
+      const productType = String(values.productType ?? 'GASOLINE');
+      const isEv = isEvProductType(productType);
+      // The API rejects connector/power on a fuel pump, and clears them when a charge
+      // point is switched back to fuel, so only send them for EV products.
+      const evFields = isEv
+        ? { connector_type: values.connectorType, power_kw: Number(values.powerKw) }
+        : {};
+
       if (editingPump) {
         await api.patch(`/pumps/${editingPump.id}`, {
-          fuel_type: values.fuelType,
+          product_type: productType,
+          ...evFields,
           status: values.status ? String(values.status).toLowerCase() : undefined,
         });
-        message.success('Pump updated');
+        message.success(isEv ? 'Charge point updated' : 'Pump updated');
       } else {
         await api.post('/pumps', {
           station_id: values.stationId,
           pump_number: Number(values.pumpNumber) ?? 1,
-          fuel_type: values.fuelType ?? 'GASOLINE',
+          product_type: productType,
+          ...evFields,
         });
-        message.success('Pump created');
+        message.success(isEv ? 'Charge point created' : 'Pump created');
       }
       setModalOpen(false);
       form.resetFields();
@@ -187,7 +213,7 @@ export default function AdminPumpsPage() {
       key: 'pump',
       render: (_: unknown, record: Pump) => (
         <Space>
-          <ToolOutlined className="text-fuel-orange" />
+          <ToolOutlined className="text-accent" />
           <Text strong>Pump #{record.pumpNumber}</Text>
         </Space>
       ),
@@ -198,13 +224,20 @@ export default function AdminPumpsPage() {
       render: (_: unknown, record: Pump) => stationMap.get(record.stationId) || 'N/A',
     },
     {
-      title: 'Fuel Type',
-      dataIndex: 'fuelType',
-      key: 'fuelType',
-      render: (type: string) => (
-        <Tag color={isGasolineFuelType(type) ? 'orange' : 'blue'} className="!font-medium">
-          {fuelTypeLabel(type)}
-        </Tag>
+      title: 'Product',
+      dataIndex: 'productType',
+      key: 'productType',
+      render: (type: string, record: Pump) => (
+        <Space direction="vertical" size={2}>
+          <Tag color={productTagColor(type)} className="!font-medium">
+            {productLabel(type)}
+          </Tag>
+          {isEvProductType(type) && (
+            <Text type="secondary" className="!text-xs">
+              {connectorLabel(record.connectorType)} · {record.powerKw ?? 0} kW
+            </Text>
+          )}
+        </Space>
       ),
     },
     {
@@ -270,7 +303,7 @@ export default function AdminPumpsPage() {
             onChange={(v) => { setPumpSortBy(v); fetchData(); }}
             options={[
               { value: 'pump_number', label: 'Pump #' },
-              { value: 'fuel_type', label: 'Fuel type' },
+              { value: 'product_type', label: 'Product' },
               { value: 'created_at', label: 'Date' },
             ]}
             className="w-28"
@@ -333,14 +366,54 @@ export default function AdminPumpsPage() {
           >
             <InputNumber className="!w-full" min={1} placeholder="Next available (auto-filled when station selected)" />
           </Form.Item>
-          <Form.Item name="fuelType" label="Fuel Type" rules={[{ required: true }]}>
+          <Form.Item name="productType" label="Product" rules={[{ required: true }]}>
             <Select
               options={[
-                { value: 'GASOLINE', label: 'Gasoline' },
-                { value: 'DIESEL', label: 'Diesel' },
+                {
+                  label: 'Fuel',
+                  options: PRODUCT_TYPES.filter((p) => !isEvProductType(p)).map((p) => ({
+                    value: p,
+                    label: productLabel(p),
+                  })),
+                },
+                {
+                  label: 'EV Charging',
+                  options: PRODUCT_TYPES.filter(isEvProductType).map((p) => ({
+                    value: p,
+                    label: productLabel(p),
+                  })),
+                },
               ]}
             />
           </Form.Item>
+
+          {/* A charge point is identified by its connector and rated power. */}
+          <Form.Item noStyle shouldUpdate={(prev, next) => prev.productType !== next.productType}>
+            {({ getFieldValue }) =>
+              isEvProductType(getFieldValue('productType')) ? (
+                <>
+                  <Form.Item
+                    name="connectorType"
+                    label="Connector"
+                    rules={[{ required: true, message: 'Select the connector this charge point uses' }]}
+                  >
+                    <Select
+                      placeholder="e.g. CCS Combo"
+                      options={CONNECTOR_TYPES.map((c) => ({ value: c, label: connectorLabel(c) }))}
+                    />
+                  </Form.Item>
+                  <Form.Item
+                    name="powerKw"
+                    label="Rated Power (kW)"
+                    rules={[{ required: true, type: 'number', min: 0.1, message: 'Enter the rated output in kW' }]}
+                  >
+                    <InputNumber className="!w-full" placeholder="e.g. 60" min={0.1} step={1} />
+                  </Form.Item>
+                </>
+              ) : null
+            }
+          </Form.Item>
+
           {editingPump && (
             <Form.Item name="status" label="Status" rules={[{ required: true }]}>
               <Select

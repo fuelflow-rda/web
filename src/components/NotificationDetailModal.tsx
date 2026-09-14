@@ -18,10 +18,18 @@ export const notificationTypeVisuals: Record<
   string,
   { icon: React.ReactNode; color: string; tagColor: string }
 > = {
-  ALERT: { icon: <ExclamationCircleOutlined />, color: '#EF4444', tagColor: 'red' },
-  WARNING: { icon: <WarningOutlined />, color: '#F97316', tagColor: 'orange' },
-  INFO: { icon: <InfoCircleOutlined />, color: '#3B82F6', tagColor: 'blue' },
-  SUCCESS: { icon: <CheckCircleOutlined />, color: '#10B981', tagColor: 'green' },
+  ALERT: { icon: <ExclamationCircleOutlined />, color: 'var(--danger)', tagColor: 'red' },
+  WARNING: { icon: <WarningOutlined />, color: 'var(--warn)', tagColor: 'orange' },
+  INFO: { icon: <InfoCircleOutlined />, color: 'var(--ink-secondary)', tagColor: 'blue' },
+  SUCCESS: { icon: <CheckCircleOutlined />, color: 'var(--accent)', tagColor: 'green' },
+  /**
+   * The API emits lower-case types of its own. Anything unlisted falls back to INFO,
+   * which is right for the routine ones; a site that has recorded nothing for a full
+   * day is not routine, so it is called out as a warning rather than a notice.
+   */
+  station_dormant: { icon: <WarningOutlined />, color: 'var(--warn)', tagColor: 'orange' },
+  /** An attendant cut a shift short and gave a reason — worth a manager's attention. */
+  shift_early_end: { icon: <WarningOutlined />, color: 'var(--warn)', tagColor: 'orange' },
 };
 
 export interface NotificationDetailModalProps {
@@ -52,7 +60,7 @@ export function NotificationDetailModal({
           >
             {cfg.icon}
           </span>
-          <span className="text-base font-semibold text-slate-800 leading-snug pr-6">
+          <span className="text-base font-semibold text-ink leading-snug pr-6">
             {notification.title}
           </span>
         </Space>
@@ -74,7 +82,7 @@ export function NotificationDetailModal({
           <Tag color={cfg.tagColor}>{notification.type}</Tag>
           {!notification.isRead && <Tag color="orange">Unread</Tag>}
         </Space>
-        <Typography.Paragraph className="!mb-0 !text-slate-600 whitespace-pre-wrap break-words">
+        <Typography.Paragraph className="!mb-0 !text-ink-secondary whitespace-pre-wrap break-words">
           {notification.message}
         </Typography.Paragraph>
         <Typography.Text type="secondary" className="!text-xs">

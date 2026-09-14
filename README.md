@@ -1,8 +1,8 @@
-# StationIQ Web Dashboard
+# Relai Web Dashboard
 
 A comprehensive fuel station management dashboard built with **Next.js 14**, **Tailwind CSS**, **Ant Design**, and **Recharts**.
 
-This is the **Manager and Admin** web portal for the StationIQ platform.
+This is the **Manager and Admin** web portal for the Relai platform.
 
 ## Tech Stack
 
@@ -26,7 +26,7 @@ This is the **Manager and Admin** web portal for the StationIQ platform.
 ### Installation
 
 ```bash
-cd stationiq-web
+cd relai-web
 npm install
 ```
 

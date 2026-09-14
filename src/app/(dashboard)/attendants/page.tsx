@@ -26,12 +26,12 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs, { Dayjs } from 'dayjs';
 import api from '@/lib/api';
 import { formatRWF } from '@/lib/format';
-import { fuelTypeLabel } from '@/lib/fuel-type-labels';
+import { isEvProductType, normalizeProductType, productLabel } from '@/lib/product-types';
 import { useStationStore } from '@/store/station-store';
 import { useAuthStore } from '@/store/auth-store';
 import ExportButton from '@/components/ExportButton';
 import ComparisonChart from '@/components/charts/ComparisonChart';
-import type { AttendantReport } from '@/types';
+import type { AttendantReport, ProductType } from '@/types';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -51,7 +51,9 @@ export default function AttendantsPage() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [assignPumpModalOpen, setAssignPumpModalOpen] = useState(false);
   const [assigningAttendant, setAssigningAttendant] = useState<AttendantReport | null>(null);
-  const [pumps, setPumps] = useState<Array<{ id: string; pumpNumber: number; fuelType: string }>>([]);
+  const [pumps, setPumps] = useState<
+    Array<{ id: string; pumpNumber: number; productType: ProductType; powerKw: number | null }>
+  >([]);
   const [submitting, setSubmitting] = useState(false);
   const [pinResetLoading, setPinResetLoading] = useState(false);
   const [form] = Form.useForm();
@@ -64,11 +66,22 @@ export default function AttendantsPage() {
       const res = await api.get('/pumps', { params: { stationId: currentStation.id } });
       const payload = res.data as { data?: unknown[] };
       const raw = payload?.data ?? (Array.isArray(res.data) ? res.data : []);
-      setPumps((raw as { id: string; pump_number: number; fuel_type: string }[]).map((p) => ({
-        id: p.id,
-        pumpNumber: p.pump_number,
-        fuelType: p.fuel_type,
-      })));
+      setPumps(
+        (
+          raw as {
+            id: string;
+            pump_number: number;
+            product_type?: string;
+            fuel_type?: string;
+            power_kw?: number | null;
+          }[]
+        ).map((p) => ({
+          id: p.id,
+          pumpNumber: p.pump_number,
+          productType: normalizeProductType(p.product_type ?? p.fuel_type),
+          powerKw: p.power_kw == null ? null : Number(p.power_kw),
+        })),
+      );
     } catch {
       setPumps([]);
     }
@@ -91,7 +104,14 @@ export default function AttendantsPage() {
         is_active?: boolean;
         created_at?: string | null;
         assigned_pump_id?: string | null;
-        pumps?: { id: string; pump_number: number; fuel_type: string } | null;
+        pumps?: {
+          id: string;
+          pump_number: number;
+          product_type?: string;
+          fuel_type?: string;
+          connector_type?: string | null;
+          power_kw?: number | null;
+        } | null;
       }>;
       const perfList = (reportRes.data?.attendant_performance ?? []) as Array<{
         id: string;
@@ -99,6 +119,7 @@ export default function AttendantsPage() {
         transactions: number;
         revenue: number;
         liters: number;
+        kwh?: number;
         cash: number;
         card: number;
         momo: number;
@@ -107,8 +128,11 @@ export default function AttendantsPage() {
       const rows: AttendantReport[] = attendants.map((att) => {
         const p = perfByAtt.get(att.id);
         const pump = att.pumps;
+        const pumpProduct = pump ? normalizeProductType(pump.product_type ?? pump.fuel_type) : null;
         const assignedPumpLabel = pump
-          ? `Pump #${pump.pump_number} (${fuelTypeLabel(String(pump.fuel_type))})`
+          ? isEvProductType(pumpProduct)
+            ? `#${pump.pump_number} · ${productLabel(pumpProduct)} · ${pump.power_kw ?? 0}kW`
+            : `Pump #${pump.pump_number} (${productLabel(pumpProduct)})`
           : att.assigned_pump_id
             ? 'Assigned'
             : null;
@@ -124,6 +148,7 @@ export default function AttendantsPage() {
           assignedPumpShort: assignedPumpShort ?? null,
           totalTransactions: p?.transactions ?? 0,
           totalLiters: p?.liters ?? 0,
+          totalKwh: p?.kwh ?? 0,
           totalRevenue: p?.revenue ?? 0,
           cashAmount: p?.cash ?? 0,
           cardAmount: p?.card ?? 0,
@@ -257,7 +282,7 @@ export default function AttendantsPage() {
             <Text strong>{name}</Text>
           </Space>
           {record.phone && (
-            <div className="text-xs text-slate-400 mt-0.5 ml-5">{record.phone}</div>
+            <div className="text-xs text-ink-muted mt-0.5 ml-5">{record.phone}</div>
           )}
         </div>
       ),
@@ -271,13 +296,21 @@ export default function AttendantsPage() {
       width: 80,
     },
     {
-      title: 'Liters',
-      dataIndex: 'totalLiters',
+      title: 'Dispensed',
       key: 'totalLiters',
-      sorter: (a, b) => a.totalLiters - b.totalLiters,
+      sorter: (a, b) => a.totalLiters + a.totalKwh - (b.totalLiters + b.totalKwh),
       align: 'right',
-      width: 100,
-      render: (v: number) => `${v.toLocaleString()} L`,
+      width: 130,
+      render: (_: unknown, record: AttendantReport) => (
+        <div className="leading-tight">
+          <div>{record.totalLiters.toLocaleString()} L</div>
+          {record.totalKwh > 0 && (
+            <div className="text-xs text-accent font-semibold">
+              {record.totalKwh.toLocaleString()} kWh
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       title: 'Revenue',
@@ -294,7 +327,7 @@ export default function AttendantsPage() {
       width: 140,
       render: (_: unknown, record: AttendantReport) => (
         <div className="flex items-center gap-1 flex-nowrap">
-          <span className="text-slate-500 shrink-0">
+          <span className="text-ink-secondary shrink-0">
             {record.assignedPumpShort ? (
               <Tooltip title={record.assignedPumpLabel ?? record.assignedPumpShort}>
                 {record.assignedPumpShort === 'Assigned' ? 'Assigned' : `Pump ${record.assignedPumpShort}`}
@@ -347,6 +380,7 @@ export default function AttendantsPage() {
     { header: 'Attendant', key: 'attendantName' },
     { header: 'Transactions', key: 'totalTransactions' },
     { header: 'Liters', key: 'totalLiters' },
+    { header: 'kWh', key: 'totalKwh' },
     { header: 'Revenue (RWF)', key: 'totalRevenue' },
     { header: 'Cash (RWF)', key: 'cashAmount' },
     { header: 'Card (RWF)', key: 'cardAmount' },
@@ -398,7 +432,9 @@ export default function AttendantsPage() {
               options={[
                 ...pumps.map((p) => ({
                   value: p.id,
-                  label: `Pump #${p.pumpNumber} (${fuelTypeLabel(p.fuelType)})`,
+                  label: isEvProductType(p.productType)
+                    ? `#${p.pumpNumber} · ${productLabel(p.productType)} · ${p.powerKw ?? 0}kW`
+                    : `Pump #${p.pumpNumber} (${productLabel(p.productType)})`,
                 })),
               ]}
             />
@@ -482,31 +518,31 @@ export default function AttendantsPage() {
             <Card size="small" className="!rounded-lg">
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <UserOutlined className="text-slate-400" />
-                  <Text className="w-24 text-slate-500">Name</Text>
+                  <UserOutlined className="text-ink-muted" />
+                  <Text className="w-24 text-ink-secondary">Name</Text>
                   <Text strong>{selectedAttendant.attendantName}</Text>
                 </div>
                 <div className="flex items-center gap-2">
-                  <PhoneOutlined className="text-slate-400" />
-                  <Text className="w-24 text-slate-500">Phone</Text>
+                  <PhoneOutlined className="text-ink-muted" />
+                  <Text className="w-24 text-ink-secondary">Phone</Text>
                   <Text strong>{selectedAttendant.phone || 'Not set'}</Text>
                 </div>
                 <div className="flex items-center gap-2">
-                  <ThunderboltOutlined className="text-slate-400" />
-                  <Text className="w-24 text-slate-500">Pump</Text>
+                  <ThunderboltOutlined className="text-ink-muted" />
+                  <Text className="w-24 text-ink-secondary">Pump</Text>
                   <Text strong>{selectedAttendant.assignedPumpLabel || 'Not assigned'}</Text>
                 </div>
                 <div className="flex items-center gap-2">
-                  <SafetyOutlined className="text-slate-400" />
-                  <Text className="w-24 text-slate-500">Status</Text>
+                  <SafetyOutlined className="text-ink-muted" />
+                  <Text className="w-24 text-ink-secondary">Status</Text>
                   <Tag color={selectedAttendant.isActive !== false ? 'green' : 'red'}>
                     {selectedAttendant.isActive !== false ? 'Active' : 'Inactive'}
                   </Tag>
                 </div>
                 {selectedAttendant.createdAt && (
                   <div className="flex items-center gap-2">
-                    <CalendarOutlined className="text-slate-400" />
-                    <Text className="w-24 text-slate-500">Joined</Text>
+                    <CalendarOutlined className="text-ink-muted" />
+                    <Text className="w-24 text-ink-secondary">Joined</Text>
                     <Text>{dayjs(selectedAttendant.createdAt).format('MMM D, YYYY')}</Text>
                   </div>
                 )}
@@ -519,8 +555,18 @@ export default function AttendantsPage() {
                 <Statistic title="Total Revenue" value={selectedAttendant.totalRevenue} prefix="RWF" />
               </Col>
               <Col span={12}>
-                <Statistic title="Total Liters" value={selectedAttendant.totalLiters} suffix="L" precision={1} />
+                <Statistic title="Fuel Dispensed" value={selectedAttendant.totalLiters} suffix="L" precision={1} />
               </Col>
+              {selectedAttendant.totalKwh > 0 && (
+                <Col span={12}>
+                  <Statistic
+                    title="EV Charging"
+                    value={selectedAttendant.totalKwh}
+                    suffix="kWh"
+                    precision={1}
+                  />
+                </Col>
+              )}
               <Col span={12}>
                 <Statistic title="Transactions" value={selectedAttendant.totalTransactions} />
               </Col>

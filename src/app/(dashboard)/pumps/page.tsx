@@ -20,11 +20,17 @@ import type { ColumnsType } from 'antd/es/table';
 import api from '@/lib/api';
 import { formatRWF } from '@/lib/format';
 import {
-  fuelTypeLabel,
-  isGasolineFuelType,
-  normalizePumpFuelType,
-  normalizeTransactionFuelType,
-} from '@/lib/fuel-type-labels';
+  CONNECTOR_TYPES,
+  PRODUCT_TYPES,
+  connectorLabel,
+  formatQuantity,
+  isEvProductType,
+  normalizeProductType,
+  productLabel,
+  productTagColor,
+  unitForProduct,
+  unitLabel,
+} from '@/lib/product-types';
 import { useStationStore } from '@/store/station-store';
 import ExportButton from '@/components/ExportButton';
 import PumpPerformanceChart from '@/components/charts/PumpPerformanceChart';
@@ -53,15 +59,23 @@ export default function PumpsPage() {
       const raw = out?.data ?? (Array.isArray(pumpsRes.data) ? pumpsRes.data : []);
       const mapped = (
         Array.isArray(raw) ? raw : []
-      ).map((p: Record<string, unknown>) => ({
-        id: p.id as string,
-        stationId: p.station_id as string,
-        pumpNumber: Number(p.pump_number) ?? 0,
-        fuelType: normalizePumpFuelType(p.fuel_type as string | undefined),
-        status: (String(p.status ?? 'active').toUpperCase() === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE') as Pump['status'],
-        createdAt: (p.created_at as string) ?? '',
-        updatedAt: (p.updated_at as string) ?? '',
-      }));
+      ).map((p: Record<string, unknown>) => {
+        const productType = normalizeProductType(
+          (p.product_type as string | undefined) ?? (p.fuel_type as string | undefined),
+        );
+        return {
+          id: p.id as string,
+          stationId: p.station_id as string,
+          pumpNumber: Number(p.pump_number) ?? 0,
+          productType,
+          fuelType: productType,
+          connectorType: (p.connector_type as Pump['connectorType']) ?? null,
+          powerKw: p.power_kw == null ? null : Number(p.power_kw),
+          status: (String(p.status ?? 'active').toUpperCase() === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE') as Pump['status'],
+          createdAt: (p.created_at as string) ?? '',
+          updatedAt: (p.updated_at as string) ?? '',
+        };
+      });
       setPumps(mapped);
     } catch {
       setPumps([]);
@@ -87,38 +101,52 @@ export default function PumpsPage() {
       const res = await api.get(`/reports/pump/${selectedPumpId}`, {
         params: { from: from.toISOString(), to: to.toISOString() },
       });
-      const payload = res.data as { transactions?: Array<{ liters?: number; total_amount?: number; timestamp?: string; fuel_type?: string }> };
+      const payload = res.data as {
+        transactions?: Array<{
+          quantity?: number;
+          liters?: number;
+          total_amount?: number;
+          timestamp?: string;
+          product_type?: string;
+          fuel_type?: string;
+        }>;
+      };
       const tx = Array.isArray(payload?.transactions) ? payload.transactions : [];
       const pump = pumps.find((p) => p.id === selectedPumpId);
-      const totalLiters = tx.reduce((s, t) => s + parseFloat(String(t.liters ?? 0)), 0);
+      const pumpProduct = pump?.productType ?? 'GASOLINE';
+      const totalQuantity = tx.reduce((s, t) => s + parseFloat(String(t.quantity ?? t.liters ?? 0)), 0);
       const totalRev = tx.reduce((s, t) => s + (t.total_amount ?? 0), 0);
       const summaryRow: PumpReport = {
         date: `${from.toISOString().slice(0, 10)} to ${to.toISOString().slice(0, 10)}`,
         pumpId: selectedPumpId,
         pumpNumber: pump?.pumpNumber ?? 0,
-        fuelType: (pump?.fuelType as PumpReport['fuelType']) ?? 'GASOLINE',
-        litersDispensed: totalLiters,
+        productType: pumpProduct,
+        fuelType: pumpProduct,
+        unit: unitForProduct(pumpProduct),
+        quantityDispensed: totalQuantity,
         expectedRevenue: totalRev,
         recordedRevenue: totalRev,
         discrepancy: 0,
       };
-      const transactionRows: PumpReport[] = tx.map((t, i) => {
-        const liters = parseFloat(String(t.liters ?? 0));
+      const transactionRows: PumpReport[] = tx.map((t) => {
+        const productType = normalizeProductType(t.product_type ?? t.fuel_type);
+        const quantity = parseFloat(String(t.quantity ?? t.liters ?? 0));
         const amt = t.total_amount ?? 0;
         const dateStr = t.timestamp ? new Date(t.timestamp).toISOString().slice(0, 10) : to.toISOString().slice(0, 10);
         return {
           date: dateStr,
           pumpId: selectedPumpId,
           pumpNumber: pump?.pumpNumber ?? 0,
-          fuelType:
-          normalizeTransactionFuelType(t.fuel_type as string | undefined) as PumpReport['fuelType'],
-          litersDispensed: liters,
+          productType,
+          fuelType: productType,
+          unit: unitForProduct(productType),
+          quantityDispensed: quantity,
           expectedRevenue: amt,
           recordedRevenue: amt,
           discrepancy: 0,
         };
       });
-      setReports(transactionRows.length > 0 ? transactionRows : (totalLiters > 0 || totalRev > 0 ? [summaryRow] : []));
+      setReports(transactionRows.length > 0 ? transactionRows : (totalQuantity > 0 || totalRev > 0 ? [summaryRow] : []));
     } catch {
       setReports([]);
     } finally {
@@ -140,25 +168,36 @@ export default function PumpsPage() {
       api.get<{ nextNumber: number }>('/pumps/next-number', { params: { stationId: currentStation.id } })
         .then((res) => {
           const next = res.data?.nextNumber ?? (pumps.length > 0 ? Math.max(...pumps.map((p) => p.pumpNumber), 0) + 1 : 1);
-          form.setFieldsValue({ pumpNumber: next, fuelType: 'GASOLINE' });
+          form.setFieldsValue({ pumpNumber: next, productType: 'GASOLINE' });
         })
         .catch(() => {
           const nextNum = pumps.length > 0 ? Math.max(...pumps.map((p) => p.pumpNumber), 0) + 1 : 1;
-          form.setFieldsValue({ pumpNumber: nextNum, fuelType: 'GASOLINE' });
+          form.setFieldsValue({ pumpNumber: nextNum, productType: 'GASOLINE' });
         });
     }
   }, [addModalOpen, currentStation?.id, pumps, form]);
 
-  const handleAddPump = async (values: { pumpNumber: number; fuelType: string }) => {
+  const handleAddPump = async (values: {
+    pumpNumber: number;
+    productType: string;
+    connectorType?: string;
+    powerKw?: number;
+  }) => {
     if (!currentStation) return;
     setSubmitting(true);
     try {
+      const productType = values.productType ?? 'GASOLINE';
+      const isEv = isEvProductType(productType);
       await api.post('/pumps', {
         station_id: currentStation.id,
         pump_number: Number(values.pumpNumber) ?? 1,
-        fuel_type: values.fuelType ?? 'GASOLINE',
+        product_type: productType,
+        // The API rejects these on a fuel pump, so only send them for charge points.
+        ...(isEv
+          ? { connector_type: values.connectorType, power_kw: Number(values.powerKw) }
+          : {}),
       });
-      message.success('Pump added.');
+      message.success(isEv ? 'Charge point added.' : 'Pump added.');
       setAddModalOpen(false);
       form.resetFields();
       fetchPumps();
@@ -186,23 +225,17 @@ export default function PumpsPage() {
       render: (_: unknown, record: PumpReport) => (
         <Space>
           <Text strong>#{record.pumpNumber}</Text>
-          <Tag
-            color={
-              isGasolineFuelType(record.fuelType) ? 'orange' : 'blue'
-            }
-          >
-            {fuelTypeLabel(record.fuelType)}
-          </Tag>
+          <Tag color={productTagColor(record.productType)}>{productLabel(record.productType)}</Tag>
         </Space>
       ),
     },
     {
-      title: 'Liters Dispensed',
-      dataIndex: 'litersDispensed',
-      key: 'litersDispensed',
-      sorter: (a, b) => a.litersDispensed - b.litersDispensed,
+      title: 'Dispensed',
+      dataIndex: 'quantityDispensed',
+      key: 'quantityDispensed',
+      sorter: (a, b) => a.quantityDispensed - b.quantityDispensed,
       align: 'right',
-      render: (v: number) => `${v.toLocaleString()} L`,
+      render: (v: number, record: PumpReport) => formatQuantity(v, record.unit),
     },
     {
       title: 'Expected Revenue',
@@ -229,7 +262,7 @@ export default function PumpsPage() {
       render: (v: number) => (
         <Text
           strong
-          className={Math.abs(v) > 0 ? '!text-red-500' : '!text-green-600'}
+          className={Math.abs(v) > 0 ? '!text-danger' : '!text-accent'}
         >
           {formatRWF(v)}
         </Text>
@@ -240,8 +273,9 @@ export default function PumpsPage() {
   const exportColumns = [
     { header: 'Date', key: 'date' },
     { header: 'Pump #', key: 'pumpNumber' },
-    { header: 'Fuel Type', key: 'fuelType' },
-    { header: 'Liters', key: 'litersDispensed' },
+    { header: 'Product', key: 'productType' },
+    { header: 'Quantity', key: 'quantityDispensed' },
+    { header: 'Unit', key: 'unit' },
     { header: 'Expected (RWF)', key: 'expectedRevenue' },
     { header: 'Recorded (RWF)', key: 'recordedRevenue' },
     { header: 'Discrepancy (RWF)', key: 'discrepancy' },
@@ -264,22 +298,68 @@ export default function PumpsPage() {
         </Space>
       </div>
 
-      <Modal title="Add Pump" open={addModalOpen} onCancel={() => { setAddModalOpen(false); form.resetFields(); }} footer={null} destroyOnClose>
+      <Modal
+        title="Add Pump or Charge Point"
+        open={addModalOpen}
+        onCancel={() => { setAddModalOpen(false); form.resetFields(); }}
+        footer={null}
+        destroyOnClose
+      >
         <Form form={form} layout="vertical" onFinish={handleAddPump}>
-          <Form.Item name="pumpNumber" label="Pump Number" rules={[{ required: true, type: 'number', min: 1 }]}>
+          <Form.Item name="pumpNumber" label="Number" rules={[{ required: true, type: 'number', min: 1 }]}>
             <InputNumber className="!w-full" placeholder="e.g. 1" min={1} />
           </Form.Item>
-          <Form.Item name="fuelType" label="Fuel Type" rules={[{ required: true }]} initialValue="GASOLINE">
+          <Form.Item name="productType" label="Product" rules={[{ required: true }]} initialValue="GASOLINE">
             <Select
               options={[
-                { value: 'GASOLINE', label: 'Gasoline' },
-                { value: 'DIESEL', label: 'Diesel' },
+                {
+                  label: 'Fuel',
+                  options: PRODUCT_TYPES.filter((p) => !isEvProductType(p)).map((p) => ({
+                    value: p,
+                    label: productLabel(p),
+                  })),
+                },
+                {
+                  label: 'EV Charging',
+                  options: PRODUCT_TYPES.filter(isEvProductType).map((p) => ({
+                    value: p,
+                    label: productLabel(p),
+                  })),
+                },
               ]}
             />
           </Form.Item>
+
+          {/* A charge point is identified by its connector and rated power. */}
+          <Form.Item noStyle shouldUpdate={(prev, next) => prev.productType !== next.productType}>
+            {({ getFieldValue }) =>
+              isEvProductType(getFieldValue('productType')) ? (
+                <>
+                  <Form.Item
+                    name="connectorType"
+                    label="Connector"
+                    rules={[{ required: true, message: 'Select the connector this charge point uses' }]}
+                  >
+                    <Select
+                      placeholder="e.g. CCS Combo"
+                      options={CONNECTOR_TYPES.map((c) => ({ value: c, label: connectorLabel(c) }))}
+                    />
+                  </Form.Item>
+                  <Form.Item
+                    name="powerKw"
+                    label="Rated Power (kW)"
+                    rules={[{ required: true, type: 'number', min: 0.1, message: 'Enter the rated output in kW' }]}
+                  >
+                    <InputNumber className="!w-full" placeholder="e.g. 60" min={0.1} step={1} />
+                  </Form.Item>
+                </>
+              ) : null
+            }
+          </Form.Item>
+
           <div className="flex justify-end gap-2">
             <Button onClick={() => setAddModalOpen(false)}>Cancel</Button>
-            <Button type="primary" htmlType="submit" loading={submitting}>Add Pump</Button>
+            <Button type="primary" htmlType="submit" loading={submitting}>Add</Button>
           </div>
         </Form>
       </Modal>
@@ -303,7 +383,9 @@ export default function PumpsPage() {
             className="w-44"
             options={pumps.map((p) => ({
               value: p.id,
-              label: `Pump #${p.pumpNumber} (${fuelTypeLabel(p.fuelType)})`,
+              label: isEvProductType(p.productType)
+                ? `#${p.pumpNumber} · ${productLabel(p.productType)} · ${connectorLabel(p.connectorType)} ${p.powerKw ?? 0}kW`
+                : `Pump #${p.pumpNumber} (${productLabel(p.productType)})`,
             }))}
           />
         </div>
@@ -320,7 +402,7 @@ export default function PumpsPage() {
           pagination={{ pageSize: 20, showTotal: (t) => `${t} records` }}
           size="middle"
           rowClassName={(record) =>
-            Math.abs(record.discrepancy) > 0 ? 'bg-red-50' : ''
+            Math.abs(record.discrepancy) > 0 ? 'bg-danger-tint' : ''
           }
         />
       </Card>

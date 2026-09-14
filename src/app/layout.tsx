@@ -1,66 +1,35 @@
-'use client';
-
+import type { Metadata } from 'next';
 import React from 'react';
-import { ConfigProvider } from 'antd';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { AuthBootstrap } from '@/components/AuthBootstrap';
+import { Providers } from '@/components/Providers';
+import { ThemeScript } from '@/components/ThemeScript';
+import { BUSINESS } from '@/lib/business';
 
+// Downloaded at build time and served from our origin: the browser never
+// contacts Google Fonts. See docs/data-and-tracking-audit.md.
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
-const theme = {
-  token: {
-    colorPrimary: '#F97316',
-    colorLink: '#F97316',
-    colorLinkHover: '#EA580C',
-    borderRadius: 10,
-    fontFamily: 'var(--font-inter), system-ui, -apple-system, sans-serif',
-    colorBgContainer: '#ffffff',
-    colorBorderSecondary: '#F1F5F9',
+export const metadata: Metadata = {
+  metadataBase: new URL(BUSINESS.siteUrl),
+  title: {
+    default: BUSINESS.productName,
+    template: `%s | ${BUSINESS.productName}`,
   },
-  components: {
-    Button: {
-      colorPrimary: '#F97316',
-      algorithm: true,
-      controlHeight: 40,
-      borderRadius: 10,
-    },
-    Menu: {
-      colorItemBgSelected: 'rgba(249,115,22,0.1)',
-      colorItemTextSelected: '#F97316',
-    },
-    Card: {
-      borderRadiusLG: 16,
-    },
-    Table: {
-      borderRadius: 12,
-      headerBg: '#F8FAFC',
-    },
-    Select: {
-      borderRadius: 10,
-    },
-    Input: {
-      borderRadius: 10,
-    },
-  },
+  description: 'Relai fuel and EV charging station management',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
+    // suppressHydrationWarning: ThemeScript sets data-theme and color-scheme on <html>
+    // before React hydrates, so the server markup differs here by design.
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
       <head>
-        <title>StationIQ</title>
-        <meta name="description" content="StationIQ fuel station management dashboard" />
+        <ThemeScript />
       </head>
-      <body className={`${inter.className} min-h-screen w-full m-0 p-0 overflow-x-hidden`} style={{ background: '#F8FAFC' }}>
-        <ConfigProvider theme={theme}>
-          <AuthBootstrap />
-          {children}
-        </ConfigProvider>
+      {/* Background comes from the token so it follows the theme. */}
+      <body className={`${inter.className} min-h-screen w-full m-0 p-0 overflow-x-hidden`}>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

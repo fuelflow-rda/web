@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Relai">
+  <title>Relai</title>
+  <rect width="64" height="64" rx="15" fill="#2E5E52"/>
+  <g transform="translate(8 8)"><g transform="rotate(-18 24 24)">
+    <path fill-rule="evenodd" fill="#FFFFFF" d="M24 4C24 4 38 20 38 29A14 14 0 0 1 10 29C10 20 24 4 24 4ZM26.4 16.5L17.6 30.5H22.2L21.6 40L30.4 26.5H25.6Z"/>
+  </g></g>
+</svg>

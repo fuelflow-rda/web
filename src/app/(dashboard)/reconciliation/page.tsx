@@ -26,7 +26,7 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs, { Dayjs } from 'dayjs';
 import api from '@/lib/api';
 import { formatRWF } from '@/lib/format';
-import { fuelTypeLabel, isGasolineFuelType } from '@/lib/fuel-type-labels';
+import { formatQuantity, productLabel, productTagColor, unitLabel } from '@/lib/product-types';
 import { useStationStore } from '@/store/station-store';
 import ExportButton from '@/components/ExportButton';
 import type {
@@ -102,18 +102,16 @@ export default function ReconciliationPage() {
       render: (_: unknown, record: PumpReconciliation) => (
         <Space>
           <Text strong>#{record.pumpNumber}</Text>
-          <Tag color={isGasolineFuelType(record.fuelType) ? 'orange' : 'blue'}>
-            {fuelTypeLabel(record.fuelType)}
-          </Tag>
+          <Tag color={productTagColor(record.productType)}>{productLabel(record.productType)}</Tag>
         </Space>
       ),
     },
     {
-      title: 'Liters',
-      dataIndex: 'litersDispensed',
-      key: 'litersDispensed',
+      title: 'Dispensed',
+      dataIndex: 'quantity',
+      key: 'quantity',
       align: 'right',
-      render: (v: number) => `${v.toLocaleString()} L`,
+      render: (v: number, record: PumpReconciliation) => formatQuantity(v, record.unit),
     },
     {
       title: 'Expected',
@@ -135,7 +133,7 @@ export default function ReconciliationPage() {
       key: 'difference',
       align: 'right',
       render: (v: number) => (
-        <Text strong className={v !== 0 ? '!text-red-500' : '!text-green-600'}>
+        <Text strong className={v !== 0 ? '!text-danger' : '!text-accent'}>
           {formatRWF(v)}
         </Text>
       ),
@@ -160,7 +158,7 @@ export default function ReconciliationPage() {
       key: 'attendantName',
       render: (name: string) => (
         <Space>
-          <UserOutlined className="text-slate-400" />
+          <UserOutlined className="text-ink-muted" />
           <Text strong>{name}</Text>
         </Space>
       ),
@@ -172,11 +170,19 @@ export default function ReconciliationPage() {
       align: 'right',
     },
     {
-      title: 'Liters',
-      dataIndex: 'liters',
+      title: 'Dispensed',
       key: 'liters',
       align: 'right',
-      render: (v: number) => `${Number(v).toLocaleString()} L`,
+      render: (_: unknown, record: AttendantReconciliation) => (
+        <div className="leading-tight">
+          <div>{Number(record.liters).toLocaleString()} L</div>
+          {record.kwh > 0 && (
+            <div className="text-xs text-accent font-semibold">
+              {Number(record.kwh).toLocaleString()} kWh
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       title: 'Revenue',
@@ -210,8 +216,9 @@ export default function ReconciliationPage() {
   ];
 
   const exportPumpData = (report?.pumpBreakdown || []).map((p) => ({
-    pump: `#${p.pumpNumber} (${p.fuelType})`,
-    litersDispensed: p.litersDispensed,
+    pump: `#${p.pumpNumber} (${productLabel(p.productType)})`,
+    quantity: p.quantity,
+    unit: unitLabel(p.unit),
     expectedRevenue: p.expectedRevenue,
     recordedRevenue: p.recordedRevenue,
     difference: p.difference,
@@ -220,7 +227,8 @@ export default function ReconciliationPage() {
 
   const exportPumpColumns = [
     { header: 'Pump', key: 'pump' },
-    { header: 'Liters', key: 'litersDispensed' },
+    { header: 'Quantity', key: 'quantity' },
+    { header: 'Unit', key: 'unit' },
     { header: 'Expected (RWF)', key: 'expectedRevenue' },
     { header: 'Recorded (RWF)', key: 'recordedRevenue' },
     { header: 'Difference (RWF)', key: 'difference' },
@@ -231,8 +239,9 @@ export default function ReconciliationPage() {
   const exportData = [
     ...(report?.pumpBreakdown || []).map((p) => ({
       section: 'Pump',
-      label: `#${p.pumpNumber} (${p.fuelType})`,
-      litersDispensed: p.litersDispensed,
+      label: `#${p.pumpNumber} (${productLabel(p.productType)})`,
+      quantity: p.quantity,
+      unit: unitLabel(p.unit),
       expectedRevenue: p.expectedRevenue,
       recordedRevenue: p.recordedRevenue,
       difference: p.difference,
@@ -243,6 +252,7 @@ export default function ReconciliationPage() {
       label: a.attendantName,
       transactionCount: a.transactionCount,
       liters: a.liters,
+      kwh: a.kwh,
       revenue: a.revenue,
     })),
   ];
@@ -255,7 +265,7 @@ export default function ReconciliationPage() {
           <Text type="secondary">End of day revenue reconciliation · Select a date, then generate</Text>
         </div>
         <Space wrap align="center">
-          <span className="text-slate-500 text-sm font-medium flex items-center gap-1.5">
+          <span className="text-ink-secondary text-sm font-medium flex items-center gap-1.5">
             <CalendarOutlined />
             Report date
           </span>
@@ -282,7 +292,9 @@ export default function ReconciliationPage() {
                     { header: 'Label', key: 'label' },
                     { header: 'Transactions', key: 'transactionCount' },
                     { header: 'Liters', key: 'liters' },
-                    { header: 'Liters dispensed', key: 'litersDispensed' },
+                    { header: 'kWh', key: 'kwh' },
+                    { header: 'Quantity', key: 'quantity' },
+                    { header: 'Unit', key: 'unit' },
                     { header: 'Revenue (RWF)', key: 'revenue' },
                     { header: 'Expected (RWF)', key: 'expectedRevenue' },
                     { header: 'Recorded (RWF)', key: 'recordedRevenue' },
@@ -302,9 +314,9 @@ export default function ReconciliationPage() {
         </div>
       ) : report ? (
         <>
-          <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-            <CalendarOutlined className="text-slate-400" />
-            <Text strong className="text-slate-600">
+          <div className="flex items-center gap-2 pb-2 border-b border-line-subtle">
+            <CalendarOutlined className="text-ink-muted" />
+            <Text strong className="text-ink-secondary">
               Report for {reportDateLabel}
             </Text>
           </div>
@@ -316,7 +328,7 @@ export default function ReconciliationPage() {
                   title="Expected Revenue"
                   value={report.expectedRevenue}
                   prefix="RWF"
-                  valueStyle={{ color: '#3B82F6' }}
+                  valueStyle={{ color: 'var(--ink-secondary)' }}
                 />
               </Card>
             </Col>
@@ -326,7 +338,7 @@ export default function ReconciliationPage() {
                   title="Recorded Revenue"
                   value={report.recordedRevenue}
                   prefix="RWF"
-                  valueStyle={{ color: '#10B981' }}
+                  valueStyle={{ color: 'var(--accent)' }}
                 />
               </Card>
             </Col>
@@ -338,7 +350,7 @@ export default function ReconciliationPage() {
                     value={report.difference}
                     prefix="RWF"
                     valueStyle={{
-                      color: report.status === 'BALANCED' ? '#10B981' : '#F97316',
+                      color: report.status === 'BALANCED' ? 'var(--accent)' : 'var(--warn)',
                     }}
                   />
                   {report.status === 'BALANCED' ? (
@@ -382,7 +394,7 @@ export default function ReconciliationPage() {
               pagination={false}
               size="middle"
               rowClassName={(record) =>
-                record.status === 'DISCREPANCY' ? 'bg-orange-50' : ''
+                record.status === 'DISCREPANCY' ? 'bg-warn-tint' : ''
               }
             />
           </Card>
@@ -399,7 +411,7 @@ export default function ReconciliationPage() {
         </>
       ) : (
         <Card className="!rounded-xl text-center py-12">
-          <FileTextOutlined className="text-5xl text-gray-300 mb-4" />
+          <FileTextOutlined className="text-5xl text-ink-disabled mb-4" />
           <Title level={4} type="secondary">No Report Found</Title>
           <Text type="secondary">
             No reconciliation report for {selectedDate.format('MMMM D, YYYY')}.

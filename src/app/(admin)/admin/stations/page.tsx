@@ -198,7 +198,7 @@ export default function AdminStationsPage() {
       key: 'name',
       render: (_: unknown, record: Station) => (
         <Space>
-          <BankOutlined className="text-fuel-orange" />
+          <BankOutlined className="text-accent" />
           <div>
             <Text strong>{record.name}</Text>
             <br />
@@ -350,7 +350,7 @@ export default function AdminStationsPage() {
             </Form.Item>
           )}
           <Form.Item name="name" label="Station Name" rules={[{ required: true }]}>
-            <Input placeholder="e.g. StationIQ Kigali Central" />
+            <Input placeholder="e.g. Relai Kigali Central" />
           </Form.Item>
           <Form.Item name="location" label="Location" rules={[{ required: true }]}>
             <Input placeholder="e.g. Kigali, Nyarugenge" />

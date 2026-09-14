@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useState, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Table,
   Card,
@@ -15,18 +15,18 @@ import {
   Select,
   Switch,
   message,
-  Avatar,
   Popconfirm,
   Tooltip,
+  Alert,
 } from 'antd';
 import type { TablePaginationConfig } from 'antd/es/table';
 import {
   PlusOutlined,
   EditOutlined,
-  UserOutlined,
   StopOutlined,
   CheckCircleOutlined,
   EyeOutlined,
+  KeyOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -34,13 +34,15 @@ import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth-store';
 import { useStationStore } from '@/store/station-store';
 import type { User, Station } from '@/types';
+import { InitialsAvatar } from '@/components/InitialsAvatar';
 
 const { Title, Text } = Typography;
 
-const roleColors: Record<string, string> = {
-  ADMIN: 'red',
-  MANAGER: 'orange',
-  ATTENDANT: 'blue',
+/* Plain words, not codes: the role column is read far more often than filtered. */
+const roleLabels: Record<string, string> = {
+  ADMIN: 'Company admin',
+  MANAGER: 'Station manager',
+  ATTENDANT: 'Attendant',
 };
 
 const API_ROLE_TO_UI: Record<string, User['role']> = { company_admin: 'ADMIN', station_manager: 'MANAGER', attendant: 'ATTENDANT' };
@@ -91,13 +93,18 @@ function mapStationFromApi(raw: Record<string, unknown>): Station {
   };
 }
 
-export default function AdminUsersPage() {
+function AdminUsersPageInner() {
   const router = useRouter();
   const authUser = useAuthStore((s) => s.user);
   const setCurrentStationById = useStationStore((s) => s.setCurrentStationById);
   const isSuperAdmin = authUser?.role === 'SUPERADMIN';
   const [companies, setCompanies] = useState<{ id: string; name: string }[]>([]);
-  const [companyFilter, setCompanyFilter] = useState<string | undefined>();
+  const searchParams = useSearchParams();
+  // Deep link target for "Admins" on the Companies page, so that button can land
+  // here already narrowed instead of dropping the superadmin into every user.
+  const [companyFilter, setCompanyFilter] = useState<string | undefined>(
+    () => searchParams.get('company_id') ?? undefined,
+  );
   const [users, setUsers] = useState<User[]>([]);
   const [stations, setStations] = useState<Station[]>([]);
   const [loading, setLoading] = useState(false);
@@ -106,7 +113,12 @@ export default function AdminUsersPage() {
   const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm();
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string | undefined>();
+  const [roleFilter, setRoleFilter] = useState<string | undefined>(
+    () => searchParams.get('role') ?? undefined,
+  );
+  const [resetUser, setResetUser] = useState<User | null>(null);
+  const [resetForm] = Form.useForm();
+  const [issuedPassword, setIssuedPassword] = useState<string | null>(null);
   const [stationFilter, setStationFilter] = useState<string | undefined>();
   const [sortBy, setSortBy] = useState('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -200,6 +212,9 @@ export default function AdminUsersPage() {
       role: user.role,
       stationId: user.stationId,
       isActive: user.isActive,
+      // Company is required whenever an admin is in the form. Leaving it unset
+      // made every edit fail validation on a field the update never sends.
+      companyId: user.companyId,
     });
     setModalOpen(true);
   };
@@ -214,6 +229,8 @@ export default function AdminUsersPage() {
           phone: values.phone,
           pin: values.pin,
           is_active: values.isActive,
+          // Attendants have no email; sending one back would be rejected outright.
+          ...(editingUser.role === 'ATTENDANT' ? {} : { email: values.email }),
         });
         message.success('User updated');
       } else {
@@ -278,6 +295,47 @@ export default function AdminUsersPage() {
     router.push('/dashboard');
   };
 
+  const openReset = (user: User) => {
+    setResetUser(user);
+    setIssuedPassword(null);
+    resetForm.resetFields();
+    resetForm.setFieldsValue({ sendEmail: false });
+  };
+
+  const handleReset = async (values: { password?: string; sendEmail?: boolean }) => {
+    if (!resetUser) return;
+    setSubmitting(true);
+    try {
+      const res = await api.post(`/users/${resetUser.id}/reset-password`, {
+        ...(values.password?.trim() ? { password: values.password.trim() } : {}),
+        send_email: !!values.sendEmail,
+      });
+      const data = res.data as { emailSent?: boolean; temporary_password?: string };
+      if (data.emailSent) {
+        message.success(`New password emailed to ${resetUser.email}`);
+        setResetUser(null);
+      } else if (data.temporary_password) {
+        // Held on screen rather than dropped into a toast: this is the only time
+        // the password is visible, and whoever ran the reset has to pass it on.
+        setIssuedPassword(data.temporary_password);
+      } else {
+        message.success('Password updated');
+        setResetUser(null);
+      }
+    } catch (err: unknown) {
+      const msg =
+        err && typeof err === 'object' && 'response' in err
+          ? String(
+              (err as { response?: { data?: { message?: string } } }).response?.data?.message ??
+                'Failed to reset password',
+            )
+          : 'Failed to reset password';
+      message.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const toggleActive = async (user: User) => {
     try {
       await api.patch(`/users/${user.id}`, { is_active: !user.isActive });
@@ -293,14 +351,15 @@ export default function AdminUsersPage() {
       title: 'User',
       key: 'user',
       render: (_: unknown, record: User) => (
-        <Space>
-          <Avatar className="!bg-fuel-orange" icon={<UserOutlined />} />
-          <div>
-            <Text strong>{record.name}</Text>
-            <br />
-            <Text type="secondary" className="text-xs">{record.email}</Text>
+        <div className="flex items-center gap-3">
+          <InitialsAvatar name={record.name} />
+          <div className="min-w-0">
+            <Text strong className="block truncate">{record.name}</Text>
+            <Text type="secondary" className="text-xs block truncate">
+              {record.email || record.phone || 'No contact details'}
+            </Text>
           </div>
-        </Space>
+        </div>
       ),
     },
     ...(isSuperAdmin
@@ -309,8 +368,13 @@ export default function AdminUsersPage() {
             title: 'Company',
             dataIndex: 'companyName',
             key: 'companyName',
-            width: 160,
-            render: (name: string | undefined) => name || '—',
+            width: 180,
+            render: (name: string | undefined) =>
+              name ? (
+                <span className="whitespace-nowrap">{name}</span>
+              ) : (
+                <Text type="secondary">Not assigned</Text>
+              ),
           } as const,
         ]
       : []),
@@ -318,37 +382,52 @@ export default function AdminUsersPage() {
       title: 'Role',
       dataIndex: 'role',
       key: 'role',
-      render: (role: string) => <Tag color={roleColors[role]}>{role}</Tag>,
+      width: 160,
+      render: (role: string) => <Tag>{roleLabels[role] ?? role}</Tag>,
     },
     {
       title: 'Station',
       key: 'station',
-      render: (_: unknown, record: User) => record.station?.name || 'N/A',
+      render: (_: unknown, record: User) =>
+        record.station?.name || (
+          <Text type="secondary">{record.role === 'ADMIN' ? 'All stations' : 'Not assigned'}</Text>
+        ),
     },
     {
       title: 'Phone',
       dataIndex: 'phone',
       key: 'phone',
-      render: (v: string) => v || 'N/A',
+      width: 160,
+      render: (v: string) => v || <Text type="secondary">Not set</Text>,
     },
     {
       title: 'Status',
       dataIndex: 'isActive',
       key: 'isActive',
+      width: 120,
       render: (active: boolean) => (
-        <Tag color={active ? 'green' : 'default'}>{active ? 'Active' : 'Inactive'}</Tag>
+        <span className="inline-flex items-center gap-2 text-sm">
+          <span
+            aria-hidden="true"
+            className={`w-2 h-2 rounded-full ${active ? 'bg-accent' : 'bg-ink-disabled'}`}
+          />
+          {active ? 'Active' : 'Inactive'}
+        </span>
       ),
     },
     {
       title: 'Joined',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: (d: string) => dayjs(d).format('MMM D, YYYY'),
+      width: 130,
+      render: (d: string) => (
+        <span className="whitespace-nowrap">{d ? dayjs(d).format('D MMM YYYY') : ''}</span>
+      ),
     },
     {
       title: 'Actions',
       key: 'actions',
-      width: isSuperAdmin ? 160 : 200,
+      width: isSuperAdmin ? 200 : 240,
       render: (_: unknown, record: User) => (
         <Space>
           {record.role === 'MANAGER' && (
@@ -358,7 +437,14 @@ export default function AdminUsersPage() {
               </Button>
             </Tooltip>
           )}
-          <Button type="text" icon={<EditOutlined />} onClick={() => openEdit(record)} />
+          <Tooltip title="Edit">
+            <Button type="text" icon={<EditOutlined />} aria-label="Edit user" onClick={() => openEdit(record)} />
+          </Tooltip>
+          {record.role !== 'ATTENDANT' && (
+            <Tooltip title="Set a new sign-in password">
+              <Button type="text" icon={<KeyOutlined />} aria-label="Reset password" onClick={() => openReset(record)} />
+            </Tooltip>
+          )}
           <Popconfirm
             title={`${record.isActive ? 'Deactivate' : 'Activate'} this user?`}
             onConfirm={() => toggleActive(record)}
@@ -367,6 +453,7 @@ export default function AdminUsersPage() {
               type="text"
               icon={record.isActive ? <StopOutlined /> : <CheckCircleOutlined />}
               danger={record.isActive}
+              aria-label={record.isActive ? 'Deactivate user' : 'Activate user'}
             />
           </Popconfirm>
         </Space>
@@ -396,68 +483,79 @@ export default function AdminUsersPage() {
       </div>
 
       <Card className="!rounded-xl">
-        <div className="flex flex-wrap gap-3 mb-4">
+        <div className="flex flex-wrap items-center gap-3 mb-4">
           <Input.Search
-            placeholder="Search name, email, phone"
+            placeholder="Search name, email or phone"
             allowClear
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onSearch={() => setPage(1)}
-            className="max-w-xs"
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            className="w-full sm:w-72"
           />
           <Select
-            placeholder="Role"
+            placeholder="All roles"
             allowClear
             value={roleFilter}
             onChange={(v) => { setRoleFilter(v); setPage(1); }}
             options={[
-              { value: 'ADMIN', label: 'Admin' },
-              { value: 'MANAGER', label: 'Manager' },
-              { value: 'ATTENDANT', label: 'Attendant' },
+              { value: 'ADMIN', label: 'Company admins' },
+              { value: 'MANAGER', label: 'Station managers' },
+              { value: 'ATTENDANT', label: 'Attendants' },
             ]}
-            className="w-36"
+            className="w-44"
           />
           {isSuperAdmin && (
             <Select
-              placeholder="Company"
+              placeholder="All companies"
               allowClear
               showSearch
               optionFilterProp="label"
               value={companyFilter}
-              onChange={(v) => { setCompanyFilter(v); setPage(1); }}
+              onChange={(v) => { setCompanyFilter(v); setStationFilter(undefined); setPage(1); }}
               options={companies.map((c) => ({ value: c.id, label: c.name }))}
-              className="min-w-[200px]"
+              className="w-52"
             />
           )}
           <Select
-            placeholder="Station"
+            placeholder="All stations"
             allowClear
+            showSearch
+            optionFilterProp="label"
             value={stationFilter}
             onChange={(v) => { setStationFilter(v); setPage(1); }}
             options={stations.map((s) => ({ value: s.id, label: s.name }))}
             className="w-48"
           />
           <Select
-            value={sortBy}
-            onChange={(v) => { setSortBy(v); setPage(1); }}
+            value={`${sortBy}:${sortOrder}`}
+            onChange={(v: string) => {
+              const [by, order] = v.split(':');
+              setSortBy(by);
+              setSortOrder(order as 'asc' | 'desc');
+              setPage(1);
+            }}
             options={[
-              { value: 'created_at', label: 'Date' },
-              { value: 'name', label: 'Name' },
-              { value: 'email', label: 'Email' },
-              { value: 'role', label: 'Role' },
+              { value: 'created_at:desc', label: 'Newest first' },
+              { value: 'created_at:asc', label: 'Oldest first' },
+              { value: 'name:asc', label: 'Name, A to Z' },
+              { value: 'name:desc', label: 'Name, Z to A' },
+              { value: 'role:asc', label: 'By role' },
             ]}
-            className="w-32"
+            className="w-40"
           />
-          <Select
-            value={sortOrder}
-            onChange={(v) => { setSortOrder(v as 'asc' | 'desc'); setPage(1); }}
-            options={[
-              { value: 'desc', label: 'Desc' },
-              { value: 'asc', label: 'Asc' },
-            ]}
-            className="w-24"
-          />
-          <Button onClick={() => fetchData()}>Apply</Button>
+          {(search || roleFilter || stationFilter || (isSuperAdmin && companyFilter)) && (
+            <Button
+              type="link"
+              onClick={() => {
+                setSearch('');
+                setRoleFilter(undefined);
+                setStationFilter(undefined);
+                if (isSuperAdmin) setCompanyFilter(undefined);
+                setPage(1);
+              }}
+            >
+              Clear filters
+            </Button>
+          )}
         </div>
         <Table
           columns={columns}
@@ -473,6 +571,7 @@ export default function AdminUsersPage() {
           }}
           onChange={handleTableChange}
           size="middle"
+          locale={{ emptyText: 'No users match these filters.' }}
         />
       </Card>
 
@@ -503,6 +602,9 @@ export default function AdminUsersPage() {
                     placeholder="Select company"
                     showSearch
                     optionFilterProp="label"
+                    /* Fixed once the account exists: update has no path for moving
+                       an admin to another company. */
+                    disabled={!!editingUser}
                     options={companies.map((c) => ({ value: c.id, label: c.name }))}
                   />
                 </Form.Item>
@@ -584,6 +686,85 @@ export default function AdminUsersPage() {
           </div>
         </Form>
       </Modal>
+
+      <Modal
+        open={!!resetUser}
+        title={`Reset password — ${resetUser?.name ?? ''}`}
+        onCancel={() => setResetUser(null)}
+        footer={
+          issuedPassword
+            ? [
+                <Button key="done" type="primary" onClick={() => setResetUser(null)}>
+                  Done
+                </Button>,
+              ]
+            : null
+        }
+        destroyOnClose
+      >
+        {issuedPassword ? (
+          <Alert
+            type="success"
+            showIcon
+            message="Password updated"
+            description={
+              <div className="space-y-2">
+                <div>
+                  Give this to <strong>{resetUser?.name}</strong>. It is shown once and
+                  cannot be retrieved later.
+                </div>
+                <Input.TextArea
+                  readOnly
+                  autoSize
+                  value={issuedPassword}
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="!font-mono"
+                />
+              </div>
+            }
+          />
+        ) : (
+          <Form form={resetForm} layout="vertical" onFinish={handleReset}>
+            <Text type="secondary" className="block mb-4">
+              Signs in as {resetUser?.email}. Their current password stops working
+              immediately.
+            </Text>
+            <Form.Item
+              name="password"
+              label="New password"
+              extra="Leave blank to generate a strong one."
+              rules={[{ min: 8, message: 'At least 8 characters' }]}
+            >
+              <Input.Password placeholder="Generate automatically" autoComplete="new-password" />
+            </Form.Item>
+            <Form.Item name="sendEmail" label="Email it to them" valuePropName="checked">
+              <Switch />
+            </Form.Item>
+            <Text type="secondary" className="block mb-4 text-xs">
+              Emailing requires RESEND_API_KEY and MAIL_FROM on the API. Left off, the
+              password is shown here for you to pass on.
+            </Text>
+            <div className="flex justify-end gap-2">
+              <Button onClick={() => setResetUser(null)}>Cancel</Button>
+              <Button type="primary" htmlType="submit" loading={submitting} danger>
+                Reset password
+              </Button>
+            </div>
+          </Form>
+        )}
+      </Modal>
     </div>
+  );
+}
+
+/**
+ * `useSearchParams` opts the tree into client-side rendering, and Next needs the
+ * boundary spelled out or the static build of this route fails.
+ */
+export default function AdminUsersPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminUsersPageInner />
+    </Suspense>
   );
 }

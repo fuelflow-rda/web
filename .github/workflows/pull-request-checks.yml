@@ -1,6 +1,6 @@
 # Validate PRs: lint, test, build, Docker image build (no push).
-# Image: kayiganwa/stationiq_web
-name: StationIQ Web — Pull Request Checks
+# Image: kayiganwa/relai_web
+name: Relai Web — Pull Request Checks
 on:
   pull_request:
     branches: [main, develop]
@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DOCKERHUB_IMAGE: kayiganwa/stationiq_web
+  DOCKERHUB_IMAGE: kayiganwa/relai_web
 
 jobs:
   validate:

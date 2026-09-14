@@ -13,9 +13,9 @@ export function formatNumber(n: number): string {
 }
 
 export function fuelTypeColor(type: string): string {
-  return isGasolineFuelType(type) ? '#F97316' : '#3B82F6';
+  return isGasolineFuelType(type) ? 'var(--product-gasoline)' : 'var(--product-diesel)';
 }
 
 export function fuelTypeBg(type: string): string {
-  return isGasolineFuelType(type) ? '#FFF7ED' : '#EFF6FF';
+  return isGasolineFuelType(type) ? 'var(--warn-tint)' : 'var(--surface-muted)';
 }

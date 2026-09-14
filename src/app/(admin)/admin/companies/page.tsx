@@ -1,60 +1,69 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import {
-  Table,
-  Card,
-  Button,
-  Typography,
-  Space,
-  Modal,
-  Form,
-  Input,
-  message,
-  Popconfirm,
-  Tag,
-  Switch,
-} from 'antd';
+import { useRouter } from 'next/navigation';
+import { Table, Card, Button, Typography, Modal, Form, Input, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import {
-  PlusOutlined,
-  TeamOutlined,
-  BankOutlined,
-  GlobalOutlined,
-} from '@ant-design/icons';
+import { PlusOutlined, RightOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import api from '@/lib/api';
 import type { Company } from '@/types';
+import { InitialsAvatar } from '@/components/InitialsAvatar';
 
 const { Title, Text } = Typography;
 
+type CompanyRow = Company & { stationCount: number; adminCount: number };
+
 export default function AdminCompaniesPage() {
-  const [companies, setCompanies] = useState<Company[]>([]);
+  const router = useRouter();
+  const [rows, setRows] = useState<CompanyRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteCompany, setInviteCompany] = useState<Company | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [createForm] = Form.useForm();
-  const [inviteForm] = Form.useForm();
 
   const fetchCompanies = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get('/companies');
-      const raw = Array.isArray(res.data) ? res.data : [];
-      setCompanies(
+      // Three list calls instead of one per company: counts are derived here.
+      const [companiesRes, stationsRes, adminsRes] = await Promise.all([
+        api.get('/companies'),
+        api.get('/stations', { params: { limit: 500 } }),
+        api.get('/users', { params: { role: 'company_admin', limit: 100 } }),
+      ]);
+
+      const stationsRaw =
+        (stationsRes.data as { data?: unknown[] })?.data ??
+        (Array.isArray(stationsRes.data) ? stationsRes.data : []);
+      const adminsRaw =
+        (adminsRes.data as { data?: unknown[] })?.data ??
+        (Array.isArray(adminsRes.data) ? adminsRes.data : []);
+
+      const stationCounts = new Map<string, number>();
+      for (const s of stationsRaw as Array<Record<string, unknown>>) {
+        const cid = s.company_id as string;
+        stationCounts.set(cid, (stationCounts.get(cid) ?? 0) + 1);
+      }
+      const adminCounts = new Map<string, number>();
+      for (const u of adminsRaw as Array<Record<string, unknown>>) {
+        const cid = u.company_id as string;
+        adminCounts.set(cid, (adminCounts.get(cid) ?? 0) + 1);
+      }
+
+      const raw = Array.isArray(companiesRes.data) ? companiesRes.data : [];
+      setRows(
         raw.map((c: Record<string, unknown>) => ({
           id: c.id as string,
           name: (c.name as string) ?? '',
-          country: (c.country as string) ?? undefined,
           createdAt: (c.created_at as string) ?? '',
           updatedAt: (c.updated_at as string) ?? '',
+          stationCount: stationCounts.get(c.id as string) ?? 0,
+          adminCount: adminCounts.get(c.id as string) ?? 0,
         })),
       );
     } catch {
       message.error('Failed to load companies');
-      setCompanies([]);
+      setRows([]);
     } finally {
       setLoading(false);
     }
@@ -67,151 +76,66 @@ export default function AdminCompaniesPage() {
   const handleCreate = async (values: { name: string }) => {
     setSubmitting(true);
     try {
-      await api.post('/companies', {
-        name: values.name.trim(),
-        country: 'RW',
-      });
+      const res = await api.post('/companies', { name: values.name.trim(), country: 'RW' });
       message.success('Company created');
       setCreateOpen(false);
       createForm.resetFields();
-      fetchCompanies();
+      const id = (res.data as { id?: string })?.id;
+      // Straight to the new company so the first admin can be added at once.
+      if (id) router.push(`/admin/companies/${id}`);
+      else fetchCompanies();
     } catch (err: unknown) {
-      const msg =
-        err && typeof err === 'object' && 'response' in err
-          ? String((err as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'Failed')
-          : 'Failed to create company';
+      const msg = err instanceof Error ? err.message : 'Failed to create company';
       message.error(msg);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const openInvite = (company: Company) => {
-    setInviteCompany(company);
-    inviteForm.resetFields();
-    inviteForm.setFieldsValue({
-      send_invite_email: true,
-    });
-    setInviteOpen(true);
-  };
-
-  const handleInvite = async (values: {
-    name: string;
-    email: string;
-    password?: string;
-    send_invite_email: boolean;
-  }) => {
-    if (!inviteCompany) return;
-    setSubmitting(true);
-    try {
-      const body: Record<string, unknown> = {
-        company_id: inviteCompany.id,
-        name: values.name.trim(),
-        email: values.email.trim(),
-        send_invite_email: values.send_invite_email,
-      };
-      if (values.password?.trim()) body.password = values.password.trim();
-
-      const res = await api.post('/users/company-admins', body);
-      const data = res.data as {
-        emailSent?: boolean;
-        temporary_password?: string;
-      };
-
-      if (data.temporary_password) {
-        Modal.success({
-          title: data.emailSent === false && values.send_invite_email ? 'Admin created (email not sent)' : 'Admin created',
-          width: 520,
-          content: (
-            <div className="space-y-2 text-left">
-              <p>Copy this temporary password now. It will not be shown again.</p>
-              <Input readOnly value={data.temporary_password} className="font-mono" />
-              {values.send_invite_email && !data.emailSent && (
-                <p className="text-amber-700 text-sm">
-                  Email was not sent. Configure RESEND_API_KEY and MAIL_FROM on the API, or share the password manually.
-                </p>
-              )}
-            </div>
-          ),
-        });
-      } else {
-        message.success('Company admin created. Check their inbox for login details.');
-      }
-      setInviteOpen(false);
-      inviteForm.resetFields();
-      setInviteCompany(null);
-      fetchCompanies();
-    } catch (err: unknown) {
-      const msg =
-        err && typeof err === 'object' && 'response' in err
-          ? String((err as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'Failed')
-          : 'Failed to create admin';
-      message.error(msg);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await api.delete(`/companies/${id}`);
-      message.success('Company deleted');
-      fetchCompanies();
-    } catch {
-      message.error('Failed to delete company (remove stations and users first if constrained)');
-    }
-  };
-
-  const columns: ColumnsType<Company> = [
+  const columns: ColumnsType<CompanyRow> = [
     {
       title: 'Company',
       key: 'name',
-      render: (_: unknown, record: Company) => (
-        <Space>
-          <BankOutlined className="text-fuel-orange" />
-          <div>
-            <Text strong>{record.name}</Text>
-            {record.country && (
-              <>
-                <br />
-                <Text type="secondary" className="text-xs">
-                  <GlobalOutlined /> {record.country}
-                </Text>
-              </>
-            )}
-          </div>
-        </Space>
+      render: (_: unknown, record) => (
+        <div className="flex items-center gap-3">
+          <InitialsAvatar name={record.name} square />
+          <Text strong>{record.name}</Text>
+        </div>
       ),
+    },
+    {
+      title: 'Stations',
+      dataIndex: 'stationCount',
+      key: 'stationCount',
+      width: 130,
+      align: 'right',
+      render: (n: number) => (n === 0 ? <Text type="secondary">0</Text> : n),
+    },
+    {
+      title: 'Administrators',
+      dataIndex: 'adminCount',
+      key: 'adminCount',
+      width: 150,
+      align: 'right',
+      render: (n: number) =>
+        n === 0 ? (
+          <Text className="!text-warn font-medium">None yet</Text>
+        ) : (
+          n
+        ),
     },
     {
       title: 'Created',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 140,
-      render: (d: string) => (d ? dayjs(d).format('MMM D, YYYY') : '—'),
+      width: 150,
+      render: (d: string) => (d ? dayjs(d).format('D MMM YYYY') : ''),
     },
     {
-      title: 'Actions',
-      key: 'actions',
-      width: 220,
-      render: (_: unknown, record: Company) => (
-        <Space>
-          <Button type="link" icon={<TeamOutlined />} onClick={() => openInvite(record)}>
-            Add admin
-          </Button>
-          <Popconfirm
-            title="Delete this company?"
-            description="This may fail if stations or users still exist."
-            onConfirm={() => handleDelete(record.id)}
-            okText="Delete"
-            okButtonProps={{ danger: true }}
-          >
-            <Button type="link" danger size="small">
-              Delete
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
+      key: 'open',
+      width: 56,
+      align: 'right',
+      render: () => <RightOutlined className="text-ink-muted" aria-hidden="true" />,
     },
   ];
 
@@ -222,27 +146,36 @@ export default function AdminCompaniesPage() {
           <Title level={3} className="!mb-0">
             Companies
           </Title>
-          <Text type="secondary">Create tenants, then invite a company admin by email</Text>
+          <Text type="secondary">
+            Each company is a tenant with its own stations, administrators and staff. Open one to
+            manage its admins.
+          </Text>
         </div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => { createForm.resetFields(); setCreateOpen(true); }}>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => {
+            createForm.resetFields();
+            setCreateOpen(true);
+          }}
+        >
           New company
         </Button>
       </div>
 
-      <Card className="!rounded-xl">
-        <div className="mb-3">
-          <Tag color="blue">Superadmin</Tag>
-          <Text type="secondary" className="ml-2">
-            Admins receive credentials by email when Resend is configured on the API.
-          </Text>
-        </div>
+      <Card className="!rounded-xl" styles={{ body: { padding: 0 } }}>
         <Table
           columns={columns}
-          dataSource={companies}
+          dataSource={rows}
           rowKey="id"
           loading={loading}
-          pagination={{ pageSize: 20, showTotal: (t) => `${t} companies` }}
+          pagination={rows.length > 20 ? { pageSize: 20, showTotal: (t) => `${t} companies` } : false}
           size="middle"
+          rowClassName="cursor-pointer"
+          onRow={(record) => ({
+            onClick: () => router.push(`/admin/companies/${record.id}`),
+          })}
+          locale={{ emptyText: 'No companies yet. Create the first one to get started.' }}
         />
       </Card>
 
@@ -254,53 +187,20 @@ export default function AdminCompaniesPage() {
         destroyOnClose
       >
         <Form form={createForm} layout="vertical" onFinish={handleCreate}>
-          <Form.Item name="name" label="Company name" rules={[{ required: true }]}>
-            <Input placeholder="e.g. StationIQ Rwanda Ltd" />
+          <Form.Item
+            name="name"
+            label="Company name"
+            rules={[{ required: true, message: 'Enter the company name' }]}
+          >
+            <Input placeholder="e.g. Rubis Rwanda" autoFocus />
           </Form.Item>
+          <Text type="secondary" className="block mb-4 text-sm">
+            You will be taken to the company page next, where you can add its first administrator.
+          </Text>
           <div className="flex justify-end gap-2">
             <Button onClick={() => setCreateOpen(false)}>Cancel</Button>
             <Button type="primary" htmlType="submit" loading={submitting}>
-              Create
-            </Button>
-          </div>
-        </Form>
-      </Modal>
-
-      <Modal
-        title={inviteCompany ? `Invite company admin — ${inviteCompany.name}` : 'Invite company admin'}
-        open={inviteOpen}
-        onCancel={() => { setInviteOpen(false); setInviteCompany(null); }}
-        footer={null}
-        destroyOnClose
-        width={480}
-      >
-        <Form form={inviteForm} layout="vertical" onFinish={handleInvite}>
-          <Form.Item name="name" label="Full name" rules={[{ required: true }]}>
-            <Input placeholder="Admin name" />
-          </Form.Item>
-          <Form.Item name="email" label="Work email" rules={[{ required: true, type: 'email' }]}>
-            <Input placeholder="admin@company.com" />
-          </Form.Item>
-          <Form.Item
-            name="password"
-            label="Password (optional)"
-            tooltip="Leave blank to auto-generate a strong password."
-          >
-            <Input.Password placeholder="Min. 8 characters, or leave empty" />
-          </Form.Item>
-          <Form.Item
-            name="send_invite_email"
-            label="Send credentials by email"
-            valuePropName="checked"
-            initialValue={true}
-            extra="Requires RESEND_API_KEY, MAIL_FROM, and WEB_APP_LOGIN_URL on the API."
-          >
-            <Switch />
-          </Form.Item>
-          <div className="flex justify-end gap-2">
-            <Button onClick={() => { setInviteOpen(false); setInviteCompany(null); }}>Cancel</Button>
-            <Button type="primary" htmlType="submit" loading={submitting}>
-              Create admin
+              Create company
             </Button>
           </div>
         </Form>

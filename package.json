@@ -1,5 +1,5 @@
 {
-  "name": "stationiq-web",
+  "name": "relai-web",
   "version": "0.4.0",
   "packageManager": "pnpm@9.15.0",
   "private": true,
@@ -9,7 +9,8 @@
     "start": "next start -p 3001",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "pnpm run typecheck"
+    "test": "pnpm run typecheck && pnpm run check:contrast",
+    "check:contrast": "node scripts/check-contrast.mjs"
   },
   "dependencies": {
     "next": "^14.1.0",

@@ -39,6 +39,7 @@ import {
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import api from '@/lib/api';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { useAuthStore } from '@/store/auth-store';
 import { useStationStore } from '@/store/station-store';
 import type { Notification } from '@/types';
@@ -46,6 +47,7 @@ import {
   NotificationDetailModal,
   notificationTypeVisuals,
 } from '@/components/NotificationDetailModal';
+import { BrandMark } from '@/components/BrandMark';
 
 dayjs.extend(relativeTime);
 
@@ -143,10 +145,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [initialize]);
 
   useEffect(() => {
-    if (initialized && !user) {
+    if (!initialized) return;
+    if (!user) {
       router.replace('/login');
+      return;
     }
-  }, [initialized, user, router]);
+    // Defence in depth: login already refuses attendant sessions, but a stored
+    // session from an older build must not open the management console either.
+    if (user.role === 'ATTENDANT') {
+      logout();
+    }
+  }, [initialized, user, router, logout]);
 
   useEffect(() => {
     if (user) {
@@ -155,15 +164,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [user, fetchStations, fetchNotifications]);
 
+  // Warm the route bundles for every sidebar destination so the first click on
+  // each page does not wait for its JavaScript. No-op in development.
+  useEffect(() => {
+    if (!user) return;
+    for (const item of allNavItems) router.prefetch(item.key);
+  }, [user, router]);
+
   if (!initialized || !user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="flex items-center justify-center min-h-screen bg-surface-sunken">
         <div className="text-center">
-          <div className="w-12 h-12 rounded-2xl gradient-orange flex items-center justify-center mx-auto mb-4 shadow-glow-orange">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 22V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16" />
-              <path d="M13 10h4a2 2 0 0 1 2 2v10" />
-            </svg>
+          <div className="w-12 h-12 rounded-2xl bg-accent flex items-center justify-center mx-auto mb-4">
+            <BrandMark size={24} color="var(--accent-on)" />
           </div>
           <Spin size="large" />
         </div>
@@ -197,6 +210,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       logout();
     } else if (key === 'admin') {
       router.push('/admin');
+    } else if (key === 'profile') {
+      router.push('/settings');
     }
   };
 
@@ -209,29 +224,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         width={272}
         collapsedWidth={80}
         collapsed={collapsed}
-        className="!bg-fuel-sidebar"
+        className="!bg-sidebar"
         style={{
           position: 'fixed',
           left: 0,
           top: 0,
           bottom: 0,
           zIndex: 100,
-          borderRight: '1px solid rgba(255,255,255,0.06)',
+          borderRight: '1px solid var(--sidebar-border)',
         }}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center gap-3 px-6 h-16 border-b border-white/[0.06]">
-            <div className="flex items-center justify-center w-9 h-9 gradient-orange rounded-xl flex-shrink-0 shadow-glow-orange">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 22V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16" />
-                <path d="M13 10h4a2 2 0 0 1 2 2v10" />
-              </svg>
+          <div className="flex items-center gap-3 px-6 h-16 border-b border-[var(--sidebar-border)]">
+            <div className="flex items-center justify-center w-9 h-9 bg-accent rounded-control flex-shrink-0">
+              <BrandMark size={18} color="var(--accent-on)" />
             </div>
             {!collapsed && (
               <div className="flex items-center gap-2">
-                <Text className="!text-white !text-lg !font-extrabold tracking-tight">StationIQ</Text>
-                <span className="px-1.5 py-0.5 text-[10px] font-bold text-fuel-orange bg-fuel-orange/10 rounded-md">PRO</span>
+                <Text className="!text-[var(--sidebar-ink)] !text-lg !font-extrabold tracking-tight">Relai</Text>
+                <span className="px-1.5 py-0.5 text-[10px] font-bold text-accent bg-accent-tint rounded-md">PRO</span>
               </div>
             )}
           </div>
@@ -239,7 +251,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Station Selector in Sidebar */}
           {!collapsed && (
             <div className="px-4 pt-4 pb-2">
-              <span className="text-[10px] font-bold tracking-[0.1em] text-slate-500 uppercase block mb-2">
+              <span className="text-[10px] font-bold tracking-[0.1em] text-[var(--sidebar-ink-muted)] uppercase block mb-2">
                 Station
               </span>
               <div className="sidebar-station-select-wrapper">
@@ -250,7 +262,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   className="sidebar-station-select w-full"
                   popupClassName="sidebar-station-select-dropdown"
                   options={stations.map((s) => ({ value: s.id, label: s.name }))}
-                  suffixIcon={<DownOutlined className="!text-slate-400 !text-[10px]" />}
+                  suffixIcon={<DownOutlined className="!text-[var(--sidebar-ink-muted)] !text-[10px]" />}
                   allowClear={false}
                   size="middle"
                 />
@@ -264,7 +276,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div key={group.label} className="mb-1">
                 {!collapsed && (
                   <div className="px-6 pt-4 pb-2">
-                    <span className="text-[10px] font-bold tracking-[0.1em] text-slate-500 uppercase">
+                    <span className="text-[10px] font-bold tracking-[0.1em] text-[var(--sidebar-ink-muted)] uppercase">
                       {group.label}
                     </span>
                   </div>
@@ -286,19 +298,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* User profile at bottom */}
           <div className="p-3">
             <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} trigger={['click']} placement="topRight">
-              <div className="flex items-center gap-3 cursor-pointer hover:bg-white/[0.04] rounded-xl p-2.5 transition-all duration-200">
+              <div className="flex items-center gap-3 cursor-pointer hover:bg-[var(--sidebar-hover)] rounded-xl p-2.5 transition-all duration-200">
                 <div className="relative flex-shrink-0">
                   <Avatar
                     size={36}
-                    className="!bg-gradient-to-br !from-fuel-orange !to-fuel-orange-dark"
+                    className="!bg-accent"
                     icon={<UserOutlined />}
                   />
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-fuel-sidebar" />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-accent rounded-full border-2 border-sidebar" />
                 </div>
                 {!collapsed && (
                   <div className="min-w-0 flex-1">
-                    <Text className="!text-white !text-sm !font-semibold block truncate">{user.name}</Text>
-                    <Text className="!text-slate-500 !text-xs block truncate">{roleLabel(user.role)}</Text>
+                    <Text className="!text-[var(--sidebar-ink)] !text-sm !font-semibold block truncate">{user.name}</Text>
+                    <Text className="!text-[var(--sidebar-ink-muted)] !text-xs block truncate">{roleLabel(user.role)}</Text>
                   </div>
                 )}
               </div>
@@ -310,12 +322,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Layout style={{ marginLeft: sidebarWidth, transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
         {/* Header */}
         <Header
-          className="!px-6 flex items-center justify-between border-b border-gray-100/80 sticky top-0 z-50"
+          className="!px-6 flex items-center justify-between border-b border-line-subtle sticky top-0 z-50"
           style={{
             height: 64,
-            background: 'rgba(255, 255, 255, 0.85)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
+            background: 'var(--surface)',
           }}
         >
           <div className="flex items-center gap-4">
@@ -323,15 +333,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               type="text"
               icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
               onClick={() => setCollapsed(!collapsed)}
-              className="!text-slate-400 hover:!text-slate-600 !w-9 !h-9 !rounded-lg"
+              className="!text-ink-muted hover:!text-ink-secondary !w-9 !h-9 !rounded-lg"
             />
             <div className="hidden sm:block">
-              <h1 className="text-base font-bold text-slate-800 leading-tight">{currentPageTitle}</h1>
-              <p className="text-xs text-slate-400 leading-tight">{currentStation?.name || 'Select a station'}</p>
+              <h1 className="text-base font-bold text-ink leading-tight">{currentPageTitle}</h1>
+              <p className="text-xs text-ink-muted leading-tight">{currentStation?.name || 'Select a station'}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            <ThemeToggle className="!text-ink-muted hover:!text-ink-secondary !w-9 !h-9 !rounded-lg" />
             <Popover
               open={notifOpen}
               onOpenChange={(open) => {
@@ -345,8 +356,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               overlayInnerStyle={{ padding: 0 }}
               content={
                 <div>
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                    <span className="font-bold text-slate-800">Notifications</span>
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-line-subtle">
+                    <span className="font-bold text-ink">Notifications</span>
                     {unreadCount > 0 && (
                       <Tag color="orange" className="!mr-0">{unreadCount} new</Tag>
                     )}
@@ -369,13 +380,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           const cfg = notificationTypeVisuals[n.type] || notificationTypeVisuals.INFO;
                           return (
                             <List.Item
-                              className={`!px-4 !py-3 cursor-pointer hover:bg-gray-50 transition-colors ${!n.isRead ? 'bg-orange-50/40' : ''}`}
+                              className={`!px-4 !py-3 cursor-pointer hover:bg-surface-sunken transition-colors ${!n.isRead ? 'bg-warn-tint' : ''}`}
                               onClick={() => {
                                 setNotifOpen(false);
                                 setNotifDetail(n);
                                 if (!n.isRead) void markAsRead(n.id);
                               }}
-                              style={{ borderBottom: '1px solid #f1f5f9' }}
+                              style={{ borderBottom: '1px solid var(--line-subtle)' }}
                             >
                               <div className="flex gap-3 w-full">
                                 <div
@@ -386,15 +397,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
-                                    <span className={`text-sm leading-tight ${!n.isRead ? 'font-semibold text-slate-800' : 'font-medium text-slate-600'}`}>
+                                    <span className={`text-sm leading-tight ${!n.isRead ? 'font-semibold text-ink' : 'font-medium text-ink-secondary'}`}>
                                       {n.title}
                                     </span>
                                     {!n.isRead && (
-                                      <div className="w-2 h-2 rounded-full bg-fuel-orange flex-shrink-0" />
+                                      <div className="w-2 h-2 rounded-full bg-accent flex-shrink-0" />
                                     )}
                                   </div>
-                                  <p className="text-xs text-slate-400 mt-0.5 truncate">{n.message}</p>
-                                  <span className="text-[11px] text-slate-300 mt-1 block">
+                                  <p className="text-xs text-ink-muted mt-0.5 truncate">{n.message}</p>
+                                  <span className="text-[11px] text-ink-disabled mt-1 block">
                                     {dayjs(n.createdAt).fromNow()}
                                   </span>
                                 </div>
@@ -405,12 +416,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       />
                     )}
                   </div>
-                  <div className="border-t border-gray-100 px-4 py-2.5 text-center">
+                  <div className="border-t border-line-subtle px-4 py-2.5 text-center">
                     <Button
                       type="link"
                       size="small"
                       onClick={() => { setNotifOpen(false); router.push('/notifications'); }}
-                      className="!text-fuel-orange !font-semibold"
+                      className="!text-accent !font-semibold"
                     >
                       View All Notifications
                     </Button>
@@ -422,28 +433,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Button
                   type="text"
                   icon={<BellOutlined className="text-lg" />}
-                  className="!text-slate-400 hover:!text-slate-600 !w-9 !h-9 !rounded-lg hover:!bg-slate-50"
+                  className="!text-ink-muted hover:!text-ink-secondary !w-9 !h-9 !rounded-lg hover:!bg-surface-sunken"
                 />
               </Badge>
             </Popover>
-            <div className="w-px h-6 bg-slate-100 mx-1" />
+            <div className="w-px h-6 bg-surface-muted mx-1" />
             <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} trigger={['click']}>
-              <div className="flex items-center gap-2.5 cursor-pointer hover:bg-slate-50 rounded-xl px-2 py-1.5 transition-colors">
+              <div className="flex items-center gap-2.5 cursor-pointer hover:bg-surface-sunken rounded-xl px-2 py-1.5 transition-colors">
                 <Avatar
                   size={32}
-                  className="!bg-gradient-to-br !from-fuel-orange !to-fuel-orange-dark"
+                  className="!bg-accent"
                   icon={<UserOutlined />}
                 />
                 <div className="hidden lg:block">
-                  <span className="text-sm font-semibold text-slate-700 block leading-tight">{user.name}</span>
-                  <span className="text-[11px] text-slate-400 block leading-tight">{roleLabel(user.role)}</span>
+                  <span className="text-sm font-semibold text-ink block leading-tight">{user.name}</span>
+                  <span className="text-[11px] text-ink-muted block leading-tight">{roleLabel(user.role)}</span>
                 </div>
               </div>
             </Dropdown>
           </div>
         </Header>
 
-        <Content className="p-6 min-h-[calc(100vh-64px)]" style={{ background: '#F8FAFC' }}>
+        <Content className="p-6 min-h-[calc(100vh-64px)]" style={{ background: 'var(--surface-sunken)' }}>
           <div className="page-content">
             {children}
           </div>

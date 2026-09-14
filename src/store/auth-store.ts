@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import api from '@/lib/api';
+import api, { clearApiCache } from '@/lib/api';
 
 export interface AuthUser {
   id: string;
@@ -25,36 +25,16 @@ interface AuthState {
   isManager: () => boolean;
 }
 
-const TOKEN_KEY = 'stationiq_token';
-const USER_KEY = 'stationiq_user';
-const LEGACY_TOKEN_KEY = 'fuelflow_token';
-const LEGACY_USER_KEY = 'fuelflow_user';
+const TOKEN_KEY = 'relai_token';
+const USER_KEY = 'relai_user';
 
 function readStoredSession(): Pick<AuthState, 'user' | 'token'> {
   if (typeof window === 'undefined') {
     return { user: null, token: null };
   }
 
-  let token = localStorage.getItem(TOKEN_KEY);
-  let userStr = localStorage.getItem(USER_KEY);
-
-  if (!token) {
-    const legacyToken = localStorage.getItem(LEGACY_TOKEN_KEY);
-    if (legacyToken) {
-      token = legacyToken;
-      localStorage.setItem(TOKEN_KEY, legacyToken);
-      localStorage.removeItem(LEGACY_TOKEN_KEY);
-    }
-  }
-
-  if (!userStr) {
-    const legacyUser = localStorage.getItem(LEGACY_USER_KEY);
-    if (legacyUser) {
-      userStr = legacyUser;
-      localStorage.setItem(USER_KEY, legacyUser);
-      localStorage.removeItem(LEGACY_USER_KEY);
-    }
-  }
+  const token = localStorage.getItem(TOKEN_KEY);
+  const userStr = localStorage.getItem(USER_KEY);
 
   if (!token || !userStr) {
     return { user: null, token: null };
@@ -97,6 +77,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         stationId: raw.station_id as string | undefined,
         companyId: raw.company_id as string | undefined,
       };
+      // This console is the management portal. Attendants belong on the mobile
+      // app (phone + PIN) and have no screens here, so refuse the session
+      // outright rather than handing them a manager dashboard they cannot use.
+      if (user.role === 'ATTENDANT') {
+        set({ loading: false });
+        throw new Error(
+          'Attendant accounts sign in on the Relai mobile app, not the web portal.',
+        );
+      }
+
+      clearApiCache();
       localStorage.setItem(TOKEN_KEY, token);
       localStorage.setItem(USER_KEY, JSON.stringify(user));
       set({ user, token, loading: false, initialized: true });
@@ -108,15 +99,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
+    clearApiCache();
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
-    localStorage.removeItem(LEGACY_TOKEN_KEY);
-    localStorage.removeItem(LEGACY_USER_KEY);
     set({ user: null, token: null, initialized: true });
     window.location.href = '/login';
   },
 
   initialize: () => {
+    // Several layouts call this on mount. Re-reading storage would create a new
+    // user object each time and re-run every effect keyed on it, which used to
+    // fetch the station and notification lists three times per navigation.
+    if (get().initialized) return;
     const { user, token } = readStoredSession();
     set({ user, token, initialized: true });
   },

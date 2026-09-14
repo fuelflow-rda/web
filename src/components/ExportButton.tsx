@@ -35,7 +35,7 @@ export default function ExportButton({ data, columns, filename }: ExportButtonPr
     worksheet.getRow(1).fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FFF97316' },
+      fgColor: { argb: 'FF2E5E52' },
     };
 
     data.forEach((row) => {
@@ -67,7 +67,7 @@ export default function ExportButton({ data, columns, filename }: ExportButtonPr
 
     doc.setFontSize(16);
     doc.setTextColor(249, 115, 22);
-    doc.text('StationIQ Report', 14, 15);
+    doc.text('Relai Report', 14, 15);
 
     doc.setFontSize(10);
     doc.setTextColor(100);
@@ -97,13 +97,13 @@ export default function ExportButton({ data, columns, filename }: ExportButtonPr
   const items = [
     {
       key: 'excel',
-      icon: <FileExcelOutlined className="!text-green-600" />,
+      icon: <FileExcelOutlined className="!text-accent" />,
       label: <span className="font-medium">Export to Excel</span>,
       onClick: exportToExcel,
     },
     {
       key: 'pdf',
-      icon: <FilePdfOutlined className="!text-red-500" />,
+      icon: <FilePdfOutlined className="!text-danger" />,
       label: <span className="font-medium">Export to PDF</span>,
       onClick: exportToPdf,
     },
@@ -113,7 +113,7 @@ export default function ExportButton({ data, columns, filename }: ExportButtonPr
     <Dropdown menu={{ items }} trigger={['click']}>
       <Button
         icon={<DownloadOutlined />}
-        className="!rounded-xl !font-semibold !border-gray-200 hover:!border-fuel-orange hover:!text-fuel-orange"
+        className="!rounded-xl !font-semibold !border-line hover:!border-accent hover:!text-accent"
       >
         Export
       </Button>

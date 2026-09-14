@@ -5,7 +5,7 @@
 # Required environment secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN
 # Optional environment variables: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
 # Required environment secret: NEXT_PUBLIC_API_URL
-name: StationIQ Web — Deployment (Production)
+name: Relai Web — Deployment (Production)
 on:
   push:
     branches: [main]
@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  DOCKERHUB_IMAGE: kayiganwa/stationiq_web
+  DOCKERHUB_IMAGE: kayiganwa/relai_web
 
 jobs:
   deploy-production:

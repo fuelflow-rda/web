@@ -12,19 +12,23 @@ import {
   Legend,
 } from 'recharts';
 import { Empty } from 'antd';
+import { useDesignTokens, categoricalSeries } from '@/lib/design-tokens';
 
 interface ComparisonChartProps {
   data: Record<string, unknown>[];
   labels: string[];
 }
 
-const COLORS = ['#F97316', '#3B82F6', '#8B5CF6', '#10B981', '#EF4444'];
 
 export default function ComparisonChart({ data, labels }: ComparisonChartProps) {
+  // Resolved values: Recharts writes SVG attributes, which cannot read var().
+  const t = useDesignTokens();
+  const COLORS = categoricalSeries(t);
+
   if (!data || data.length === 0) {
     return (
       <div className="h-72 flex items-center justify-center">
-        <Empty description={<span className="text-slate-400">No data to compare</span>} />
+        <Empty description={<span className="text-ink-muted">No data to compare</span>} />
       </div>
     );
   }
@@ -32,15 +36,15 @@ export default function ComparisonChart({ data, labels }: ComparisonChartProps) 
   return (
     <ResponsiveContainer width="100%" height={320}>
       <BarChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke={t['line-subtle']} vertical={false} />
         <XAxis
           dataKey="name"
-          tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 500 }}
-          axisLine={{ stroke: '#E2E8F0' }}
+          tick={{ fontSize: 11, fill: t['ink-muted'], fontWeight: 500 }}
+          axisLine={{ stroke: t.line }}
           tickLine={false}
         />
         <YAxis
-          tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 500 }}
+          tick={{ fontSize: 11, fill: t['ink-muted'], fontWeight: 500 }}
           axisLine={false}
           tickLine={false}
           tickFormatter={(v) => {

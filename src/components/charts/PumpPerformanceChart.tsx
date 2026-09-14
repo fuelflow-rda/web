@@ -13,6 +13,8 @@ import {
   Legend,
 } from 'recharts';
 import { Empty } from 'antd';
+import { useDesignTokens } from '@/lib/design-tokens';
+import { unitLabel } from '@/lib/product-types';
 import type { PumpReport } from '@/types';
 
 interface PumpPerformanceChartProps {
@@ -20,17 +22,24 @@ interface PumpPerformanceChartProps {
 }
 
 export default function PumpPerformanceChart({ data }: PumpPerformanceChartProps) {
+  // Resolved values: Recharts writes SVG attributes, which cannot read var().
+  const t = useDesignTokens();
+
   if (!data || data.length === 0) {
     return (
       <div className="h-72 flex items-center justify-center">
-        <Empty description={<span className="text-slate-400">No performance data</span>} />
+        <Empty description={<span className="text-ink-muted">No performance data</span>} />
       </div>
     );
   }
 
+  // Every row here belongs to one selected pump, so the whole series shares a unit.
+  const unit = unitLabel(data[0]?.unit);
+  const quantityKey = `Dispensed (${unit})`;
+
   const chartData = data.map((d) => ({
     date: d.date,
-    'Liters Dispensed': d.litersDispensed,
+    [quantityKey]: d.quantityDispensed,
     'Expected Revenue': d.expectedRevenue,
     'Recorded Revenue': d.recordedRevenue,
     Discrepancy: Math.abs(d.discrepancy),
@@ -41,20 +50,20 @@ export default function PumpPerformanceChart({ data }: PumpPerformanceChartProps
       <ComposedChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
         <defs>
           <linearGradient id="litersBarGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.9} />
-            <stop offset="100%" stopColor="#3B82F6" stopOpacity={0.5} />
+            <stop offset="0%" stopColor={t['chart-2']} stopOpacity={0.9} />
+            <stop offset="100%" stopColor={t['chart-2']} stopOpacity={0.5} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke={t['line-subtle']} vertical={false} />
         <XAxis
           dataKey="date"
-          tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 500 }}
-          axisLine={{ stroke: '#E2E8F0' }}
+          tick={{ fontSize: 11, fill: t['ink-muted'], fontWeight: 500 }}
+          axisLine={{ stroke: t.line }}
           tickLine={false}
         />
         <YAxis
           yAxisId="revenue"
-          tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 500 }}
+          tick={{ fontSize: 11, fill: t['ink-muted'], fontWeight: 500 }}
           axisLine={false}
           tickLine={false}
           tickFormatter={(v) => {
@@ -64,12 +73,12 @@ export default function PumpPerformanceChart({ data }: PumpPerformanceChartProps
           }}
         />
         <YAxis
-          yAxisId="liters"
+          yAxisId="quantity"
           orientation="right"
-          tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 500 }}
+          tick={{ fontSize: 11, fill: t['ink-muted'], fontWeight: 500 }}
           axisLine={false}
           tickLine={false}
-          tickFormatter={(v) => `${v}L`}
+          tickFormatter={(v) => `${v}${unit}`}
         />
         <Tooltip
           contentStyle={{
@@ -82,14 +91,14 @@ export default function PumpPerformanceChart({ data }: PumpPerformanceChartProps
           formatter={(value: number, name: string) => {
             if (name.includes('Revenue') || name === 'Discrepancy')
               return [`RWF ${value.toLocaleString()}`, name];
-            return [`${value.toLocaleString()} L`, name];
+            return [`${value.toLocaleString()} ${unit}`, name];
           }}
           labelStyle={{ fontWeight: 700, marginBottom: 4 }}
         />
         <Legend wrapperStyle={{ fontSize: 12, fontWeight: 600 }} />
         <Bar
-          yAxisId="liters"
-          dataKey="Liters Dispensed"
+          yAxisId="quantity"
+          dataKey={quantityKey}
           fill="url(#litersBarGrad)"
           radius={[6, 6, 0, 0]}
           barSize={28}
@@ -98,26 +107,26 @@ export default function PumpPerformanceChart({ data }: PumpPerformanceChartProps
           yAxisId="revenue"
           type="monotone"
           dataKey="Expected Revenue"
-          stroke="#F97316"
+          stroke={t['chart-1']}
           strokeWidth={2.5}
-          dot={{ fill: '#F97316', r: 3, strokeWidth: 0 }}
+          dot={{ fill: t['chart-1'], r: 3, strokeWidth: 0 }}
         />
         <Line
           yAxisId="revenue"
           type="monotone"
           dataKey="Recorded Revenue"
-          stroke="#10B981"
+          stroke={t['chart-3']}
           strokeWidth={2}
-          dot={{ fill: '#10B981', r: 3, strokeWidth: 0 }}
+          dot={{ fill: t['chart-3'], r: 3, strokeWidth: 0 }}
         />
         <Line
           yAxisId="revenue"
           type="monotone"
           dataKey="Discrepancy"
-          stroke="#EF4444"
+          stroke={t['chart-4']}
           strokeWidth={1.5}
           strokeDasharray="5 5"
-          dot={{ fill: '#EF4444', r: 2, strokeWidth: 0 }}
+          dot={{ fill: t['chart-4'], r: 2, strokeWidth: 0 }}
         />
       </ComposedChart>
     </ResponsiveContainer>

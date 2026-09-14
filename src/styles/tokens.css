@@ -1,0 +1,170 @@
+/**
+ * Design tokens — the single source of colour for the web app.
+ *
+ * Every value the UI paints with lives here, named by role rather than by hue, and
+ * is defined twice: once for light and once for dark. Nothing outside this file
+ * should contain a raw hex, because a literal cannot follow the theme.
+ *
+ * The theme is selected by `data-theme` on <html>, set before first paint by
+ * ThemeScript so the page never flashes the wrong one.
+ *
+ * Geometry is deliberately flat: depth comes from hairline borders, and focus is
+ * communicated with a ring. No shadows anywhere in the system.
+ */
+
+:root {
+  /* Accent — reserved for interactive elements. Never used to encode data. */
+  --accent: #2E5E52;
+  --accent-hover: #254A41;
+  --accent-pressed: #1D3B34;
+  --accent-tint: #EDF2F0;
+  --accent-tint-hover: #E1EAE7;
+  --accent-ring: #D6E3DE;
+  --accent-on: #FFFFFF;
+
+  /* Destructive — filled is rationed to irreversible physical actions. */
+  --danger: #9A3B2E;
+  --danger-hover: #7F3126;
+  --danger-pressed: #66271E;
+  --danger-tint: #FBF1EF;
+  --danger-border: #E3C9C4;
+  --danger-ring: #F0DCD8;
+  --danger-on: #FFFFFF;
+
+  --warn: #7E641F;
+  --warn-tint: #F6F1E6;
+  --warn-border: #E4D7B8;
+
+  /* Text */
+  --ink: #16191C;
+  --ink-secondary: #5A6165;
+  --ink-muted: #686E72;
+  --ink-disabled: #A8AEB2;
+
+  /* Hairlines carry the structure */
+  --line: #D8DCDC;
+  --line-strong: #C3C9C9;
+  --line-subtle: #E8EBEB;
+  /* Input and control borders — must stay legible as a component boundary. */
+  --line-control: #848C8C;
+
+  /* Surfaces */
+  --surface: #FFFFFF;
+  --surface-sunken: #F7F8F8;
+  --surface-muted: #F4F5F5;
+
+  /* The sidebar stays dark in both themes — it is a persistent frame, not a surface. */
+  --sidebar-bg: #16191C;
+  --sidebar-surface: #22262A;
+  --sidebar-ink: #F2F4F4;
+  --sidebar-ink-muted: #8A9094;
+  --sidebar-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-border: rgba(255, 255, 255, 0.12);
+
+  /**
+   * Focus ring — two-tone. The solid 1px edge carries the contrast (7.4:1 on the
+   * accent) while the soft halo keeps it quiet. A pale halo alone measures 1.32:1
+   * against a white page, which fails WCAG 2.2 non-text contrast.
+   */
+  --focus-ring: 0 0 0 1px var(--accent), 0 0 0 4px var(--accent-ring);
+  --focus-ring-danger: 0 0 0 1px var(--danger), 0 0 0 4px var(--danger-ring);
+
+  /**
+   * Data palette — deliberately separate from the accent so nothing on a chart
+   * competes with a button for meaning. Fuels are opposed hues; the three EV tiers
+   * form a sequential ramp. All clear 3:1 on white for graphical objects.
+   * Colour is never the only encoding: series carry direct labels too.
+   */
+  --product-gasoline: #8A5A28;
+  --product-diesel: #3F6B87;
+  --product-ev-ac: #456B58;
+  --product-ev-dc-fast: #286457;
+  --product-ev-dc-ultra: #14524A;
+
+  /* Quiet backing for product chips. Tokenised because a theme-aware colour cannot
+     be produced by appending hex alpha to the mark colour. */
+  --product-gasoline-tint: #F5EDE4;
+  --product-diesel-tint: #E8EEF3;
+  --product-ev-ac-tint: #EAF1EE;
+  --product-ev-dc-fast-tint: #E6F0EE;
+  --product-ev-dc-ultra-tint: #E3EDEB;
+
+  /* Categorical series for non-product charts, in application order. */
+  --chart-1: #3F6B87;
+  --chart-2: #8A5A28;
+  --chart-3: #456B58;
+  --chart-4: #9A3B2E;
+  --chart-5: #5A6165;
+  --chart-6: #6B7378;
+
+  /* Geometry */
+  --control-height: 36px;
+  --radius-control: 8px;
+  --radius-card: 14px;
+}
+
+:root[data-theme='dark'] {
+  --accent: #4E9481;
+  --accent-hover: #5FA894;
+  --accent-pressed: #3E8A7B;
+  --accent-tint: #0F1B18;
+  --accent-tint-hover: #14231F;
+  --accent-ring: #2E5E52;
+  --accent-on: #0E1113;
+
+  --danger: #D4796A;
+  --danger-hover: #E08C7C;
+  --danger-pressed: #BE6353;
+  --danger-tint: #231310;
+  --danger-border: #5A2E26;
+  --danger-ring: #5A2E26;
+  --danger-on: #0E1113;
+
+  --warn: #C9A34E;
+  --warn-tint: #2A2416;
+  --warn-border: #5A4C26;
+
+  --ink: #F2F4F4;
+  --ink-secondary: #B9C0C4;
+  --ink-muted: #8A9094;
+  --ink-disabled: #5A6167;
+
+  --line: #2A2F33;
+  --line-strong: #3A4045;
+  --line-subtle: #23282B;
+  --line-control: #6B7378;
+
+  --surface: #16191C;
+  --surface-sunken: #0E1113;
+  --surface-muted: #1C2023;
+
+  --sidebar-bg: #0B0D0E;
+  --sidebar-surface: #1C2023;
+
+  /* Lifted so each mark still clears 3:1 against the dark surface. */
+  --product-gasoline: #D9A066;
+  --product-diesel: #7FA9C4;
+  --product-ev-ac: #8FBFAE;
+  --product-ev-dc-fast: #5FA894;
+  --product-ev-dc-ultra: #3E8A7B;
+
+  --product-gasoline-tint: #2A2117;
+  --product-diesel-tint: #17222A;
+  --product-ev-ac-tint: #1A2622;
+  --product-ev-dc-fast-tint: #16241F;
+  --product-ev-dc-ultra-tint: #0B120F;
+
+  --chart-1: #7FA9C4;
+  --chart-2: #D9A066;
+  --chart-3: #8FBFAE;
+  --chart-4: #D4796A;
+  --chart-5: #9BA3A8;
+  --chart-6: #858E95;
+}
+
+/* Touch targets take precedence over the theme. */
+@media (max-width: 640px) {
+  :root {
+    --control-height: 44px;
+  }
+}

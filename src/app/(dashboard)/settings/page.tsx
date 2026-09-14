@@ -56,7 +56,7 @@ export default function SettingsPage() {
         <Col xs={24} lg={14} xl={15}>
           <Card title="Profile" className="!rounded-xl h-full">
             <div className="flex items-center gap-4 mb-6">
-              <Avatar size={64} className="!bg-fuel-orange" icon={<UserOutlined />} />
+              <Avatar size={64} className="!bg-accent" icon={<UserOutlined />} />
               <div>
                 <Text strong className="text-lg block">{user?.name}</Text>
                 <Text type="secondary">{user?.role}</Text>

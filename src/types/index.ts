@@ -21,20 +21,40 @@ export interface Station {
   phone?: string;
   latitude?: number;
   longitude?: number;
+  /** What the site sells: liquid fuel, EV charging, or both. */
+  stationType?: StationType;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
+export type StationType = 'FUEL' | 'EV' | 'HYBRID';
+
 export type FuelType = 'GASOLINE' | 'DIESEL';
-export type PumpFuelType = FuelType;
+
+/** EV charge tiers. Each is priced separately — fast charging costs more per kWh. */
+export type EvProductType = 'EV_AC' | 'EV_DC_FAST' | 'EV_DC_ULTRA';
+
+/** Anything a station sells, measured in liters (fuel) or kWh (EV). */
+export type ProductType = FuelType | EvProductType;
+export type ProductUnit = 'L' | 'KWH';
+
+export type ConnectorType = 'TYPE2' | 'CCS' | 'CHADEMO' | 'GBT' | 'TESLA';
+
+export type PumpFuelType = ProductType;
 export type PumpStatus = 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
 
 export interface Pump {
   id: string;
   stationId: string;
   pumpNumber: number;
-  fuelType: PumpFuelType;
+  productType: ProductType;
+  /** Legacy alias for productType. */
+  fuelType: ProductType;
+  /** EV charge points only. */
+  connectorType?: ConnectorType | null;
+  /** EV charge points only: rated output in kW. */
+  powerKw?: number | null;
   status: PumpStatus;
   currentAttendantId?: string;
   currentAttendant?: User;
@@ -74,6 +94,7 @@ export interface Shift {
   endMeterReading?: number;
   status: 'ACTIVE' | 'COMPLETED';
   totalLiters?: number;
+  totalKwh?: number;
   totalRevenue?: number;
   createdAt: string;
   updatedAt: string;
@@ -91,7 +112,14 @@ export interface Transaction {
   shiftId?: string;
   vehiclePlate?: string;
   customerPhone?: string;
-  fuelType: FuelType;
+  productType: ProductType;
+  /** Legacy alias for productType. */
+  fuelType: ProductType;
+  unit: ProductUnit;
+  /** Liters dispensed or kWh delivered — read together with `unit`. */
+  quantity: number;
+  unitPrice: number;
+  /** Legacy aliases; equal to quantity/unitPrice. */
   liters: number;
   pricePerLiter: number;
   totalAmount: number;
@@ -106,7 +134,11 @@ export interface FuelPrice {
   id: string;
   stationId?: string;
   companyId?: string;
-  fuelType: FuelType;
+  productType: ProductType;
+  /** Legacy alias for productType. */
+  fuelType: ProductType;
+  unit: ProductUnit;
+  /** RWF per liter, or per kWh for an EV tier. */
   price: number;
   previousPrice?: number;
   effectiveDate: string;
@@ -120,6 +152,7 @@ export interface AttendantReconciliation {
   attendantName: string;
   transactionCount: number;
   liters: number;
+  kwh: number;
   revenue: number;
 }
 
@@ -135,6 +168,8 @@ export interface ReconciliationReport {
   pumpBreakdown: PumpReconciliation[];
   paymentBreakdown: PaymentBreakdown[];
   attendantBreakdown?: AttendantReconciliation[];
+  totalLiters?: number;
+  totalKwh?: number;
   generatedAt?: string;
   generatedById?: string;
   generatedBy?: User;
@@ -145,8 +180,14 @@ export interface ReconciliationReport {
 export interface PumpReconciliation {
   pumpId: string;
   pumpNumber: number;
-  fuelType: FuelType;
+  productType: ProductType;
+  /** Legacy alias for productType. */
+  fuelType: ProductType;
+  unit: ProductUnit;
+  /** Liters or kWh — read together with `unit`. */
+  quantity: number;
   litersDispensed: number;
+  kwhDelivered: number;
   expectedRevenue: number;
   recordedRevenue: number;
   difference: number;
@@ -177,10 +218,12 @@ export interface DashboardStats {
   /** Liters from gasoline-class fuel (API aggregates non-diesel as gasoline). */
   gasolineLiters: number;
   dieselLiters: number;
+  /** Electricity delivered. Kept apart from liters — different unit. */
+  totalKwh: number;
   totalTransactions: number;
   activePumps: number;
   totalPumps: number;
-  revenueByHour: { hour: string; revenue: number; liters: number }[];
+  revenueByHour: { hour: string; revenue: number; liters: number; kwh: number }[];
 }
 
 export interface AttendantReport {
@@ -194,6 +237,7 @@ export interface AttendantReport {
   assignedPumpShort?: string | null;
   totalTransactions: number;
   totalLiters: number;
+  totalKwh: number;
   totalRevenue: number;
   cashAmount: number;
   cardAmount: number;
@@ -204,8 +248,12 @@ export interface PumpReport {
   date: string;
   pumpId: string;
   pumpNumber: number;
-  fuelType: PumpFuelType;
-  litersDispensed: number;
+  productType: ProductType;
+  /** Legacy alias for productType. */
+  fuelType: ProductType;
+  unit: ProductUnit;
+  /** Liters or kWh — read together with `unit`. */
+  quantityDispensed: number;
   expectedRevenue: number;
   recordedRevenue: number;
   discrepancy: number;
@@ -217,6 +265,7 @@ export interface StationOverview {
   todayRevenue: number;
   todayTransactions: number;
   todayLiters: number;
+  todayKwh: number;
   activePumps: number;
 }
 
