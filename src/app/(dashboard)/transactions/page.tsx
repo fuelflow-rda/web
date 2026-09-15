@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { Suspense, useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Table,
   Card,
@@ -41,10 +42,20 @@ import {
 } from '@/lib/product-types';
 import { useStationStore } from '@/store/station-store';
 import ExportButton from '@/components/ExportButton';
+import { isPaymentFilter, readDay, readInt } from '@/lib/links';
 import type { Transaction, Pump, User } from '@/types';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
+
+const WEEKDAYS_PLURAL = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/** "Mondays · 14:00–15:00", "Every day · 14:00–15:00" or "Mondays". */
+function localTimeLabel(dow: number | undefined, hour: number | undefined): string {
+  const day = dow === undefined ? 'Every day' : WEEKDAYS_PLURAL[dow];
+  return hour === undefined ? day : `${day} · ${pad2(hour)}:00–${pad2((hour + 1) % 24)}:00`;
+}
 
 const paymentIcons: Record<string, React.ReactNode> = {
   CASH: <DollarOutlined />,
@@ -53,8 +64,18 @@ const paymentIcons: Record<string, React.ReactNode> = {
   CREDIT: <WalletOutlined />,
 };
 
+// useSearchParams needs a Suspense boundary for Next to prerender the page.
 export default function TransactionsPage() {
+  return (
+    <Suspense>
+      <TransactionsView />
+    </Suspense>
+  );
+}
+
+function TransactionsView() {
   const { currentStation } = useStationStore();
+  const searchParams = useSearchParams();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
@@ -74,14 +95,26 @@ export default function TransactionsPage() {
     paymentMethod: string | undefined;
     flagStatus: 'all' | 'flagged' | 'unflagged';
     search: string;
-  }>({
-    dateRange: null,
-    pumpId: undefined,
-    attendantId: undefined,
-    productType: undefined,
-    paymentMethod: undefined,
-    flagStatus: 'all',
-    search: '',
+    /** Station-local weekday (0 = Sunday) and hour, from a heatmap link. */
+    dow: number | undefined;
+    hour: number | undefined;
+  }>(() => {
+    // Links from the dashboard arrive with the slice they were showing.
+    const from = readDay(searchParams, 'from');
+    const to = readDay(searchParams, 'to') ?? from;
+    const payment = searchParams.get('payment') ?? '';
+    const flag = searchParams.get('flag');
+    return {
+      dateRange: from && to ? [dayjs(from), dayjs(to)] : null,
+      pumpId: searchParams.get('pump') ?? undefined,
+      attendantId: searchParams.get('attendant') ?? undefined,
+      productType: searchParams.get('product') ?? undefined,
+      paymentMethod: isPaymentFilter(payment) ? payment : undefined,
+      flagStatus: flag === 'flagged' || flag === 'unflagged' ? flag : 'all',
+      search: '',
+      dow: readInt(searchParams, 'dow', 0, 6),
+      hour: readInt(searchParams, 'hour', 0, 23),
+    };
   });
 
   const fetchTransactions = useCallback(async () => {
@@ -105,6 +138,8 @@ export default function TransactionsPage() {
       if (filters.paymentMethod) params.payment_method = filters.paymentMethod;
       if (filters.flagStatus !== 'all') params.flag_status = filters.flagStatus;
       if (filters.search?.trim()) params.search = filters.search.trim();
+      if (filters.dow !== undefined) params.dow = filters.dow;
+      if (filters.hour !== undefined) params.hour = filters.hour;
 
       const res = await api.get('/transactions', { params });
       const payload = res.data as { data?: unknown[]; pagination?: { total: number } };
@@ -491,6 +526,16 @@ export default function TransactionsPage() {
             className="w-56 !rounded-lg"
             allowClear
           />
+          {/* No control sets this; it only arrives from the dashboard heatmap. */}
+          {(filters.dow !== undefined || filters.hour !== undefined) && (
+            <Tag
+              closable
+              onClose={() => setFilters((f) => ({ ...f, dow: undefined, hour: undefined }))}
+              className="!flex !items-center !m-0 !px-3 !text-sm"
+            >
+              {localTimeLabel(filters.dow, filters.hour)}
+            </Tag>
+          )}
           <Button
             icon={<FilterOutlined />}
             onClick={() =>
@@ -502,6 +547,8 @@ export default function TransactionsPage() {
                 paymentMethod: undefined,
                 flagStatus: 'all',
                 search: '',
+                dow: undefined,
+                hour: undefined,
               })
             }
           >

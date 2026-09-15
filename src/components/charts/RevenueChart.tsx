@@ -17,6 +17,8 @@ import { useDesignTokens } from '@/lib/design-tokens';
 interface RevenueChartProps {
   data: { hour: string; revenue: number; liters: number; kwh?: number }[];
   timeRange?: string;
+  /** Called with the index of the clicked point in `data`. */
+  onPointClick?: (index: number) => void;
 }
 
 const formatRWF = (value: number) => {
@@ -25,7 +27,7 @@ const formatRWF = (value: number) => {
   return value.toString();
 };
 
-export default function RevenueChart({ data }: RevenueChartProps) {
+export default function RevenueChart({ data, onPointClick }: RevenueChartProps) {
   // Resolved values: Recharts writes SVG attributes, which cannot read var().
   const t = useDesignTokens();
 
@@ -42,7 +44,20 @@ export default function RevenueChart({ data }: RevenueChartProps) {
 
   return (
     <ResponsiveContainer width="100%" height={300}>
-      <AreaChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+      <AreaChart
+        data={data}
+        margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+        // The tooltip already snaps to the nearest point, so a click anywhere in the
+        // plot means that point; nobody has to land on a 3px dot.
+        onClick={
+          onPointClick
+            ? (state) => {
+                if (typeof state?.activeTooltipIndex === 'number') onPointClick(state.activeTooltipIndex);
+              }
+            : undefined
+        }
+        style={onPointClick ? { cursor: 'pointer' } : undefined}
+      >
         <defs>
           <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={t['chart-1']} stopOpacity={0.2} />

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { Suspense, useEffect, useRef, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Table,
   Card,
@@ -31,20 +32,35 @@ import { useStationStore } from '@/store/station-store';
 import { useAuthStore } from '@/store/auth-store';
 import ExportButton from '@/components/ExportButton';
 import ComparisonChart from '@/components/charts/ComparisonChart';
+import { readDay } from '@/lib/links';
 import type { AttendantReport, ProductType } from '@/types';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 
+// useSearchParams needs a Suspense boundary for Next to prerender the page.
 export default function AttendantsPage() {
+  return (
+    <Suspense>
+      <AttendantsView />
+    </Suspense>
+  );
+}
+
+function AttendantsView() {
   const { currentStation } = useStationStore();
   const authUser = useAuthStore((s) => s.user);
+  const searchParams = useSearchParams();
   const [reports, setReports] = useState<AttendantReport[]>([]);
   const [loading, setLoading] = useState(false);
-  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([
-    dayjs().startOf('month'),
-    dayjs(),
-  ]);
+  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>(() => {
+    // A dashboard link carries its period so the numbers match what was clicked.
+    const from = readDay(searchParams, 'from');
+    const to = readDay(searchParams, 'to');
+    return from && to
+      ? [dayjs(from).startOf('day'), dayjs(to).endOf('day')]
+      : [dayjs().startOf('month'), dayjs()];
+  });
   const [selectedAttendant, setSelectedAttendant] = useState<AttendantReport | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [compareIds, setCompareIds] = useState<string[]>([]);
@@ -58,6 +74,18 @@ export default function AttendantsPage() {
   const [pinResetLoading, setPinResetLoading] = useState(false);
   const [form] = Form.useForm();
   const [assignPumpForm] = Form.useForm();
+
+  // Open the attendant a dashboard link points at, once, when their row has loaded.
+  const deepLinkOpened = useRef(false);
+  useEffect(() => {
+    const id = searchParams.get('attendant');
+    if (!id || deepLinkOpened.current) return;
+    const row = reports.find((r) => r.attendantId === id);
+    if (!row) return;
+    deepLinkOpened.current = true;
+    setSelectedAttendant(row);
+    setDrawerOpen(true);
+  }, [reports, searchParams]);
   const [pinResetForm] = Form.useForm();
 
   const fetchPumps = useCallback(async () => {

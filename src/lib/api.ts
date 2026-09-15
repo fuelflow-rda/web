@@ -1,6 +1,9 @@
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
-const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+// Trailing slashes are stripped: the value is set by hand in the Vercel
+// dashboard, and a stray "/" would otherwise produce "host//api/..." below,
+// which does not match the API's `api` global prefix.
+const base = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000').replace(/\/+$/, '');
 const baseURL = base.endsWith('/api') ? base : `${base}/api`;
 
 const api = axios.create({

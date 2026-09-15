@@ -4,7 +4,10 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, Col, Empty, Progress, Row, Segmented, Spin, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import { attendantsHref, isPaymentFilter, pumpsHref, transactionsHref } from '@/lib/links';
 import { formatRWF } from '@/lib/format';
 import { formatQuantity, isEvProductType, productColor, productLabel } from '@/lib/product-types';
 import { useStationStore } from '@/store/station-store';
@@ -149,6 +152,14 @@ export default function DashboardPage() {
   );
 
   const totalPayments = (data?.payments ?? []).reduce((sum, p) => sum + p.amount, 0);
+
+  // Every link out of the dashboard carries the period on screen, so the page it opens
+  // shows the same numbers that were clicked.
+  const router = useRouter();
+  const range = useMemo(() => {
+    const { from, to } = windowFor(period);
+    return { from: dayjs(from).format('YYYY-MM-DD'), to: dayjs(to).format('YYYY-MM-DD') };
+  }, [period]);
   const evPumps = (data?.pumps ?? []).filter((p) => isEvProductType(p.productType));
 
   const attendantColumns: ColumnsType<DashboardPayload['attendants'][number]> = [
@@ -166,7 +177,17 @@ export default function DashboardPage() {
       key: 'name',
       render: (name: string, r) => (
         <span className="font-medium text-ink">
-          {name}
+          {r.attendantId ? (
+            <Link
+              href={attendantsHref({ attendant: r.attendantId, ...range })}
+              className="text-ink hover:text-accent hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {name}
+            </Link>
+          ) : (
+            name
+          )}
           {r.flagged > 0 && (
             <Tag className="!ml-2 !text-[10px]" color="warning">
               {r.flagged} flagged
@@ -255,6 +276,8 @@ export default function DashboardPage() {
         <Col xs={24} sm={12} xl={6}>
           <MetricTile
             label="Revenue"
+            href={transactionsHref(range)}
+            linkLabel="View transactions"
             value={`RWF ${compactRWF(data?.totals.revenue ?? 0)}`}
             delta={data?.deltas.revenue}
             spark={revenueSpark}
@@ -265,6 +288,8 @@ export default function DashboardPage() {
         <Col xs={24} sm={12} xl={6}>
           <MetricTile
             label="Fuel dispensed"
+            href={pumpsHref()}
+            linkLabel="View pumps"
             value={`${Math.round(data?.totals.liters ?? 0).toLocaleString()} L`}
             delta={data?.deltas.liters}
             spark={litersSpark}
@@ -275,6 +300,8 @@ export default function DashboardPage() {
         <Col xs={24} sm={12} xl={6}>
           <MetricTile
             label="Energy delivered"
+            href={pumpsHref(evPumps[0]?.pumpId)}
+            linkLabel="View charge points"
             value={`${Math.round(data?.totals.kwh ?? 0).toLocaleString()} kWh`}
             delta={data?.deltas.kwh}
             spark={kwhSpark}
@@ -289,6 +316,8 @@ export default function DashboardPage() {
         <Col xs={24} sm={12} xl={6}>
           <MetricTile
             label="Transactions"
+            href={transactionsHref(range)}
+            linkLabel="View transactions"
             value={(data?.totals.transactions ?? 0).toLocaleString()}
             delta={data?.deltas.transactions}
             spark={txSpark}
@@ -307,29 +336,88 @@ export default function DashboardPage() {
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={16}>
           <Card title="Revenue trend" className="!rounded-card h-full" size="small">
-            <RevenueChart data={chartData} />
+            <RevenueChart
+              data={chartData}
+              onPointClick={(i) => {
+                const bucket = data?.series[i]?.bucket;
+                if (!bucket) return;
+                const day = dayjs(bucket).format('YYYY-MM-DD');
+                router.push(transactionsHref({ from: day, to: day }));
+              }}
+            />
           </Card>
         </Col>
         <Col xs={24} xl={8}>
           <Card title="Product mix" className="!rounded-card h-full" size="small">
-            <ProductMixBar data={data?.productMix ?? []} />
+            <ProductMixBar
+              data={data?.productMix ?? []}
+              hrefFor={(row) => transactionsHref({ ...range, product: row.productType })}
+            />
           </Card>
         </Col>
       </Row>
 
-      {/* When the forecourt is actually busy */}
-      <Card
-        title="Activity by hour"
-        className="!rounded-card"
-        size="small"
-        extra={
-          <Text type="secondary" className="!text-xs">
-            Local time · darker is busier
-          </Text>
-        }
-      >
-        <ActivityHeatmap data={data?.heatmap ?? []} />
-      </Card>
+      {/* When the forecourt is busy + how customers paid */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} xl={16}>
+          <Card
+            title="Activity by hour"
+            className="!rounded-card h-full"
+            size="small"
+            extra={
+              <Text type="secondary" className="!text-xs">
+                {data?.window.tz ? `Times in ${data.window.tz}` : 'Station local time'}
+              </Text>
+            }
+          >
+            <ActivityHeatmap
+              data={data?.heatmap ?? []}
+              hrefFor={(dow, hour) => transactionsHref({ ...range, dow: dow ?? undefined, hour })}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} xl={8}>
+          <Card title="How customers paid" className="!rounded-card h-full" size="small">
+            {(data?.payments ?? []).length === 0 ? (
+              <Empty description={<span className="text-ink-muted">No payments in this period</span>} />
+            ) : (
+              <div className="space-y-5">
+                {(data?.payments ?? []).map((p) => {
+                  const share = totalPayments > 0 ? (p.amount / totalPayments) * 100 : 0;
+                  const content = (
+                    <>
+                      <div className="flex items-baseline justify-between mb-1.5">
+                        <span className="text-sm font-medium text-ink">{p.method}</span>
+                        <span className="text-xs text-ink-muted tabular-nums">{share.toFixed(1)}%</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-surface-muted overflow-hidden">
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${share}%`, background: 'var(--accent)' }}
+                        />
+                      </div>
+                      <div className="text-sm font-semibold tabular-nums text-ink mt-1.5">
+                        {formatRWF(p.amount)}
+                      </div>
+                    </>
+                  );
+                  return isPaymentFilter(p.method) ? (
+                    <Link
+                      key={p.method}
+                      href={transactionsHref({ ...range, payment: p.method })}
+                      className="block -mx-2 px-2 py-1.5 rounded-lg hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                    >
+                      {content}
+                    </Link>
+                  ) : (
+                    <div key={p.method}>{content}</div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        </Col>
+      </Row>
 
       {/* Rankings */}
       <Row gutter={[16, 16]}>
@@ -339,6 +427,12 @@ export default function DashboardPage() {
               columns={attendantColumns}
               dataSource={data?.attendants ?? []}
               rowKey={(r) => r.attendantId ?? r.name}
+              rowClassName={(r) => (r.attendantId ? 'cursor-pointer' : '')}
+              onRow={(r) => ({
+                onClick: () => {
+                  if (r.attendantId) router.push(attendantsHref({ attendant: r.attendantId, ...range }));
+                },
+              })}
               size="small"
               pagination={false}
               scroll={(data?.attendants.length ?? 0) > 8 ? { y: 320 } : undefined}
@@ -365,9 +459,10 @@ export default function DashboardPage() {
               {(data?.pumps ?? []).map((pump) => {
                 const isEv = isEvProductType(pump.productType);
                 return (
-                  <div
+                  <Link
                     key={pump.pumpId}
-                    className="flex items-center gap-3 py-2 border-b border-line-subtle last:border-0"
+                    href={pumpsHref(pump.pumpId)}
+                    className="flex items-center gap-3 py-2 -mx-2 px-2 rounded-lg border-b border-line-subtle last:border-0 hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
                   >
                     <span
                       className="w-1 h-9 rounded-full shrink-0"
@@ -404,39 +499,13 @@ export default function DashboardPage() {
                     <span className="text-sm font-semibold tabular-nums text-ink w-24 text-right shrink-0">
                       {formatRWF(pump.revenue)}
                     </span>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
           </Card>
         </Col>
       </Row>
-
-      {/* Payment split */}
-      <Card title="How customers paid" className="!rounded-card" size="small">
-        <Row gutter={[16, 16]}>
-          {(data?.payments ?? []).map((p) => {
-            const share = totalPayments > 0 ? (p.amount / totalPayments) * 100 : 0;
-            return (
-              <Col xs={24} sm={8} key={p.method}>
-                <div className="flex items-baseline justify-between mb-1.5">
-                  <span className="text-sm font-medium text-ink">{p.method}</span>
-                  <span className="text-xs text-ink-muted tabular-nums">{share.toFixed(1)}%</span>
-                </div>
-                <div className="h-2 rounded-full bg-surface-muted overflow-hidden">
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${share}%`, background: 'var(--accent)' }}
-                  />
-                </div>
-                <div className="text-sm font-semibold tabular-nums text-ink mt-1.5">
-                  {formatRWF(p.amount)}
-                </div>
-              </Col>
-            );
-          })}
-        </Row>
-      </Card>
     </div>
   );
 }

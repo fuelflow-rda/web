@@ -1,8 +1,13 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 
 interface MetricTileProps {
+  /** Where the tile leads; the whole tile becomes the link. */
+  href?: string;
+  /** Screen-reader text for the link's destination, e.g. "View transactions". */
+  linkLabel?: string;
   label: string;
   value: string;
   /** Percentage change vs the previous period. null means no usable baseline. */
@@ -70,14 +75,20 @@ export default function MetricTile({
   detail,
   accent = 'var(--ink-muted)',
   riseIsGood = true,
+  href,
+  linkLabel,
 }: MetricTileProps) {
   const hasDelta = typeof delta === 'number' && Number.isFinite(delta);
   const rising = hasDelta && delta! > 0;
   const flat = hasDelta && delta === 0;
   const good = rising === riseIsGood;
 
-  return (
-    <div className="bg-surface border border-line-subtle rounded-card p-4 flex flex-col justify-between h-full">
+  const tile = (
+    <div
+      className={`bg-surface border border-line-subtle rounded-card p-4 flex flex-col justify-between h-full ${
+        href ? 'transition-colors group-hover:border-line-strong' : ''
+      }`}
+    >
       <div>
         <div className="flex items-start justify-between gap-2">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
@@ -102,6 +113,18 @@ export default function MetricTile({
       </div>
 
       {spark && spark.length > 1 && <Sparkline points={spark} color={accent} />}
+      {href && linkLabel && <span className="sr-only">{linkLabel}</span>}
     </div>
+  );
+
+  if (!href) return tile;
+
+  return (
+    <Link
+      href={href}
+      className="group block h-full rounded-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+    >
+      {tile}
+    </Link>
   );
 }

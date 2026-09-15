@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { Suspense, useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Table,
   Card,
@@ -40,13 +41,26 @@ const { Title, Text } = Typography;
 
 type ViewMode = 'daily' | 'weekly' | 'monthly';
 
+// useSearchParams needs a Suspense boundary for Next to prerender the page.
 export default function PumpsPage() {
+  return (
+    <Suspense>
+      <PumpsView />
+    </Suspense>
+  );
+}
+
+function PumpsView() {
   const { currentStation } = useStationStore();
+  const searchParams = useSearchParams();
   const [reports, setReports] = useState<PumpReport[]>([]);
   const [pumps, setPumps] = useState<Pump[]>([]);
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('daily');
-  const [selectedPumpId, setSelectedPumpId] = useState<string | undefined>();
+  // A dashboard link names the pump to open.
+  const [selectedPumpId, setSelectedPumpId] = useState<string | undefined>(
+    () => searchParams.get('pump') ?? undefined,
+  );
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm();
@@ -83,7 +97,10 @@ export default function PumpsPage() {
   }, [currentStation]);
 
   useEffect(() => {
-    if (pumps.length > 0 && !selectedPumpId) setSelectedPumpId(pumps[0].id);
+    // Also covers a linked pump that no longer exists or belongs to another station.
+    if (pumps.length > 0 && !pumps.some((p) => p.id === selectedPumpId)) {
+      setSelectedPumpId(pumps[0].id);
+    }
   }, [pumps, selectedPumpId]);
 
   const fetchReports = useCallback(async () => {
