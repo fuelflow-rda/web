@@ -12,6 +12,7 @@ import {
   Tag,
   Button,
   Space,
+  Tooltip,
   message,
   Spin,
 } from 'antd';
@@ -112,6 +113,33 @@ export default function ReconciliationPage() {
       key: 'quantity',
       align: 'right',
       render: (v: number, record: PumpReconciliation) => formatQuantity(v, record.unit),
+    },
+    {
+      title: 'Metered',
+      key: 'meteredQuantity',
+      align: 'right',
+      render: (_: unknown, record: PumpReconciliation) =>
+        record.meteredQuantity == null ? (
+          <Tooltip title="A shift ended without a closing meter reading">
+            <Text type="secondary">—</Text>
+          </Tooltip>
+        ) : (
+          formatQuantity(record.meteredQuantity, record.unit)
+        ),
+    },
+    {
+      title: 'Meter variance',
+      key: 'variance',
+      align: 'right',
+      render: (_: unknown, record: PumpReconciliation) =>
+        record.variance == null ? (
+          <Text type="secondary">—</Text>
+        ) : (
+          <Text strong className={record.variance !== 0 ? '!text-danger' : '!text-accent'}>
+            {record.variance > 0 ? '+' : ''}
+            {formatQuantity(record.variance, record.unit)}
+          </Text>
+        ),
     },
     {
       title: 'Expected',
@@ -219,6 +247,10 @@ export default function ReconciliationPage() {
     pump: `#${p.pumpNumber} (${productLabel(p.productType)})`,
     quantity: p.quantity,
     unit: unitLabel(p.unit),
+    // Blank, not zero, when a closing reading is missing: the export has to carry the
+    // same "unknown" the table shows.
+    meteredQuantity: p.meteredQuantity ?? '',
+    variance: p.variance ?? '',
     expectedRevenue: p.expectedRevenue,
     recordedRevenue: p.recordedRevenue,
     difference: p.difference,
@@ -229,6 +261,8 @@ export default function ReconciliationPage() {
     { header: 'Pump', key: 'pump' },
     { header: 'Quantity', key: 'quantity' },
     { header: 'Unit', key: 'unit' },
+    { header: 'Metered', key: 'meteredQuantity' },
+    { header: 'Meter variance', key: 'variance' },
     { header: 'Expected (RWF)', key: 'expectedRevenue' },
     { header: 'Recorded (RWF)', key: 'recordedRevenue' },
     { header: 'Difference (RWF)', key: 'difference' },
@@ -295,6 +329,8 @@ export default function ReconciliationPage() {
                     { header: 'kWh', key: 'kwh' },
                     { header: 'Quantity', key: 'quantity' },
                     { header: 'Unit', key: 'unit' },
+                    { header: 'Metered', key: 'meteredQuantity' },
+                    { header: 'Meter variance', key: 'variance' },
                     { header: 'Revenue (RWF)', key: 'revenue' },
                     { header: 'Expected (RWF)', key: 'expectedRevenue' },
                     { header: 'Recorded (RWF)', key: 'recordedRevenue' },

@@ -192,6 +192,14 @@ export interface PumpReconciliation {
   recordedRevenue: number;
   difference: number;
   status: 'BALANCED' | 'DISCREPANCY';
+  /**
+   * From the pump's own totaliser: closing minus opening across the day's shifts.
+   * null when a shift left its closing reading unrecorded — unknown, not balanced.
+   */
+  meteredQuantity: number | null;
+  /** Metered minus sold. Positive means fuel left the pump with no sale recorded. */
+  variance: number | null;
+  readingsComplete: boolean;
 }
 
 export interface PaymentBreakdown {
