@@ -154,7 +154,7 @@ export default function NotificationsPage() {
         </Space>
       </div>
 
-      <Card className="!rounded-xl" bodyStyle={{ padding: 0 }}>
+      <Card className="!rounded-xl" styles={{ body: { padding: 0 } }}>
         <List
           loading={loading}
           dataSource={filteredNotifications}

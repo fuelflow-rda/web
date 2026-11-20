@@ -68,7 +68,7 @@ export function ForgotPasswordModal({
             ]
           : null
       }
-      destroyOnClose
+      destroyOnHidden
     >
       {sent ? (
         <Alert type="success" showIcon message={sent} className="!rounded-xl" />

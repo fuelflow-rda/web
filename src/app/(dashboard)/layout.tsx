@@ -260,7 +260,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   onChange={setCurrentStationById}
                   placeholder="Select station"
                   className="sidebar-station-select w-full"
-                  popupClassName="sidebar-station-select-dropdown"
+                  classNames={{ popup: { root: 'sidebar-station-select-dropdown' } }}
                   options={stations.map((s) => ({ value: s.id, label: s.name }))}
                   suffixIcon={<DownOutlined className="!text-[var(--sidebar-ink-muted)] !text-[10px]" />}
                   allowClear={false}
@@ -353,7 +353,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               placement="bottomRight"
               arrow={false}
               overlayStyle={{ width: 380 }}
-              overlayInnerStyle={{ padding: 0 }}
+              styles={{ body: { padding: 0 } }}
               content={
                 <div>
                   <div className="flex items-center justify-between px-4 py-3 border-b border-line-subtle">

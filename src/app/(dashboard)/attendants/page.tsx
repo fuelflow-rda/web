@@ -329,7 +329,7 @@ function AttendantsView() {
         open={addModalOpen}
         onCancel={() => { setAddModalOpen(false); form.resetFields(); }}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical" onFinish={handleAddAttendant}>
           <Form.Item name="name" label="Full Name" rules={[{ required: true }]}>

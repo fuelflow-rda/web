@@ -579,7 +579,7 @@ function TransactionsView() {
         title={selectedTx?.isFlagged ? 'Edit flag' : 'Flag transaction'}
         open={flagModalVisible}
         onCancel={closeFlagModal}
-        destroyOnClose
+        destroyOnHidden
         footer={[
           <Button key="cancel" onClick={closeFlagModal}>
             Cancel

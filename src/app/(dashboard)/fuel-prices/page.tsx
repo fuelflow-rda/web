@@ -247,7 +247,7 @@ export default function FuelPricesPage() {
               <Card
                 className="!rounded-xl !border-2 h-full"
                 style={{ borderColor: price > 0 ? color : 'var(--line)' }}
-                bodyStyle={{ padding: '20px' }}
+                styles={{ body: { padding: '20px' } }}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -318,7 +318,7 @@ export default function FuelPricesPage() {
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form
           form={form}

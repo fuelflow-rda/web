@@ -377,7 +377,7 @@ export default function AdminCompanyDetailPage() {
         open={inviteOpen}
         onCancel={() => setInviteOpen(false)}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
         width={480}
       >
         <Form form={inviteForm} layout="vertical" onFinish={handleInvite}>

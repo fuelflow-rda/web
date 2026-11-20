@@ -320,7 +320,7 @@ function PumpsView() {
         open={addModalOpen}
         onCancel={() => { setAddModalOpen(false); form.resetFields(); }}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical" onFinish={handleAddPump}>
           <Form.Item name="pumpNumber" label="Number" rules={[{ required: true, type: 'number', min: 1 }]}>
@@ -414,7 +414,7 @@ function PumpsView() {
         <Table
           columns={columns}
           dataSource={reports}
-          rowKey={(_, index) => `report-${selectedPumpId}-${index}`}
+          rowKey={(record) => `report-${record.pumpId}-${record.date}`}
           loading={loading}
           pagination={{ pageSize: 20, showTotal: (t) => `${t} records` }}
           size="middle"

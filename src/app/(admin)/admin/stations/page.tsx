@@ -332,7 +332,7 @@ export default function AdminStationsPage() {
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           {!editingStation && isSuperAdmin && (

@@ -74,7 +74,7 @@ export function NotificationDetailModal({
       }
       width={420}
       centered
-      destroyOnClose
+      destroyOnHidden
       classNames={{ body: '!pt-2' }}
     >
       <div className="space-y-3">

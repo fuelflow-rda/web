@@ -580,7 +580,7 @@ function AdminUsersPageInner() {
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
         width={520}
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
@@ -700,7 +700,7 @@ function AdminUsersPageInner() {
               ]
             : null
         }
-        destroyOnClose
+        destroyOnHidden
       >
         {issuedPassword ? (
           <Alert

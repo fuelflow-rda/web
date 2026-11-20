@@ -287,7 +287,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         okText="Go to Manager View"
         cancelText="Cancel"
         okButtonProps={{ disabled: !selectedStationId }}
-        destroyOnClose
+        destroyOnHidden
       >
         <p className="text-ink-secondary mb-3">Choose a station to view as manager. The dashboard will show data for that station.</p>
         <Select

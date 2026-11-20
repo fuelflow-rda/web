@@ -339,7 +339,7 @@ export default function AdminPumpsPage() {
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item name="stationId" label="Station" rules={[{ required: true }]}>

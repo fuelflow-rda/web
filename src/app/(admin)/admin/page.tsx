@@ -128,7 +128,7 @@ function StatTile({
   const card = (
     <Card
       className={`!rounded-xl h-full ${onClick ? 'hover:shadow-lg hover:border-accent transition-all' : ''}`}
-      bodyStyle={{ padding: 16 }}
+      styles={{ body: { padding: 16 } }}
     >
       <Statistic
         title={<span className="text-xs uppercase tracking-wide">{title}</span>}
@@ -566,7 +566,7 @@ function SuperAdminOverview() {
         </Col>
       </Row>
 
-      <Card className="!rounded-xl" bodyStyle={{ padding: 0 }}>
+      <Card className="!rounded-xl" styles={{ body: { padding: 0 } }}>
         <div className="flex flex-wrap divide-y md:divide-y-0 divide-line-subtle">
           <CountCell
             label="Companies"
@@ -612,7 +612,7 @@ function SuperAdminOverview() {
           <Card
             title={`Revenue and transactions · ${windowLabel}`}
             className="!rounded-xl h-full"
-            bodyStyle={{ paddingTop: 8 }}
+            styles={{ body: { paddingTop: 8 } }}
           >
             <PlatformTrendChart data={series} height={268} />
           </Card>
@@ -626,7 +626,7 @@ function SuperAdminOverview() {
                 Manage
               </Button>
             }
-            bodyStyle={{ padding: 0 }}
+            styles={{ body: { padding: 0 } }}
           >
             <Table
               columns={companyColumns}
@@ -702,7 +702,7 @@ function SuperAdminOverview() {
                 Open users
               </Button>
             }
-            bodyStyle={{ padding: 0 }}
+            styles={{ body: { padding: 0 } }}
           >
             <Table
               columns={adminColumns}
@@ -971,7 +971,7 @@ export default function AdminDashboardPage() {
       <Row gutter={[16, 16]}>
         {stations.map((station) => (
           <Col xs={24} sm={12} lg={8} key={station.stationId}>
-            <Card className="!rounded-xl hover:shadow-lg transition-shadow" bodyStyle={{ padding: 20 }}>
+            <Card className="!rounded-xl hover:shadow-lg transition-shadow" styles={{ body: { padding: 20 } }}>
               <div className="flex items-center justify-between mb-3">
                 <Text strong className="text-base">{station.stationName}</Text>
                 <Tag color={station.activePumps > 0 ? 'green' : 'default'}>
