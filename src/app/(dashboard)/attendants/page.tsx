@@ -20,20 +20,18 @@ import {
   Select,
   Tag,
   message,
-  Tooltip,
 } from 'antd';
-import { UserOutlined, BarChartOutlined, PlusOutlined, ThunderboltOutlined, PhoneOutlined, CalendarOutlined, LockOutlined, SafetyOutlined } from '@ant-design/icons';
+import { UserOutlined, BarChartOutlined, PlusOutlined, PhoneOutlined, CalendarOutlined, LockOutlined, SafetyOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { Dayjs } from 'dayjs';
 import api from '@/lib/api';
 import { formatRWF } from '@/lib/format';
-import { isEvProductType, normalizeProductType, productLabel } from '@/lib/product-types';
 import { useStationStore } from '@/store/station-store';
 import { useAuthStore } from '@/store/auth-store';
 import ExportButton from '@/components/ExportButton';
 import ComparisonChart from '@/components/charts/ComparisonChart';
 import { readDay } from '@/lib/links';
-import type { AttendantReport, ProductType } from '@/types';
+import type { AttendantReport } from '@/types';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -65,15 +63,9 @@ function AttendantsView() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [assignPumpModalOpen, setAssignPumpModalOpen] = useState(false);
-  const [assigningAttendant, setAssigningAttendant] = useState<AttendantReport | null>(null);
-  const [pumps, setPumps] = useState<
-    Array<{ id: string; pumpNumber: number; productType: ProductType; powerKw: number | null }>
-  >([]);
   const [submitting, setSubmitting] = useState(false);
   const [pinResetLoading, setPinResetLoading] = useState(false);
   const [form] = Form.useForm();
-  const [assignPumpForm] = Form.useForm();
 
   // Open the attendant a dashboard link points at, once, when their row has loaded.
   const deepLinkOpened = useRef(false);
@@ -87,33 +79,6 @@ function AttendantsView() {
     setDrawerOpen(true);
   }, [reports, searchParams]);
   const [pinResetForm] = Form.useForm();
-
-  const fetchPumps = useCallback(async () => {
-    if (!currentStation) return;
-    try {
-      const res = await api.get('/pumps', { params: { stationId: currentStation.id } });
-      const payload = res.data as { data?: unknown[] };
-      const raw = payload?.data ?? (Array.isArray(res.data) ? res.data : []);
-      setPumps(
-        (
-          raw as {
-            id: string;
-            pump_number: number;
-            product_type?: string;
-            fuel_type?: string;
-            power_kw?: number | null;
-          }[]
-        ).map((p) => ({
-          id: p.id,
-          pumpNumber: p.pump_number,
-          productType: normalizeProductType(p.product_type ?? p.fuel_type),
-          powerKw: p.power_kw == null ? null : Number(p.power_kw),
-        })),
-      );
-    } catch {
-      setPumps([]);
-    }
-  }, [currentStation]);
 
   const fetchReports = useCallback(async () => {
     if (!currentStation) return;
@@ -131,15 +96,6 @@ function AttendantsView() {
         phone?: string | null;
         is_active?: boolean;
         created_at?: string | null;
-        assigned_pump_id?: string | null;
-        pumps?: {
-          id: string;
-          pump_number: number;
-          product_type?: string;
-          fuel_type?: string;
-          connector_type?: string | null;
-          power_kw?: number | null;
-        } | null;
       }>;
       const perfList = (reportRes.data?.attendant_performance ?? []) as Array<{
         id: string;
@@ -155,25 +111,12 @@ function AttendantsView() {
       const perfByAtt = new Map(perfList.map((p) => [p.id, p]));
       const rows: AttendantReport[] = attendants.map((att) => {
         const p = perfByAtt.get(att.id);
-        const pump = att.pumps;
-        const pumpProduct = pump ? normalizeProductType(pump.product_type ?? pump.fuel_type) : null;
-        const assignedPumpLabel = pump
-          ? isEvProductType(pumpProduct)
-            ? `#${pump.pump_number} · ${productLabel(pumpProduct)} · ${pump.power_kw ?? 0}kW`
-            : `Pump #${pump.pump_number} (${productLabel(pumpProduct)})`
-          : att.assigned_pump_id
-            ? 'Assigned'
-            : null;
-        const assignedPumpShort = pump ? `#${pump.pump_number}` : att.assigned_pump_id ? 'Assigned' : null;
         return {
           attendantId: att.id,
           attendantName: att.name ?? 'Unknown',
           phone: att.phone ?? null,
           isActive: att.is_active ?? true,
           createdAt: att.created_at ?? null,
-          assignedPumpId: att.assigned_pump_id ?? null,
-          assignedPumpLabel: assignedPumpLabel ?? null,
-          assignedPumpShort: assignedPumpShort ?? null,
           totalTransactions: p?.transactions ?? 0,
           totalLiters: p?.liters ?? 0,
           totalKwh: p?.kwh ?? 0,
@@ -194,43 +137,6 @@ function AttendantsView() {
   useEffect(() => {
     fetchReports();
   }, [fetchReports]);
-
-  useEffect(() => {
-    fetchPumps();
-  }, [fetchPumps]);
-
-  const handleAssignPump = async (values: { pumpId: string | null }) => {
-    if (!assigningAttendant) return;
-    setSubmitting(true);
-    try {
-      await api.patch(`/users/${assigningAttendant.attendantId}`, {
-        assigned_pump_id: values.pumpId || null,
-      });
-      message.success('Pump assignment updated.');
-      setAssignPumpModalOpen(false);
-      setAssigningAttendant(null);
-      assignPumpForm.resetFields();
-      fetchReports();
-    } catch (err: unknown) {
-      const ax = err as { response?: { data?: { message?: string }; status?: number } };
-      const status = ax?.response?.status;
-      const msg = ax?.response?.data?.message ?? 'Failed to assign pump';
-      if (status === 404) {
-        message.warning('This attendant is no longer in the system. Refreshing the list.');
-        fetchReports();
-      } else {
-        message.error(msg);
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const openAssignPumpModal = (record: AttendantReport) => {
-    setAssigningAttendant(record);
-    assignPumpForm.setFieldsValue({ pumpId: record.assignedPumpId || undefined });
-    setAssignPumpModalOpen(true);
-  };
 
   const handleAddAttendant = async (values: { name: string; phone: string; pin: string }) => {
     if (!currentStation || !authUser?.companyId) {
@@ -350,33 +256,6 @@ function AttendantsView() {
       render: (v: number) => <Text strong>{formatRWF(v)}</Text>,
     },
     {
-      title: 'Pump',
-      key: 'assignedPump',
-      width: 140,
-      render: (_: unknown, record: AttendantReport) => (
-        <div className="flex items-center gap-1 flex-nowrap">
-          <span className="text-ink-secondary shrink-0">
-            {record.assignedPumpShort ? (
-              <Tooltip title={record.assignedPumpLabel ?? record.assignedPumpShort}>
-                {record.assignedPumpShort === 'Assigned' ? 'Assigned' : `Pump ${record.assignedPumpShort}`}
-              </Tooltip>
-            ) : (
-              'Not assigned'
-            )}
-          </span>
-          <Button
-            type="link"
-            size="small"
-            className="!p-0 !min-w-0 !h-auto"
-            icon={<ThunderboltOutlined />}
-            onClick={() => openAssignPumpModal(record)}
-          >
-            {record.assignedPumpId ? 'Change' : 'Assign'}
-          </Button>
-        </div>
-      ),
-    },
-    {
       title: 'Status',
       key: 'status',
       width: 80,
@@ -444,35 +323,6 @@ function AttendantsView() {
           <ExportButton data={reports} columns={exportColumns} filename="attendant-reports" />
         </Space>
       </div>
-
-      <Modal
-        title={assigningAttendant ? `Assign pump: ${assigningAttendant.attendantName}` : 'Assign pump'}
-        open={assignPumpModalOpen}
-        onCancel={() => { setAssignPumpModalOpen(false); setAssigningAttendant(null); assignPumpForm.resetFields(); }}
-        footer={null}
-        destroyOnClose
-      >
-        <Form form={assignPumpForm} layout="vertical" onFinish={handleAssignPump}>
-          <Form.Item name="pumpId" label="Pump">
-            <Select
-              allowClear
-              placeholder="Select a pump (or clear assignment)"
-              options={[
-                ...pumps.map((p) => ({
-                  value: p.id,
-                  label: isEvProductType(p.productType)
-                    ? `#${p.pumpNumber} · ${productLabel(p.productType)} · ${p.powerKw ?? 0}kW`
-                    : `Pump #${p.pumpNumber} (${productLabel(p.productType)})`,
-                })),
-              ]}
-            />
-          </Form.Item>
-          <div className="flex justify-end gap-2">
-            <Button onClick={() => { setAssignPumpModalOpen(false); setAssigningAttendant(null); }}>Cancel</Button>
-            <Button type="primary" htmlType="submit" loading={submitting}>Save</Button>
-          </div>
-        </Form>
-      </Modal>
 
       <Modal
         title="Add Attendant"
@@ -554,11 +404,6 @@ function AttendantsView() {
                   <PhoneOutlined className="text-ink-muted" />
                   <Text className="w-24 text-ink-secondary">Phone</Text>
                   <Text strong>{selectedAttendant.phone || 'Not set'}</Text>
-                </div>
-                <div className="flex items-center gap-2">
-                  <ThunderboltOutlined className="text-ink-muted" />
-                  <Text className="w-24 text-ink-secondary">Pump</Text>
-                  <Text strong>{selectedAttendant.assignedPumpLabel || 'Not assigned'}</Text>
                 </div>
                 <div className="flex items-center gap-2">
                   <SafetyOutlined className="text-ink-muted" />

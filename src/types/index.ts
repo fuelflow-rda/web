@@ -240,9 +240,6 @@ export interface AttendantReport {
   phone?: string | null;
   isActive?: boolean;
   createdAt?: string | null;
-  assignedPumpId?: string | null;
-  assignedPumpLabel?: string | null;
-  assignedPumpShort?: string | null;
   totalTransactions: number;
   totalLiters: number;
   totalKwh: number;
