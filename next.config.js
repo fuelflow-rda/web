@@ -24,7 +24,7 @@ const nextConfig = {
   output: 'standalone',
   // Do not advertise the framework version.
   poweredByHeader: false,
-  transpilePackages: ['antd', '@ant-design/icons', '@ant-design/charts', 'recharts'],
+  transpilePackages: ['antd', '@ant-design/icons', 'recharts'],
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

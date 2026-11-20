@@ -16,10 +16,8 @@
     "check:contrast": "node scripts/check-contrast.mjs"
   },
   "dependencies": {
-    "@ant-design/charts": "^2.0.0",
     "@ant-design/icons": "^5.2.6",
     "@ant-design/v5-patch-for-react-19": "^1.0.3",
-    "@supabase/supabase-js": "^2.39.0",
     "antd": "^5.13.0",
     "axios": "^1.6.0",
     "dayjs": "^1.11.10",
