@@ -1,6 +1,10 @@
 'use client';
 
 import React, { useEffect } from 'react';
+// antd 5 drives its static methods (message, notification, Modal.confirm) through
+// ReactDOM.render, which React 19 removed. This patch reroutes them onto createRoot.
+// It has to be imported once, before any static call runs.
+import '@ant-design/v5-patch-for-react-19';
 import { ConfigProvider, theme as antdTheme } from 'antd';
 import { AuthBootstrap } from '@/components/AuthBootstrap';
 import { useThemeStore } from '@/store/theme-store';
