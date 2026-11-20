@@ -1,0 +1,6 @@
+# pnpm 10 and later read project settings from this file.
+
+# pnpm refuses to finish an install until every dependency build script is
+# either allowed or denied. core-js's script only prints a funding banner.
+allowBuilds:
+  core-js: false
