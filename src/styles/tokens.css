@@ -90,7 +90,8 @@
   --shadow-overlay: 0 0 0 1px var(--border);
 }
 
-:root[data-theme='dark'] {
+:root[data-theme='dark'],
+[data-theme='dark'] {
   color-scheme: dark;
   --bg: #02110C;
   --surface: #0A1F17;
@@ -137,6 +138,56 @@
   --chart-seq-7: #B3CFBE;
   --chart-seq-8: #D8E7DE;
   --chart-seq-9: #EEF4F0;
+}
+
+/* Light whatever the theme, for an element marked data-theme="light". */
+[data-theme='light'] {
+  color-scheme: light;
+  --bg: #FAF6EC;
+  --surface: #FFFDF8;
+  --surface-muted: #F3EBD6;
+  --border: #E8DEC5;
+  --border-strong: #958667;
+  --text: #0E1C16;
+  --text-secondary: #44534B;
+  --text-muted: #5E6A62;
+  --primary: #1A422F;
+  --on-primary: #F3EBD6;
+  --primary-hover: #123426;
+  --accent-text: #7D6537;
+  --focus: #2F8A68;
+  --link: #1A422F;
+  --success: #1F6B4E;
+  --success-tint: #E3F1EA;
+  --warning: #8A5A12;
+  --warning-tint: #F8EDD5;
+  --danger: #A83A2B;
+  --danger-tint: #FBEAE6;
+  --info: #2F5D86;
+  --info-tint: #E6EEF5;
+  --product-gasoline: #B86E1C;
+  --product-diesel: #2F5D86;
+  --product-ev-ac: #3F9A76;
+  --product-ev-dc: #2F8A68;
+  --product-ev-ultra: #1A422F;
+  --pay-cash: #1A422F;
+  --pay-card: #3B6B8F;
+  --pay-momo: #A9821A;
+  --chart-1: #1A422F;
+  --chart-2: #3F9A76;
+  --chart-3: #3B6B8F;
+  --chart-4: #A88A4E;
+  --chart-5: #B5654A;
+  --chart-seq-0: #F3EBD6;
+  --chart-seq-1: #D8E7DE;
+  --chart-seq-2: #B3CFBE;
+  --chart-seq-3: #86B29A;
+  --chart-seq-4: #5A9277;
+  --chart-seq-5: #3C7459;
+  --chart-seq-6: #2A5B44;
+  --chart-seq-7: #1A422F;
+  --chart-seq-8: #123426;
+  --chart-seq-9: #0A241A;
 }
 
 /* Below the sm breakpoint, controls grow to the touch target. */

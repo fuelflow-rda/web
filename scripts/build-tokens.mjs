@@ -97,8 +97,15 @@ function tokensCss() {
     const width = typeof s.width === 'number' ? px(s.width) : `var(--size-${s.width})`;
     lines.push(`  --shadow-${n}: 0 0 0 ${width} var(--${s.color});`);
   }
-  lines.push('}', '', ":root[data-theme='dark'] {", '  color-scheme: dark;');
+  // Dark on the page root (the user's theme) or on any element marked
+  // data-theme="dark", such as the public site's night sections.
+  lines.push('}', '', ":root[data-theme='dark'],", "[data-theme='dark'] {", '  color-scheme: dark;');
   for (const [n, v] of Object.entries(themed)) if (v.dark !== v.light) lines.push(`  --${n}: ${v.dark};`);
+  lines.push('}', '');
+  // The public site is light only: its wrapper carries data-theme="light", and the
+  // values declared there win over the dark ones its descendants would inherit.
+  lines.push('/* Light whatever the theme, for an element marked data-theme="light". */', "[data-theme='light'] {", '  color-scheme: light;');
+  for (const [n, v] of Object.entries(themed)) if (v.dark !== v.light) lines.push(`  --${n}: ${v.light};`);
   lines.push('}', '');
   lines.push('/* Below the sm breakpoint, controls grow to the touch target. */');
   lines.push(`@media (max-width: ${breakpoints.sm - 0.02}px) {`, '  :root {', '    --size-control: var(--size-touch-target);', '  }', '}', '');
