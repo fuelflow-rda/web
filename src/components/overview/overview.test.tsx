@@ -157,3 +157,14 @@ describe('panels', () => {
     expect(screen.queryByText('−3.2 L')).toBeNull();
   });
 });
+
+describe('kigaliWindow', () => {
+  it('covers whole Kigali days, both ends included', async () => {
+    const { kigaliWindow } = await import('@/lib/kigali');
+    expect(kigaliWindow({ from: '2026-11-19', to: '2026-11-20' })).toEqual({
+      from: '2026-11-18T22:00:00.000Z',
+      to: '2026-11-20T21:59:59.999Z',
+    });
+    expect(kigaliWindow({ days: 7 }, Date.parse('2026-11-21T09:00:00Z'))).toEqual({ from: '2026-11-14T22:00:00.000Z' });
+  });
+});

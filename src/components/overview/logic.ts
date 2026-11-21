@@ -3,14 +3,7 @@ import { formatMeter, pointLabel } from '@/lib/product-types';
 import type { StationToday } from './data';
 import { clock, reportDay } from './panels';
 
-/** Rwanda keeps UTC+2 all year: a station's day starts at 22:00 UTC the evening before. */
-const KIGALI_MS = 2 * 3600_000;
-export function kigaliDayStart(at: number): number {
-  const local = new Date(at + KIGALI_MS);
-  local.setUTCHours(0, 0, 0, 0);
-  return local.getTime() - KIGALI_MS;
-}
-export const ymd = (ms: number) => new Date(ms + KIGALI_MS).toISOString().slice(0, 10);
+export { kigaliDayStart, ymd } from '@/lib/kigali';
 
 export function ago(ms: number): string {
   const s = Math.round(ms / 1000);

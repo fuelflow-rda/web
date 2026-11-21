@@ -39,9 +39,6 @@
     "src/app/(dashboard)/settings/page.tsx": {
       "type": 1
     },
-    "src/app/(dashboard)/transactions/page.tsx": {
-      "type": 2
-    },
     "src/app/(marketing)/page.tsx": {
       "colour": 3,
       "spacing": 2

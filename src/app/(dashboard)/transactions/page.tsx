@@ -1,68 +1,98 @@
 'use client';
 
-import React, { Suspense, useEffect, useState, useCallback } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
-import {
-  Table,
-  Card,
-  Input,
-  Select,
-  DatePicker,
-  Tag,
-  Button,
-  Space,
-  Typography,
-  Tooltip,
-  Popconfirm,
-  Modal,
-  Form,
-  message,
-} from 'antd';
-import {
-  SearchOutlined,
-  FlagOutlined,
-  CreditCardOutlined,
-  DollarOutlined,
-  MobileOutlined,
-  WalletOutlined,
-  FilterOutlined,
-} from '@ant-design/icons';
-import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
-import dayjs, { Dayjs } from 'dayjs';
+import { DatePicker, Drawer, Input, Segmented, Select } from 'antd';
+import dayjs, { type Dayjs } from 'dayjs';
+import { Flag, FlagOff, Search, X } from 'lucide-react';
 import api from '@/lib/api';
-import { formatRWF } from '@/lib/format';
-import {
-  PRODUCT_TYPES,
-  formatQuantity,
-  normalizeProductType,
-  productLabel,
-  productTagColor,
-  unitForProduct,
-  unitLabel,
-} from '@/lib/product-types';
-import { useStationStore } from '@/store/station-store';
 import ExportButton from '@/components/ExportButton';
-import { isPaymentFilter, readDay, readInt } from '@/lib/links';
-import type { Transaction, Pump, User } from '@/types';
+import { Banner, Button, PageHeader, StatusChip, Tag, type StatusTone } from '@/components/ui';
+import { focusRing } from '@/components/ui/focus';
+import { PanelError, PanelSkeleton, clock, num, rwf } from '@/components/overview/panels';
+import { kigaliWindow, ymd } from '@/lib/kigali';
+import { cx } from '@/lib/cx';
+import { isPaymentFilter } from '@/lib/links';
+import { PRODUCT_TYPES, formatMeter, pointLabel, productCode, productColor, productName } from '@/lib/product-types';
+import { useStationStore } from '@/store/station-store';
 
-const { Title, Text } = Typography;
-const { RangePicker } = DatePicker;
+type Preset = 'today' | '7d' | '30d' | '90d';
+const PRESETS: Array<{ value: Preset; label: string; days: number }> = [
+  { value: 'today', label: 'Today', days: 1 },
+  { value: '7d', label: '7 days', days: 7 },
+  { value: '30d', label: '30 days', days: 30 },
+  { value: '90d', label: '90 days', days: 90 },
+];
+type Range = { kind: 'preset'; value: Preset } | { kind: 'custom'; from: string; to: string };
+type Status = 'all' | 'pending' | 'locked' | 'voided' | 'flagged';
+type Sort = 'newest' | 'oldest' | 'amount' | 'quantity';
+const SORTS: Record<Sort, { label: string; sortBy: string; sortOrder: 'asc' | 'desc' }> = {
+  newest: { label: 'Newest first', sortBy: 'timestamp', sortOrder: 'desc' },
+  oldest: { label: 'Oldest first', sortBy: 'timestamp', sortOrder: 'asc' },
+  amount: { label: 'Largest amount', sortBy: 'total_amount', sortOrder: 'desc' },
+  quantity: { label: 'Largest quantity', sortBy: 'quantity', sortOrder: 'desc' },
+};
+const PAGE = 20;
 
-const WEEKDAYS_PLURAL = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
-const pad2 = (n: number) => String(n).padStart(2, '0');
+const PAY: Record<string, string> = { CASH: 'Cash', MOMO: 'MoMo', CARD: 'Card' };
+const STATUS: Record<'pending' | 'locked' | 'voided', { label: string; tone: StatusTone; title: string }> = {
+  pending: { label: 'Pending', tone: 'warning', title: 'Saved under 2 minutes ago: the attendant can still undo it' },
+  locked: { label: 'Synced', tone: 'success', title: 'Saved and locked' },
+  voided: { label: 'Voided', tone: 'neutral', title: 'Undone by the attendant; kept for the record' },
+};
 
-/** "Mondays · 14:00–15:00", "Every day · 14:00–15:00" or "Mondays". */
-function localTimeLabel(dow: number | undefined, hour: number | undefined): string {
-  const day = dow === undefined ? 'Every day' : WEEKDAYS_PLURAL[dow];
-  return hour === undefined ? day : `${day} · ${pad2(hour)}:00–${pad2((hour + 1) % 24)}:00`;
+interface Sale {
+  id: string;
+  timestamp: string;
+  quantity: number;
+  unit: string;
+  unit_price: number;
+  product_type: string;
+  total_amount: number;
+  payment_method: string;
+  vehicle_plate: string | null;
+  customer_phone: string | null;
+  sale_status: 'pending' | 'locked' | 'voided';
+  is_flagged: boolean | null;
+  flag_reason: string | null;
+  is_offline: boolean | null;
+  synced_at: string | null;
+  created_at: string;
+  voided_at: string | null;
+  void_reason: string | null;
+  users?: { id: string; name: string | null } | null;
+  pumps?: { pump_number: number; product_type?: string } | null;
+}
+interface Summary {
+  sales: number;
+  revenue: number;
+  liters: number;
+  kwh: number;
+  pending: number;
+  voided: number;
 }
 
-const paymentIcons: Record<string, React.ReactNode> = {
-  CASH: <DollarOutlined />,
-  CARD: <CreditCardOutlined />,
-  MOMO: <MobileOutlined />,
-  CREDIT: <WalletOutlined />,
+const readDay = (v: string | null) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined);
+const readInt = (v: string | null, lo: number, hi: number) => {
+  const n = v === null ? NaN : Number(v);
+  return Number.isInteger(n) && n >= lo && n <= hi ? n : undefined;
 };
+const one = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const dateTime = (iso: string) =>
+  new Intl.DateTimeFormat('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Africa/Kigali',
+  }).format(new Date(iso));
+
+/** The window as API timestamps, on Kigali days. */
+function windowOf(range: Range): { from: string; to?: string } {
+  if (range.kind === 'custom') return kigaliWindow({ from: range.from, to: range.to });
+  return kigaliWindow({ days: PRESETS.find((p) => p.value === range.value)!.days });
+}
 
 // useSearchParams needs a Suspense boundary for Next to prerender the page.
 export default function TransactionsPage() {
@@ -74,565 +104,599 @@ export default function TransactionsPage() {
 }
 
 function TransactionsView() {
+  const params = useSearchParams();
   const { currentStation } = useStationStore();
-  const searchParams = useSearchParams();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [pumps, setPumps] = useState<Pump[]>([]);
-  const [attendants, setAttendants] = useState<User[]>([]);
-  const [flagModalVisible, setFlagModalVisible] = useState(false);
-  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
-  const [flagForm] = Form.useForm();
+  const stationId = currentStation?.id ?? null;
 
-  const [filters, setFilters] = useState<{
-    dateRange: [Dayjs, Dayjs] | null;
-    pumpId: string | undefined;
-    attendantId: string | undefined;
-    productType: string | undefined;
-    paymentMethod: string | undefined;
-    flagStatus: 'all' | 'flagged' | 'unflagged';
-    search: string;
-    /** Station-local weekday (0 = Sunday) and hour, from a heatmap link. */
-    dow: number | undefined;
-    hour: number | undefined;
-  }>(() => {
-    // Links from the dashboard arrive with the slice they were showing.
-    const from = readDay(searchParams, 'from');
-    const to = readDay(searchParams, 'to') ?? from;
-    const payment = searchParams.get('payment') ?? '';
-    const flag = searchParams.get('flag');
-    return {
-      dateRange: from && to ? [dayjs(from), dayjs(to)] : null,
-      pumpId: searchParams.get('pump') ?? undefined,
-      attendantId: searchParams.get('attendant') ?? undefined,
-      productType: searchParams.get('product') ?? undefined,
-      paymentMethod: isPaymentFilter(payment) ? payment : undefined,
-      flagStatus: flag === 'flagged' || flag === 'unflagged' ? flag : 'all',
-      search: '',
-      dow: readInt(searchParams, 'dow', 0, 6),
-      hour: readInt(searchParams, 'hour', 0, 23),
-    };
+  // Links from the Overview and the search box arrive with the slice they mean.
+  const [range, setRange] = useState<Range>(() => {
+    const from = readDay(params.get('from'));
+    const to = readDay(params.get('to')) ?? from;
+    if (from && to) return { kind: 'custom', from, to };
+    // A search with no dates means "find this plate", not "find it today".
+    return { kind: 'preset', value: params.get('search') ? '90d' : 'today' };
   });
+  const [search, setSearch] = useState(() => params.get('search') ?? '');
+  const [query, setQuery] = useState(search);
+  const [product, setProduct] = useState<string | undefined>(() => params.get('product') ?? undefined);
+  const [payment, setPayment] = useState<string | undefined>(() => {
+    const p = params.get('payment') ?? '';
+    return isPaymentFilter(p) ? p : undefined;
+  });
+  const [attendant, setAttendant] = useState<string | undefined>(() => params.get('attendant') ?? undefined);
+  const [pump, setPump] = useState<string | undefined>(() => params.get('pump') ?? undefined);
+  const [status, setStatus] = useState<Status>(() => (params.get('flag') === 'flagged' ? 'flagged' : 'all'));
+  const [slot] = useState(() => ({ dow: readInt(params.get('dow'), 0, 6), hour: readInt(params.get('hour'), 0, 23) }));
+  const [sort, setSort] = useState<Sort>('newest');
+  const [page, setPage] = useState(1);
 
-  const fetchTransactions = useCallback(async () => {
-    if (!currentStation) return;
-    setLoading(true);
-    try {
-      const params: Record<string, unknown> = {
-        page,
-        limit: pageSize,
-        sortBy: 'timestamp',
-        sortOrder: 'desc',
-      };
-      params.station_id = currentStation.id;
-      if (filters.dateRange) {
-        params.from = filters.dateRange[0].startOf('day').toISOString();
-        params.to = filters.dateRange[1].endOf('day').toISOString();
-      }
-      if (filters.pumpId) params.pump_id = filters.pumpId;
-      if (filters.attendantId) params.attendant_id = filters.attendantId;
-      if (filters.productType) params.product_type = filters.productType;
-      if (filters.paymentMethod) params.payment_method = filters.paymentMethod;
-      if (filters.flagStatus !== 'all') params.flag_status = filters.flagStatus;
-      if (filters.search?.trim()) params.search = filters.search.trim();
-      if (filters.dow !== undefined) params.dow = filters.dow;
-      if (filters.hour !== undefined) params.hour = filters.hour;
+  const [sales, setSales] = useState<Sale[] | null>(null);
+  const [total, setTotal] = useState(0);
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  // What is on screen was loaded for this key; anything else is still loading.
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const [stamp] = useState(() => ymd(Date.now()));
+  const [nonce, setNonce] = useState(0);
+  const [pumps, setPumps] = useState<Array<{ id: string; pump_number: number; product_type: string }>>([]);
+  const [attendants, setAttendants] = useState<Array<{ id: string; name: string }>>([]);
+  const [open, setOpen] = useState<Sale | null>(null);
 
-      const res = await api.get('/transactions', { params });
-      const payload = res.data as { data?: unknown[]; pagination?: { total: number } };
-      const raw = Array.isArray(payload?.data) ? payload.data : [];
-      setTransactions(
-        raw.map((t) => {
-          const r = t as Record<string, unknown>;
-          const users = r.users as { id: string; name: string } | undefined;
-          const pumpsRef = r.pumps as
-            | {
-                id: string;
-                pump_number: number;
-                product_type?: string;
-                fuel_type?: string;
-                connector_type?: string | null;
-                power_kw?: number | null;
-              }
-            | undefined;
-          const productType = normalizeProductType(
-            (r.product_type as string | undefined) ?? (r.fuel_type as string | undefined),
-          );
-          const quantity = Number(r.quantity ?? r.liters) || 0;
-          const unitPrice = Number(r.unit_price ?? r.price_per_liter) || 0;
-          const pumpProduct = normalizeProductType(pumpsRef?.product_type ?? pumpsRef?.fuel_type);
-          return {
-            id: r.id as string,
-            stationId: r.station_id as string,
-            pumpId: r.pump_id as string,
-            attendantId: r.attendant_id as string,
-            productType,
-            fuelType: productType,
-            unit: unitForProduct(productType),
-            quantity,
-            unitPrice,
-            liters: quantity,
-            pricePerLiter: unitPrice,
-            totalAmount: Number(r.total_amount) ?? 0,
-            paymentMethod: (r.payment_method as Transaction['paymentMethod']) ?? 'CASH',
-            isFlagged: Boolean(r.is_flagged),
-            flagReason: (r.flag_reason as string | null)?.trim() || undefined,
-            vehiclePlate: (r.vehicle_plate as string) ?? undefined,
-            customerPhone: (r.customer_phone as string) ?? undefined,
-            createdAt: (r.timestamp ?? r.created_at) as string,
-            updatedAt: (r.updated_at ?? r.timestamp) as string,
-            pump: pumpsRef
-              ? {
-                  id: pumpsRef.id,
-                  pumpNumber: pumpsRef.pump_number,
-                  productType: pumpProduct,
-                  fuelType: pumpProduct,
-                  connectorType: (pumpsRef.connector_type as Pump['connectorType']) ?? null,
-                  powerKw: pumpsRef.power_kw == null ? null : Number(pumpsRef.power_kw),
-                  stationId: '',
-                  status: 'ACTIVE' as const,
-                  createdAt: '',
-                  updatedAt: '',
-                }
-              : undefined,
-            attendant: users ? { id: users.id, name: users.name, email: '', role: 'ATTENDANT' as const, isActive: true, createdAt: '', updatedAt: '' } : undefined,
-          };
-        }),
-      );
-      setTotal(payload?.pagination?.total ?? raw.length);
-    } catch {
-      setTransactions([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentStation, page, pageSize, filters]);
-
-  const fetchFiltersData = useCallback(async () => {
-    if (!currentStation) return;
-    try {
-      const [pumpsRes, attendantsRes] = await Promise.all([
-        api.get('/pumps', { params: { stationId: currentStation.id } }),
-        api.get(`/users/attendants/${currentStation.id}`),
-      ]);
-      const pumpOut = pumpsRes.data as { data?: unknown[] };
-      const rawPumps = pumpOut?.data ?? (Array.isArray(pumpsRes.data) ? pumpsRes.data : []);
-      setPumps(
-        rawPumps.map((p) => {
-          const r = p as Record<string, unknown>;
-          const productType = normalizeProductType(
-            (r.product_type as string | undefined) ?? (r.fuel_type as string | undefined),
-          );
-          return {
-            id: r.id as string,
-            stationId: r.station_id as string,
-            pumpNumber: Number(r.pump_number) ?? 0,
-            productType,
-            fuelType: productType,
-            connectorType: (r.connector_type as Pump['connectorType']) ?? null,
-            powerKw: r.power_kw == null ? null : Number(r.power_kw),
-            status: 'ACTIVE' as const,
-            createdAt: (r.created_at as string) ?? '',
-            updatedAt: (r.updated_at as string) ?? '',
-          };
-        }),
-      );
-      const rawAttendants = Array.isArray(attendantsRes.data) ? attendantsRes.data : [];
-      setAttendants(
-        rawAttendants.map((a) => {
-          const r = a as Record<string, unknown>;
-          return {
-            id: r.id as string,
-            name: (r.name as string) ?? '',
-            email: '',
-            role: 'ATTENDANT' as const,
-            isActive: true,
-            createdAt: (r.created_at as string) ?? '',
-            updatedAt: (r.updated_at as string) ?? '',
-          };
-        }),
-      );
-    } catch {
-      setPumps([]);
-      setAttendants([]);
-    }
-  }, [currentStation]);
-
+  // Typing settles for a moment before it searches.
   useEffect(() => {
-    fetchTransactions();
-  }, [fetchTransactions]);
+    const t = window.setTimeout(() => setQuery(search.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [search]);
 
-  useEffect(() => {
-    fetchFiltersData();
-  }, [fetchFiltersData]);
-
-  useEffect(() => {
+  // Any change of filter goes back to the first page.
+  const filterKey = JSON.stringify([range, query, product, payment, attendant, pump, status, sort, stationId]);
+  const [lastKey, setLastKey] = useState(filterKey);
+  if (filterKey !== lastKey) {
+    setLastKey(filterKey);
     setPage(1);
-  }, [
-    filters.dateRange,
-    filters.pumpId,
-    filters.attendantId,
-    filters.productType,
-    filters.paymentMethod,
-    filters.flagStatus,
-  ]);
+  }
 
-  const openFlagModal = (tx: Transaction) => {
-    setSelectedTx(tx);
-    flagForm.setFieldsValue({ reason: tx.flagReason ?? '' });
-    setFlagModalVisible(true);
+  const shared = useMemo(() => {
+    const w = windowOf(range);
+    const p: Record<string, unknown> = { station_id: stationId, from: w.from };
+    if (w.to) p.to = w.to;
+    if (query) p.search = query;
+    if (product) p.product_type = product;
+    if (payment) p.payment_method = payment;
+    if (attendant) p.attendant_id = attendant;
+    if (pump) p.pump_id = pump;
+    if (slot.dow !== undefined) p.dow = slot.dow;
+    if (slot.hour !== undefined) p.hour = slot.hour;
+    return p;
+    // The window is recomputed when filters change; "today" rolling over is picked up by reload.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [range, query, product, payment, attendant, pump, slot, stationId, nonce]);
+
+  const requestKey = JSON.stringify([stationId, shared, page, sort, status]);
+  useEffect(() => {
+    if (!stationId) return;
+    let live = true;
+    const list: Record<string, unknown> = {
+      ...shared,
+      page,
+      limit: PAGE,
+      sortBy: SORTS[sort].sortBy,
+      sortOrder: SORTS[sort].sortOrder,
+    };
+    if (status === 'flagged') Object.assign(list, { flag_status: 'flagged', include_voided: true });
+    else if (status === 'all') list.include_voided = true;
+    else list.sale_status = status;
+    const key = requestKey;
+    Promise.all([api.get('/transactions', { params: list }), api.get('/transactions/summary', { params: shared })])
+      .then(([res, sum]) => {
+        if (!live) return;
+        const body = res.data as { data?: Sale[]; pagination?: { total: number } };
+        setSales(body.data ?? []);
+        setTotal(body.pagination?.total ?? 0);
+        setSummary(sum.data as Summary);
+        setError(null);
+      })
+      .catch((err: Error) => live && setError(err.message))
+      .finally(() => live && setLoadedKey(key));
+    return () => {
+      live = false;
+    };
+  }, [stationId, shared, page, sort, status, requestKey]);
+  const loading = loadedKey !== requestKey;
+
+  useEffect(() => {
+    if (!stationId) return;
+    Promise.all([api.get('/pumps', { params: { stationId } }), api.get(`/users/attendants/${stationId}`)])
+      .then(([p, a]) => {
+        const pumpRows = ((p.data as { data?: unknown[] }).data ?? (Array.isArray(p.data) ? p.data : [])) as Array<
+          Record<string, unknown>
+        >;
+        setPumps(
+          pumpRows.map((r) => ({
+            id: String(r.id),
+            pump_number: Number(r.pump_number),
+            product_type: String(r.product_type ?? r.fuel_type),
+          })),
+        );
+        setAttendants(
+          ((Array.isArray(a.data) ? a.data : []) as Array<Record<string, unknown>>).map((r) => ({
+            id: String(r.id),
+            name: String(r.name ?? ''),
+          })),
+        );
+      })
+      .catch(() => {
+        // The filters stay usable with what they have; the list itself reports errors.
+      });
+  }, [stationId]);
+
+  const reload = useCallback(() => setNonce((n) => n + 1), []);
+  const filtered = Boolean(
+    query ||
+    product ||
+    payment ||
+    attendant ||
+    pump ||
+    status !== 'all' ||
+    slot.dow !== undefined ||
+    slot.hour !== undefined,
+  );
+  const clear = () => {
+    setSearch('');
+    setQuery('');
+    setProduct(undefined);
+    setPayment(undefined);
+    setAttendant(undefined);
+    setPump(undefined);
+    setStatus('all');
   };
 
-  const closeFlagModal = () => {
-    setFlagModalVisible(false);
-    setSelectedTx(null);
-    flagForm.resetFields();
-  };
-
-  const handleFlag = async (values: { reason: string }) => {
-    if (!selectedTx) return;
-    const reason = values.reason.trim();
-    try {
-      await api.patch(`/transactions/${selectedTx.id}/flag`, { reason });
-      message.success(selectedTx.isFlagged ? 'Flag reason updated' : 'Transaction flagged');
-      closeFlagModal();
-      fetchTransactions();
-    } catch (err) {
-      message.error(err instanceof Error ? err.message : 'Failed to flag transaction');
-    }
-  };
-
-  const handleUnflag = async () => {
-    if (!selectedTx) return;
-    try {
-      await api.delete(`/transactions/${selectedTx.id}/flag`);
-      message.success('Flag removed');
-      closeFlagModal();
-      fetchTransactions();
-    } catch (err) {
-      message.error(err instanceof Error ? err.message : 'Failed to remove flag');
-    }
-  };
-
-  const handleTableChange = (pagination: TablePaginationConfig) => {
-    setPage(pagination.current || 1);
-    setPageSize(pagination.pageSize || 20);
-  };
-
-  const columns: ColumnsType<Transaction> = [
-    {
-      title: 'Time',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      width: 200,
-      sorter: true,
-      render: (date: string, record: Transaction) => (
-        <div>
-          <div>{dayjs(date).format('MMM D, HH:mm')}</div>
-          {record.isFlagged && (
-            <div className="mt-0.5 flex items-start gap-1 text-xs font-medium text-danger leading-snug">
-              <FlagOutlined className="mt-0.5 shrink-0" aria-hidden="true" />
-              <span>{record.flagReason ?? 'Flagged, no reason recorded'}</span>
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: 'Vehicle Plate',
-      dataIndex: 'vehiclePlate',
-      key: 'vehiclePlate',
-      width: 130,
-      render: (plate: string) => plate || <Text type="secondary">No plate</Text>,
-    },
-    {
-      title: 'Product',
-      dataIndex: 'productType',
-      key: 'productType',
-      width: 140,
-      render: (type: string) => (
-        <Tag color={productTagColor(type)} className="font-medium!">
-          {productLabel(type)}
-        </Tag>
-      ),
-    },
-    {
-      title: 'Quantity',
-      dataIndex: 'quantity',
-      key: 'quantity',
-      width: 110,
-      sorter: true,
-      align: 'right',
-      render: (q: number, record: Transaction) => formatQuantity(q, record.unit, 1),
-    },
-    {
-      title: 'Amount',
-      dataIndex: 'totalAmount',
-      key: 'totalAmount',
-      width: 140,
-      sorter: true,
-      render: (amt: number) => <Text strong>{formatRWF(amt)}</Text>,
-    },
-    {
-      title: 'Payment',
-      dataIndex: 'paymentMethod',
-      key: 'paymentMethod',
-      width: 110,
-      render: (method: string) => (
-        <Space>
-          {paymentIcons[method]}
-          <span>{method}</span>
-        </Space>
-      ),
-    },
-    {
-      title: 'Pump',
-      key: 'pump',
-      width: 80,
-      render: (_: unknown, record: Transaction) => `#${record.pump?.pumpNumber ?? '?'}`,
-    },
-    {
-      title: 'Attendant',
-      key: 'attendant',
-      width: 140,
-      render: (_: unknown, record: Transaction) =>
-        record.attendant?.name || <Text type="secondary">Unknown</Text>,
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      width: 80,
-      fixed: 'right',
-      render: (_: unknown, record: Transaction) => (
-        <Tooltip
-          title={
-            record.isFlagged
-              ? `Flagged: ${record.flagReason ?? 'no reason recorded'}. Click to edit or remove.`
-              : 'Flag this transaction'
-          }
-        >
-          <Button
-            type="text"
-            icon={<FlagOutlined />}
-            danger={record.isFlagged}
-            aria-label={record.isFlagged ? 'Edit flag' : 'Flag transaction'}
-            onClick={() => openFlagModal(record)}
-            className={record.isFlagged ? 'text-danger!' : ''}
-          />
-        </Tooltip>
-      ),
-    },
-  ];
-
-  const exportColumns = [
-    { header: 'Time', key: 'createdAt' },
-    { header: 'Vehicle Plate', key: 'vehiclePlate' },
-    { header: 'Product', key: 'productType' },
-    { header: 'Quantity', key: 'quantity' },
-    { header: 'Unit', key: 'unitLabel' },
-    { header: 'Amount (RWF)', key: 'totalAmount' },
-    { header: 'Payment', key: 'paymentMethod' },
-    { header: 'Pump', key: 'pumpNumber' },
-    { header: 'Attendant', key: 'attendantName' },
-    { header: 'Flagged', key: 'flaggedLabel' },
-    { header: 'Flag reason', key: 'flagReason' },
-  ];
-
-  const exportData = transactions.map((t) => ({
-    ...t,
-    productType: productLabel(t.productType),
-    unitLabel: unitLabel(t.unit),
-    createdAt: dayjs(t.createdAt).format('YYYY-MM-DD HH:mm'),
-    pumpNumber: t.pump?.pumpNumber || '',
-    attendantName: t.attendant?.name || '',
-    flaggedLabel: t.isFlagged ? 'Yes' : 'No',
-    flagReason: t.flagReason ?? '',
+  const first = total === 0 ? 0 : (page - 1) * PAGE + 1;
+  const last = Math.min(page * PAGE, total);
+  const exportRows = (sales ?? []).map((s) => ({
+    time: dateTime(s.timestamp),
+    pump: s.pumps ? pointLabel(s.pumps.pump_number, s.product_type) : '',
+    product: productName(s.product_type),
+    quantity: formatMeter(s.quantity, s.unit),
+    price: s.unit_price,
+    amount: s.total_amount,
+    payment: PAY[s.payment_method] ?? s.payment_method,
+    attendant: s.users?.name ?? '',
+    plate: s.vehicle_plate ?? '',
+    status: STATUS[s.sale_status].label,
   }));
 
+  const head =
+    'px-3 py-2.5 text-left type-overline text-11 font-medium whitespace-nowrap text-text-muted first:pl-5 last:pr-5';
+  const cell = 'border-t border-border px-3 py-3 first:pl-5 last:pr-5';
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <Title level={3} className="mb-0!">Transactions</Title>
-          <Text type="secondary">View and manage all fuel transactions</Text>
-        </div>
-        <ExportButton data={exportData} columns={exportColumns} filename="transactions" />
-      </div>
-
-      <Card className="rounded-xl!">
-        <div className="flex flex-wrap gap-3 mb-4">
-          <RangePicker
-            value={filters.dateRange}
-            onChange={(dates) =>
-              setFilters((f) => ({ ...f, dateRange: dates as [Dayjs, Dayjs] | null }))
-            }
-            className="rounded-lg!"
-          />
-          <Select
-            value={filters.pumpId}
-            onChange={(v) => setFilters((f) => ({ ...f, pumpId: v }))}
-            placeholder="All Pumps"
-            allowClear
-            className="w-40"
-            options={pumps.map((p) => ({ value: p.id, label: `Pump #${p.pumpNumber}` }))}
-          />
-          <Select
-            value={filters.attendantId}
-            onChange={(v) => setFilters((f) => ({ ...f, attendantId: v }))}
-            placeholder="All Attendants"
-            allowClear
-            className="w-44"
-            options={attendants.map((a) => ({ value: a.id, label: a.name }))}
-          />
-          <Select
-            value={filters.productType}
-            onChange={(v) => setFilters((f) => ({ ...f, productType: v }))}
-            placeholder="Product"
-            allowClear
-            className="w-44"
-            options={PRODUCT_TYPES.map((p) => ({ value: p, label: productLabel(p) }))}
-          />
-          <Select
-            value={filters.paymentMethod}
-            onChange={(v) => setFilters((f) => ({ ...f, paymentMethod: v }))}
-            placeholder="Payment"
-            allowClear
-            className="w-36"
-            options={[
-              { value: 'CASH', label: 'Cash' },
-              { value: 'CARD', label: 'Card' },
-              { value: 'MOMO', label: 'MoMo' },
-              { value: 'CREDIT', label: 'Credit' },
-            ]}
-          />
-          <Select
-            value={filters.flagStatus}
-            onChange={(v) => setFilters((f) => ({ ...f, flagStatus: v as 'all' | 'flagged' | 'unflagged' }))}
-            className="w-44"
-            options={[
-              { value: 'all', label: 'All transactions' },
-              { value: 'flagged', label: 'Flagged only' },
-              { value: 'unflagged', label: 'Not flagged' },
-            ]}
-          />
-          <Input
-            prefix={<SearchOutlined />}
-            placeholder="Search plate or phone..."
-            value={filters.search}
-            onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
-            className="w-56 rounded-lg!"
-            allowClear
-          />
-          {/* No control sets this; it only arrives from the dashboard heatmap. */}
-          {(filters.dow !== undefined || filters.hour !== undefined) && (
-            <Tag
-              closable
-              onClose={() => setFilters((f) => ({ ...f, dow: undefined, hour: undefined }))}
-              className="flex! items-center! m-0! px-3! text-sm!"
-            >
-              {localTimeLabel(filters.dow, filters.hour)}
-            </Tag>
-          )}
-          <Button
-            icon={<FilterOutlined />}
-            onClick={() =>
-              setFilters({
-                dateRange: null,
-                pumpId: undefined,
-                attendantId: undefined,
-                productType: undefined,
-                paymentMethod: undefined,
-                flagStatus: 'all',
-                search: '',
-                dow: undefined,
-                hour: undefined,
-              })
-            }
-          >
-            Clear
-          </Button>
-        </div>
-
-        <Table
-          columns={columns}
-          dataSource={transactions}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            current: page,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showTotal: (t) => `Total ${t} transactions`,
-          }}
-          onChange={handleTableChange}
-          scroll={{ x: 1100 }}
-          size="middle"
-          rowClassName={(record) => (record.isFlagged ? 'bg-danger-tint' : '')}
-        />
-      </Card>
-
-      <Modal
-        title={selectedTx?.isFlagged ? 'Edit flag' : 'Flag transaction'}
-        open={flagModalVisible}
-        onCancel={closeFlagModal}
-        destroyOnHidden
-        footer={[
-          <Button key="cancel" onClick={closeFlagModal}>
-            Cancel
-          </Button>,
-          ...(selectedTx?.isFlagged
-            ? [
-                <Popconfirm
-                  key="unflag"
-                  title="Remove the flag from this transaction?"
-                  description="The reason will be deleted with it."
-                  onConfirm={handleUnflag}
-                  okText="Remove flag"
-                >
-                  <Button danger>Remove flag</Button>
-                </Popconfirm>,
-              ]
-            : []),
-          <Button key="save" type="primary" danger={!selectedTx?.isFlagged} onClick={() => flagForm.submit()}>
-            {selectedTx?.isFlagged ? 'Save reason' : 'Flag transaction'}
-          </Button>,
-        ]}
-      >
-        {selectedTx && (
-          <Text type="secondary" className="block mb-4">
-            {dayjs(selectedTx.createdAt).format('MMM D, HH:mm')}, pump #
-            {selectedTx.pump?.pumpNumber ?? '?'}, {formatRWF(selectedTx.totalAmount)}
-            {selectedTx.attendant?.name ? `, recorded by ${selectedTx.attendant.name}` : ''}.
-          </Text>
-        )}
-        <Form form={flagForm} onFinish={handleFlag} layout="vertical">
-          <Form.Item
-            name="reason"
-            label="Reason"
-            extra="Shown on the transaction and in exports, so write what the next person needs to check."
-            rules={[
-              { required: true, message: 'A reason is required to flag a transaction' },
-              {
-                validator: (_, value: string) =>
-                  value && value.trim().length >= 5
-                    ? Promise.resolve()
-                    : Promise.reject(new Error('Give a reason of at least 5 characters')),
-              },
-              { max: 500, message: 'Keep the reason under 500 characters' },
-            ]}
-          >
-            <Input.TextArea
-              rows={3}
-              maxLength={500}
-              placeholder="For example: volume does not match the pump meter reading"
+    <>
+      <PageHeader
+        title="Transactions"
+        description={`${currentStation?.name ?? 'No station chosen'} · every sale locks two minutes after it is saved`}
+        actions={
+          <>
+            <Segmented<Preset | 'custom'>
+              aria-label="Period"
+              value={range.kind === 'preset' ? range.value : 'custom'}
+              onChange={(v) => {
+                if (v !== 'custom') setRange({ kind: 'preset', value: v });
+              }}
+              options={[
+                ...PRESETS.map((p) => ({ value: p.value, label: p.label })),
+                ...(range.kind === 'custom' ? [{ value: 'custom' as const, label: 'Custom' }] : []),
+              ]}
             />
-          </Form.Item>
-        </Form>
-      </Modal>
-    </div>
+            <ExportButton
+              data={exportRows}
+              filename={`${currentStation?.name ?? 'station'}-transactions-${stamp}`}
+              columns={[
+                { header: 'Time', key: 'time' },
+                { header: 'Pump', key: 'pump' },
+                { header: 'Product', key: 'product' },
+                { header: 'Quantity', key: 'quantity' },
+                { header: 'Price (RWF)', key: 'price' },
+                { header: 'Amount (RWF)', key: 'amount' },
+                { header: 'Payment', key: 'payment' },
+                { header: 'Attendant', key: 'attendant' },
+                { header: 'Plate', key: 'plate' },
+                { header: 'Status', key: 'status' },
+              ]}
+            />
+          </>
+        }
+      />
+
+      <div role="search" aria-label="Filter transactions" className="flex flex-wrap items-center gap-3">
+        <Input
+          aria-label="Search by plate or phone"
+          placeholder="Search plate or phone"
+          prefix={<Search size={16} aria-hidden className="text-text-muted" />}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          allowClear
+          className="w-full sm:w-70"
+        />
+        <Select
+          aria-label="Product"
+          placeholder="All products"
+          allowClear
+          value={product}
+          onChange={setProduct}
+          className="w-full sm:w-37.5"
+          options={PRODUCT_TYPES.map((p) => ({ value: p, label: productName(p) }))}
+        />
+        <Select
+          aria-label="Payment"
+          placeholder="All payments"
+          allowClear
+          value={payment}
+          onChange={setPayment}
+          className="w-full sm:w-37.5"
+          options={Object.entries(PAY).map(([value, label]) => ({ value, label }))}
+        />
+        <Select
+          aria-label="Attendant"
+          placeholder="All attendants"
+          allowClear
+          value={attendant}
+          onChange={setAttendant}
+          className="w-full sm:w-37.5"
+          showSearch
+          optionFilterProp="label"
+          options={attendants.map((a) => ({ value: a.id, label: a.name }))}
+        />
+        <Select
+          aria-label="Pump or charger"
+          placeholder="All pumps"
+          allowClear
+          value={pump}
+          onChange={setPump}
+          className="w-full sm:w-37.5"
+          options={[...pumps]
+            .sort((a, b) => a.pump_number - b.pump_number)
+            .map((p) => ({ value: p.id, label: pointLabel(p.pump_number, p.product_type) }))}
+        />
+        <Select
+          aria-label="Status"
+          value={status}
+          onChange={setStatus}
+          className="w-full sm:w-37.5"
+          options={[
+            { value: 'all', label: 'All statuses' },
+            { value: 'pending', label: 'Pending' },
+            { value: 'locked', label: 'Synced' },
+            { value: 'voided', label: 'Voided' },
+            { value: 'flagged', label: 'Flagged' },
+          ]}
+        />
+        {range.kind === 'custom' ? (
+          <DatePicker.RangePicker
+            aria-label="Dates"
+            value={[dayjs(range.from), dayjs(range.to)]}
+            onChange={(v) => {
+              const [a, b] = (v ?? []) as [Dayjs | null, Dayjs | null];
+              if (a && b) setRange({ kind: 'custom', from: a.format('YYYY-MM-DD'), to: b.format('YYYY-MM-DD') });
+              else setRange({ kind: 'preset', value: 'today' });
+            }}
+          />
+        ) : null}
+        {filtered ? (
+          <Button kind="ghost" icon={X} onClick={clear} className="sm:ml-auto">
+            Clear filters
+          </Button>
+        ) : null}
+      </div>
+      {slot.dow !== undefined || slot.hour !== undefined ? (
+        <Banner tone="info" title="Showing one slot from the Overview's activity chart">
+          {slot.dow !== undefined
+            ? ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'][slot.dow]
+            : 'Every day'}
+          {slot.hour !== undefined
+            ? `, ${String(slot.hour).padStart(2, '0')}:00 to ${String(slot.hour + 1).padStart(2, '0')}:00`
+            : ''}
+          , Kigali time.
+        </Banner>
+      ) : null}
+
+      <dl
+        aria-label="Summary"
+        className="m-0 flex flex-wrap gap-x-10 gap-y-3 rounded-card bg-surface-muted px-5 py-3.5"
+      >
+        {(
+          [
+            ['Sales', summary ? num(summary.sales) : '–'],
+            ['Revenue', summary ? rwf(summary.revenue) : '–'],
+            ['Fuel', summary ? `${one(summary.liters)} L` : '–'],
+            ['Energy', summary ? `${one(summary.kwh)} kWh` : '–'],
+            ['Pending', summary ? num(summary.pending) : '–', STATUS.pending.title],
+            ['Voided', summary ? num(summary.voided) : '–'],
+          ] as Array<[string, string, string?]>
+        ).map(([label, value, title]) => (
+          <div key={label} className="flex flex-col gap-1" title={title}>
+            <dt className="font-mono text-10 font-medium tracking-p80 text-text-muted uppercase">{label}</dt>
+            <dd className="m-0 font-mono text-15 font-semibold text-text">{value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <section
+        aria-labelledby="tx-title"
+        className="min-w-0 overflow-hidden rounded-card border border-border bg-surface"
+      >
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3.5">
+          <div className="flex flex-col gap-0.5">
+            <h2 id="tx-title" className="m-0 text-15 font-semibold text-text">
+              {num(total)} {total === 1 ? 'transaction' : 'transactions'}
+            </h2>
+            <p className="m-0 text-12 text-text-muted">{SORTS[sort].label}</p>
+          </div>
+          <Select
+            aria-label="Sort"
+            value={sort}
+            onChange={setSort}
+            size="small"
+            variant="borderless"
+            options={Object.entries(SORTS).map(([value, s]) => ({ value, label: s.label }))}
+          />
+        </header>
+        {error && !sales ? (
+          <div className="p-5">
+            <PanelError message="Transactions could not be loaded." onRetry={reload} />
+          </div>
+        ) : loading && !sales ? (
+          <div className="p-5">
+            <PanelSkeleton rows={8} />
+          </div>
+        ) : sales && sales.length === 0 ? (
+          <p className="m-0 px-5 py-12 text-center text-14 text-text-secondary">
+            {filtered ? 'No sales match these filters.' : 'No sales in this period yet.'}
+          </p>
+        ) : (
+          <div className={cx('overflow-x-auto transition-opacity', loading && 'opacity-60')} aria-busy={loading}>
+            <table className="w-full min-w-240 border-collapse">
+              <thead className="bg-surface-muted">
+                <tr>
+                  {[
+                    'Time',
+                    'Pump',
+                    'Product',
+                    'Quantity',
+                    'Price',
+                    'Amount',
+                    'Payment',
+                    'Attendant',
+                    'Plate',
+                    'Status',
+                  ].map((h) => (
+                    <th key={h} scope="col" className={head}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(sales ?? []).map((s) => {
+                  const voided = s.sale_status === 'voided';
+                  const st = STATUS[s.sale_status];
+                  return (
+                    <tr
+                      key={s.id}
+                      onClick={() => setOpen(s)}
+                      className="cursor-pointer transition-colors hover:bg-surface-muted"
+                    >
+                      <td className={cell}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpen(s);
+                          }}
+                          aria-label={`Sale at ${dateTime(s.timestamp)}, details`}
+                          className={cx(
+                            'inline-flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 font-mono text-13 text-text-secondary',
+                            focusRing,
+                          )}
+                        >
+                          {range.kind === 'preset' && range.value === 'today'
+                            ? clock(s.timestamp)
+                            : dateTime(s.timestamp)}
+                          {s.is_flagged ? <Flag size={12} aria-label="Flagged" className="text-danger" /> : null}
+                        </button>
+                      </td>
+                      <td className={cx(cell, 'text-14 whitespace-nowrap text-text')}>
+                        {s.pumps ? pointLabel(s.pumps.pump_number, s.product_type) : '—'}
+                      </td>
+                      <td className={cell}>
+                        <Tag color={productColor(s.product_type)} className="whitespace-nowrap">
+                          {productCode(s.product_type)}
+                        </Tag>
+                      </td>
+                      <td className={cx(cell, 'font-mono text-13 whitespace-nowrap text-text')}>
+                        {formatMeter(s.quantity, s.unit)}
+                      </td>
+                      <td className={cx(cell, 'font-mono text-13 text-text-secondary')}>{num(s.unit_price)}</td>
+                      <td
+                        className={cx(
+                          cell,
+                          'font-mono text-13 font-semibold',
+                          voided ? 'text-text-muted line-through' : 'text-text',
+                        )}
+                      >
+                        {num(s.total_amount)}
+                      </td>
+                      <td className={cx(cell, 'text-14 text-text-secondary')}>
+                        {PAY[s.payment_method] ?? s.payment_method}
+                      </td>
+                      <td className={cx(cell, 'text-14 whitespace-nowrap text-text')}>{s.users?.name ?? '—'}</td>
+                      <td className={cx(cell, 'font-mono text-13 whitespace-nowrap text-text-secondary')}>
+                        {s.vehicle_plate ?? '—'}
+                      </td>
+                      <td className={cell} title={st.title}>
+                        <StatusChip tone={st.tone}>{st.label}</StatusChip>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3">
+          <p className="m-0 text-13 text-text-secondary" aria-live="polite">
+            {total === 0 ? 'No results' : `Showing ${num(first)} to ${num(last)} of ${num(total)}`}
+          </p>
+          <div className="flex gap-2">
+            <Button disabled={page <= 1 || loading} onClick={() => setPage((p) => p - 1)}>
+              Previous
+            </Button>
+            <Button disabled={last >= total || loading} onClick={() => setPage((p) => p + 1)}>
+              Next
+            </Button>
+          </div>
+        </footer>
+      </section>
+
+      <SaleDrawer
+        sale={open}
+        onClose={() => setOpen(null)}
+        onChanged={(s) => {
+          setOpen(s);
+          setSales((list) => (list ?? []).map((x) => (x.id === s.id ? s : x)));
+        }}
+      />
+    </>
+  );
+}
+
+/** Everything about one sale, and flagging it for a closer look. Not designed; built from the components. */
+function SaleDrawer({
+  sale,
+  onClose,
+  onChanged,
+}: {
+  sale: Sale | null;
+  onClose: () => void;
+  onChanged: (s: Sale) => void;
+}) {
+  const [reason, setReason] = useState('');
+  const [problem, setProblem] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [lastId, setLastId] = useState<string | null>(null);
+  if ((sale?.id ?? null) !== lastId) {
+    setLastId(sale?.id ?? null);
+    setReason(sale?.flag_reason ?? '');
+    setProblem('');
+  }
+  if (!sale) return <Drawer open={false} onClose={onClose} />;
+
+  const flag = async (e: FormEvent) => {
+    e.preventDefault();
+    if (reason.trim().length < 5) {
+      setProblem('Give a reason of at least 5 characters, so the next person knows what to check.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.patch(`/transactions/${sale.id}/flag`, { reason: reason.trim() });
+      onChanged({ ...sale, is_flagged: true, flag_reason: reason.trim() });
+    } catch (err) {
+      setProblem(err instanceof Error ? err.message : 'The flag could not be saved.');
+    } finally {
+      setSaving(false);
+    }
+  };
+  const unflag = async () => {
+    setSaving(true);
+    try {
+      await api.delete(`/transactions/${sale.id}/flag`);
+      onChanged({ ...sale, is_flagged: false, flag_reason: null });
+    } catch (err) {
+      setProblem(err instanceof Error ? err.message : 'The flag could not be removed.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const st = STATUS[sale.sale_status];
+  const rows: Array<[string, React.ReactNode]> = [
+    ['Time', dateTime(sale.timestamp)],
+    ['Pump', sale.pumps ? pointLabel(sale.pumps.pump_number, sale.product_type) : '—'],
+    ['Product', productName(sale.product_type)],
+    ['Quantity', formatMeter(sale.quantity, sale.unit)],
+    ['Price', `${rwf(sale.unit_price)} per ${sale.unit === 'KWH' ? 'kWh' : 'litre'}`],
+    ['Amount', rwf(sale.total_amount)],
+    ['Payment', PAY[sale.payment_method] ?? sale.payment_method],
+    ['Attendant', sale.users?.name ?? '—'],
+    ['Plate', sale.vehicle_plate ?? '—'],
+    ['Customer phone', sale.customer_phone ?? '—'],
+    [
+      'Recorded',
+      sale.is_offline
+        ? `Offline on the phone, received ${dateTime(sale.created_at)}`
+        : `Received ${dateTime(sale.created_at)}`,
+    ],
+  ];
+
+  return (
+    <Drawer open onClose={onClose} title="Sale" size="default">
+      <div className="flex flex-col gap-5">
+        <div className="flex items-center justify-between gap-3">
+          <span className="font-mono text-22 font-semibold text-text">{rwf(sale.total_amount)}</span>
+          <StatusChip tone={st.tone}>{st.label}</StatusChip>
+        </div>
+        {sale.sale_status === 'voided' ? (
+          <Banner tone="info" title="Undone by the attendant">
+            {sale.void_reason ? `Reason: ${sale.void_reason}. ` : ''}It no longer counts towards any total, and is kept
+            here for the record.
+          </Banner>
+        ) : null}
+        <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2.5">
+          {rows.map(([k, v]) => (
+            <div key={k} className="contents">
+              <dt className="text-13 text-text-muted">{k}</dt>
+              <dd className="m-0 text-14 text-text">{v}</dd>
+            </div>
+          ))}
+        </dl>
+        {sale.is_flagged ? (
+          <div className="flex flex-col gap-3 rounded-control bg-danger-tint p-4">
+            <p className="m-0 flex items-center gap-2 text-14 font-semibold text-danger">
+              <Flag size={16} aria-hidden /> Flagged for a closer look
+            </p>
+            <p className="m-0 text-14 text-text">{sale.flag_reason ?? 'No reason recorded.'}</p>
+            <Button icon={FlagOff} onClick={unflag} loading={saving}>
+              Remove flag
+            </Button>
+          </div>
+        ) : (
+          <form onSubmit={flag} noValidate className="flex flex-col gap-3 border-t border-border pt-5">
+            <label htmlFor="flag-reason" className="text-13 font-medium text-text-secondary">
+              Flag for a closer look
+            </label>
+            <Input.TextArea
+              id="flag-reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="What looks wrong: the amount, the pump, the payment…"
+              autoSize={{ minRows: 2, maxRows: 5 }}
+              maxLength={500}
+              status={problem ? 'error' : undefined}
+              aria-invalid={problem ? true : undefined}
+              aria-describedby={problem ? 'flag-problem' : undefined}
+            />
+            {problem ? (
+              <p id="flag-problem" className="m-0 text-12 text-danger">
+                {problem}
+              </p>
+            ) : null}
+            <Button icon={Flag} htmlType="submit" loading={saving}>
+              Flag this sale
+            </Button>
+          </form>
+        )}
+      </div>
+    </Drawer>
   );
 }
