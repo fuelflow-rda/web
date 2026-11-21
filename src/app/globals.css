@@ -1,5 +1,11 @@
-/* Tokens define every colour for both themes; nothing below may use a raw hex. */
+/*
+ * Design tokens. tokens.css and theme.css are generated from
+ * design-tokens/tokens.json (run `pnpm run tokens`); legacy-tokens.css maps the
+ * pre-redesign names onto them until no page uses those names. Nothing below
+ * may use a raw hex.
+ */
 @import '../styles/tokens.css';
+@import '../styles/legacy-tokens.css';
 
 /*
  * Tailwind 4. Only the theme and utilities layers are imported: Preflight, the
@@ -13,85 +19,16 @@
 @layer theme, base, antd, components, utilities;
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities);
+@import '../styles/theme.css';
 
 /* Matches the attribute ThemeScript sets on <html> before first paint. */
 @custom-variant dark (&:where([data-theme="dark"] *));
 
-/*
- * Utility colours resolve to the CSS custom properties in src/styles/tokens.css,
- * so `bg-surface` or `text-ink` follows the active theme. `inline` makes each
- * utility use the token directly, so a token and a theme key can share a name
- * (radius-control) without the theme variable referring to itself.
- */
 @theme inline {
-  --color-accent: var(--accent);
-  --color-accent-hover: var(--accent-hover);
-  --color-accent-pressed: var(--accent-pressed);
-  --color-accent-tint: var(--accent-tint);
-  --color-accent-tint-hover: var(--accent-tint-hover);
-  --color-accent-ring: var(--accent-ring);
-  --color-accent-on: var(--accent-on);
-
-  --color-danger: var(--danger);
-  --color-danger-hover: var(--danger-hover);
-  --color-danger-pressed: var(--danger-pressed);
-  --color-danger-tint: var(--danger-tint);
-  --color-danger-border: var(--danger-border);
-  --color-danger-ring: var(--danger-ring);
-  --color-danger-on: var(--danger-on);
-
-  --color-warn: var(--warn);
-  --color-warn-tint: var(--warn-tint);
-  --color-warn-border: var(--warn-border);
-
-  --color-ink: var(--ink);
-  --color-ink-secondary: var(--ink-secondary);
-  --color-ink-muted: var(--ink-muted);
-  --color-ink-disabled: var(--ink-disabled);
-
-  --color-line: var(--line);
-  --color-line-strong: var(--line-strong);
-  --color-line-subtle: var(--line-subtle);
-
-  --color-surface: var(--surface);
-  --color-surface-sunken: var(--surface-sunken);
-  --color-surface-muted: var(--surface-muted);
-
-  --color-sidebar: var(--sidebar-bg);
-  --color-sidebar-surface: var(--sidebar-surface);
-  --color-sidebar-ink: var(--sidebar-ink);
-
-  --color-product-gasoline: var(--product-gasoline);
-  --color-product-diesel: var(--product-diesel);
-  --color-product-ev-ac: var(--product-ev-ac);
-  --color-product-ev-dc-fast: var(--product-ev-dc-fast);
-  --color-product-ev-dc-ultra: var(--product-ev-dc-ultra);
-
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-chart-6: var(--chart-6);
-
-  --font-sans: Inter, system-ui, sans-serif;
-
-  --radius-control: var(--radius-control);
-  --radius-card: var(--radius-card);
-
-  --shadow-ring-accent: var(--focus-ring);
-  --shadow-ring-danger: var(--focus-ring-danger);
-
   --background-image-gradient-radial: radial-gradient(var(--tw-gradient-stops));
-  --background-image-dot-pattern: radial-gradient(
-    circle,
-    var(--line-subtle) 1px,
-    transparent 1px
-  );
-
+  --background-image-dot-pattern: radial-gradient(circle, var(--border) 1px, transparent 1px);
   --background-size-dots: 20px 20px;
 }
-
 
 html,
 body {
@@ -102,11 +39,11 @@ body {
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--surface-sunken);
-  color: var(--ink);
+  background: var(--bg);
+  color: var(--text);
 }
 
 /* Chrome paints its own opaque background on an autofilled input, and it ignores
