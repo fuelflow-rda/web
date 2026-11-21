@@ -50,6 +50,8 @@ export function SetPasswordFlow({ expected }: { expected: 'invite' | 'reset' }) 
     read.current = true;
     const token = takeToken();
     if (!token) {
+      // The fragment exists only in the browser, so it is read after hydration, once.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState({ step: 'broken', message: 'This link is incomplete. Open the whole link from the email, or ask for a new one.' });
       return;
     }

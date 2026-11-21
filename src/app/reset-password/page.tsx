@@ -42,6 +42,8 @@ export default function ResetPasswordPage() {
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     const token = params.get('access_token');
     const errorDescription = params.get('error_description');
+    // The fragment exists only in the browser, so it is read after hydration, once.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (errorDescription) setLinkError(errorDescription.replace(/\+/g, ' '));
     else if (!token) setLinkError('This page needs a valid reset link. Request a new one from the sign-in page.');
     else setAccessToken(token);
