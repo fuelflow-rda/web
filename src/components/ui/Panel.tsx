@@ -10,6 +10,8 @@ export interface PanelProps {
   meta?: ReactNode;
   /** At most one: a link such as "View all". */
   action?: { label: string; href: string };
+  /** A control in the header, such as Export, instead of or beside the link. */
+  extra?: ReactNode;
   children: ReactNode;
   /** Set false for a table or chart that runs to the panel's edges. */
   padded?: boolean;
@@ -17,7 +19,7 @@ export interface PanelProps {
 }
 
 /** Holds a chart, list or table under a title, with one optional action. */
-export function Panel({ title, meta, action, children, padded = true, className }: PanelProps) {
+export function Panel({ title, meta, action, extra, children, padded = true, className }: PanelProps) {
   const titleId = `panel-${useId()}`;
   return (
     <section aria-labelledby={titleId} className={cx('min-w-0 overflow-hidden rounded-card border border-border bg-surface', className)}>
@@ -28,6 +30,7 @@ export function Panel({ title, meta, action, children, padded = true, className 
           </h2>
           {meta ? <p className="m-0 text-12 text-text-muted">{meta}</p> : null}
         </div>
+        {extra}
         {action ? (
           <Link href={action.href} className={cx('inline-flex shrink-0 items-center gap-1 rounded-badge text-13 font-medium text-link no-underline hover:underline', focusRing)}>
             {action.label}
