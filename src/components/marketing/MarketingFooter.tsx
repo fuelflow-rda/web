@@ -1,101 +1,73 @@
-import React from 'react';
 import Link from 'next/link';
-import { BUSINESS, formattedAddress } from '@/lib/business';
-import { Logo } from './Logo';
+import { RelaiLockup } from '@/components/brand';
+import { BUSINESS } from '@/lib/business';
+import { cx } from '@/lib/cx';
+import { container } from './parts';
 
-const quickLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/#platform', label: 'Platform' },
-  { href: '/#how-it-works', label: 'How it works' },
-  { href: '/#contact', label: 'Contact' },
-  { href: '/login', label: 'Sign in' },
+const COLUMNS = [
+  {
+    title: 'Product',
+    links: [
+      { href: '/#platform', label: 'Platform' },
+      { href: '/#how-it-works', label: 'How it works' },
+      { href: '/#questions', label: 'Questions' },
+    ],
+  },
+  {
+    title: 'Company',
+    links: [
+      { href: '/#contact', label: 'Contact' },
+      { href: '/login', label: 'Sign in' },
+    ],
+  },
+  {
+    title: 'Legal',
+    links: [
+      { href: '/privacy', label: 'Privacy Policy' },
+      { href: '/terms', label: 'Terms and Conditions' },
+      { href: '/cookies', label: 'Cookie Policy' },
+      { href: '/refunds', label: 'Refund Policy' },
+    ],
+  },
 ];
 
-const legalLinks = [
-  { href: '/privacy', label: 'Privacy Policy' },
-  { href: '/terms', label: 'Terms and Conditions' },
-  { href: '/cookies', label: 'Cookie Policy' },
-  { href: '/refunds', label: 'Refund Policy' },
-];
+const link = 'rounded-control text-15 text-text-secondary no-underline hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
 
+/** The public site's footer, on night (Pencil "Footer"). */
 export function MarketingFooter() {
   const year = new Date().getFullYear();
-
   return (
-    <footer className="mk-footer">
-      <div className="mk-container">
-        <div className="mk-footer-grid">
-          <div>
-            <Logo onDark />
-            <p className="mk-footer-tagline">Fuel and EV station management</p>
-            <p className="mk-footer-desc">
-              Live sales, shift control and automatic daily reconciliation for operators in Rwanda.
-            </p>
+    <footer data-theme="dark" className="bg-bg text-text">
+      <div className={cx(container, 'flex flex-col gap-14 pt-18 pb-10')}>
+        <div className="flex flex-col gap-10 lg:flex-row lg:gap-16">
+          <div className="flex flex-col gap-4 lg:w-102 lg:shrink-0">
+            <RelaiLockup height={25} />
+            <p className="m-0 text-15 text-text-secondary">Fuel and EV station management, built in {BUSINESS.address.city}.</p>
           </div>
-
-          <nav className="mk-footer-col" aria-label="Quick links">
-            <h2>Quick links</h2>
-            <ul>
-              {quickLinks.map((l) => (
-                <li key={l.href}>
-                  <Link href={l.href}>{l.label}</Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          <nav className="mk-footer-col is-legal" aria-label="Legal">
-            <h2>Legal</h2>
-            <ul>
-              {legalLinks.map((l) => (
-                <li key={l.href}>
-                  <Link href={l.href}>{l.label}</Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          <div>
-            <ul className="mk-footer-contact">
-              <li>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z" />
-                  <circle cx="12" cy="10" r="2.5" />
-                </svg>
-                <span>{formattedAddress()}</span>
-              </li>
-              <li>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                  <rect x="3" y="5" width="18" height="14" rx="2" />
-                  <path d="m3 7 9 6 9-6" />
-                </svg>
-                <a href={`mailto:${BUSINESS.contactEmail}`}>{BUSINESS.contactEmail}</a>
-              </li>
-              {BUSINESS.phone && (
-                <li>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2" />
-                  </svg>
-                  <a href={`tel:${BUSINESS.phone.replace(/\s+/g, '')}`}>{BUSINESS.phone}</a>
-                </li>
-              )}
-              <li>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M12 7v5l3 2" />
-                </svg>
-                <span>Support for existing customers: <a href={`mailto:${BUSINESS.supportEmail}`}>{BUSINESS.supportEmail}</a></span>
-              </li>
-            </ul>
+          <div className="grid flex-1 grid-cols-2 gap-8 sm:grid-cols-3">
+            {COLUMNS.map((col) => (
+              <nav key={col.title} aria-label={col.title} className="flex flex-col gap-4">
+                <h2 className="m-0 font-mono text-11 font-medium tracking-p80 text-text-muted uppercase">{col.title}</h2>
+                <ul className="m-0 flex list-none flex-col gap-3 p-0">
+                  {col.links.map((l) => (
+                    <li key={l.href}>
+                      <Link href={l.href} className={link}>
+                        {l.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            ))}
           </div>
         </div>
-
-        <div className="mk-footer-bottom">
-          <p>
-            Copyright {year} {BUSINESS.legalName}. All rights reserved. {formattedAddress()}.
-            {BUSINESS.registrationNumber ? ` Company registration number ${BUSINESS.registrationNumber}.` : ''}
-            {BUSINESS.tin ? ` TIN ${BUSINESS.tin}.` : ''}
+        <div className="flex flex-col gap-3 border-t border-border pt-6 text-13 text-text-muted sm:flex-row sm:items-center sm:justify-between">
+          <p className="m-0">
+            © {year} {BUSINESS.legalName} · {BUSINESS.address.city}, {BUSINESS.address.country}
           </p>
+          <a href={`mailto:${BUSINESS.contactEmail}`} className={cx(link, 'text-13 text-text-muted')}>
+            {BUSINESS.contactEmail}
+          </a>
         </div>
       </div>
     </footer>

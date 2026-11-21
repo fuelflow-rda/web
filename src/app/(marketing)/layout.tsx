@@ -1,26 +1,23 @@
-import React from 'react';
-import { Instrument_Sans, Rethink_Sans } from 'next/font/google';
-import '@/styles/marketing.css';
+import type { ReactNode } from 'react';
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { MarketingFooter } from '@/components/marketing/MarketingFooter';
 
-// Both faces are downloaded at build time and served from our own origin, so no
-// request ever reaches Google Fonts. See docs/data-and-tracking-audit.md.
-const rethink = Rethink_Sans({ subsets: ['latin'], variable: '--font-rethink', display: 'swap' });
-const instrument = Instrument_Sans({ subsets: ['latin'], variable: '--font-instrument', display: 'swap' });
-
 /**
- * Frame for the public pages: landing page and legal documents. Light-only and
- * styled independently of the portal, which keeps its own layouts and theme.
+ * Frame for the public pages: the landing page and the legal documents. Light
+ * whatever the visitor's theme (data-theme="light"), in the design's fonts,
+ * which the root layout loads from our own origin.
  */
-export default function MarketingLayout({ children }: { children: React.ReactNode }) {
+export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
-    <div className={`mk-site ${rethink.variable} ${instrument.variable}`}>
-      <a href="#main" className="mk-skip-link">
+    <div data-theme="light" className="min-h-screen bg-bg font-sans text-text">
+      <a
+        href="#main"
+        className="sr-only rounded-control bg-primary px-4 py-2 text-15 font-semibold text-on-primary focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50"
+      >
         Skip to main content
       </a>
       <MarketingHeader />
-      <main id="main" tabIndex={-1} style={{ outline: 'none' }}>
+      <main id="main" tabIndex={-1} className="outline-none">
         {children}
       </main>
       <MarketingFooter />
