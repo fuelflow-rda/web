@@ -92,10 +92,10 @@ export default function ResetPasswordPage() {
         </div>
 
         <div className="mb-8">
-          <Title level={2} className="!mb-1.5 !text-ink !text-2xl !font-extrabold">
+          <Title level={2} className="mb-1.5! text-ink! text-2xl! font-extrabold!">
             Choose a new password
           </Title>
-          <Text className="!text-ink-muted !text-sm">
+          <Text className="text-ink-muted! text-sm!">
             At least 8 characters.
           </Text>
         </div>
@@ -106,16 +106,16 @@ export default function ResetPasswordPage() {
             showIcon
             message="Password updated"
             description="Taking you to the sign-in page…"
-            className="!rounded-xl"
+            className="rounded-xl!"
           />
         ) : linkError ? (
           <>
-            <Alert type="error" showIcon message={linkError} className="!rounded-xl !mb-5" />
+            <Alert type="error" showIcon message={linkError} className="rounded-xl! mb-5!" />
             <Button
               type="primary"
               block
               onClick={() => router.replace('/login')}
-              className="!h-12 !rounded-xl !font-bold"
+              className="h-12! rounded-xl! font-bold!"
             >
               Back to sign in
             </Button>
@@ -123,7 +123,7 @@ export default function ResetPasswordPage() {
         ) : (
           <Form form={form} onFinish={handleSubmit} layout="vertical" size="large" requiredMark={false}>
             {error && (
-              <Alert type="error" showIcon message={error} className="!mb-4 !rounded-xl" />
+              <Alert type="error" showIcon message={error} className="mb-4! rounded-xl!" />
             )}
 
             <Form.Item
@@ -137,7 +137,7 @@ export default function ResetPasswordPage() {
               <Input.Password
                 prefix={<LockOutlined className="text-ink-disabled" />}
                 placeholder="Enter a new password"
-                className="!h-12 !rounded-xl !bg-surface"
+                className="h-12! rounded-xl! bg-surface!"
                 autoComplete="new-password"
               />
             </Form.Item>
@@ -159,19 +159,19 @@ export default function ResetPasswordPage() {
               <Input.Password
                 prefix={<LockOutlined className="text-ink-disabled" />}
                 placeholder="Re-enter the new password"
-                className="!h-12 !rounded-xl !bg-surface"
+                className="h-12! rounded-xl! bg-surface!"
                 autoComplete="new-password"
               />
             </Form.Item>
 
-            <Form.Item className="!mb-0">
+            <Form.Item className="mb-0!">
               <Button
                 type="primary"
                 htmlType="submit"
                 loading={submitting}
                 disabled={!accessToken}
                 block
-                className="!h-12 !rounded-xl !text-base !font-bold"
+                className="h-12! rounded-xl! text-base! font-bold!"
               >
                 Update password
               </Button>

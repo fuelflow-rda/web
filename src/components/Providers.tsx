@@ -5,6 +5,7 @@ import React, { useEffect } from 'react';
 // ReactDOM.render, which React 19 removed. This patch reroutes them onto createRoot.
 // It has to be imported once, before any static call runs.
 import '@ant-design/v5-patch-for-react-19';
+import { StyleProvider } from '@ant-design/cssinjs';
 import { ConfigProvider, theme as antdTheme } from 'antd';
 import { AuthBootstrap } from '@/components/AuthBootstrap';
 import { useThemeStore } from '@/store/theme-store';
@@ -105,10 +106,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
     initialize();
   }, [initialize]);
 
+  // `layer` wraps Ant Design's runtime styles in `@layer antd`, which globals.css
+  // orders below Tailwind's utilities. Tailwind 4 puts utilities in a layer, and
+  // unlayered antd styles would otherwise beat every utility set on an antd
+  // element or its children.
   return (
-    <ConfigProvider theme={buildTheme(mode)}>
-      <AuthBootstrap />
-      {children}
-    </ConfigProvider>
+    <StyleProvider layer>
+      <ConfigProvider theme={buildTheme(mode)}>
+        <AuthBootstrap />
+        {children}
+      </ConfigProvider>
+    </StyleProvider>
   );
 }

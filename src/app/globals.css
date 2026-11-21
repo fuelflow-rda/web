@@ -1,9 +1,97 @@
 /* Tokens define every colour for both themes; nothing below may use a raw hex. */
 @import '../styles/tokens.css';
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/*
+ * Tailwind 4. Only the theme and utilities layers are imported: Preflight, the
+ * base reset, stays off as it was in v3 (`corePlugins.preflight: false`),
+ * because it fights Ant Design's own base styles.
+ *
+ * Ant Design's runtime styles go in `antd` (see StyleProvider in Providers.tsx),
+ * below utilities, so a utility on an antd element wins as it did in v3. The
+ * rules in this file stay unlayered and so still beat both.
+ */
+@layer theme, base, antd, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* Matches the attribute ThemeScript sets on <html> before first paint. */
+@custom-variant dark (&:where([data-theme="dark"] *));
+
+/*
+ * Utility colours resolve to the CSS custom properties in src/styles/tokens.css,
+ * so `bg-surface` or `text-ink` follows the active theme. `inline` makes each
+ * utility use the token directly, so a token and a theme key can share a name
+ * (radius-control) without the theme variable referring to itself.
+ */
+@theme inline {
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-pressed: var(--accent-pressed);
+  --color-accent-tint: var(--accent-tint);
+  --color-accent-tint-hover: var(--accent-tint-hover);
+  --color-accent-ring: var(--accent-ring);
+  --color-accent-on: var(--accent-on);
+
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-pressed: var(--danger-pressed);
+  --color-danger-tint: var(--danger-tint);
+  --color-danger-border: var(--danger-border);
+  --color-danger-ring: var(--danger-ring);
+  --color-danger-on: var(--danger-on);
+
+  --color-warn: var(--warn);
+  --color-warn-tint: var(--warn-tint);
+  --color-warn-border: var(--warn-border);
+
+  --color-ink: var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-disabled: var(--ink-disabled);
+
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-line-subtle: var(--line-subtle);
+
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-muted: var(--surface-muted);
+
+  --color-sidebar: var(--sidebar-bg);
+  --color-sidebar-surface: var(--sidebar-surface);
+  --color-sidebar-ink: var(--sidebar-ink);
+
+  --color-product-gasoline: var(--product-gasoline);
+  --color-product-diesel: var(--product-diesel);
+  --color-product-ev-ac: var(--product-ev-ac);
+  --color-product-ev-dc-fast: var(--product-ev-dc-fast);
+  --color-product-ev-dc-ultra: var(--product-ev-dc-ultra);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+
+  --font-sans: Inter, system-ui, sans-serif;
+
+  --radius-control: var(--radius-control);
+  --radius-card: var(--radius-card);
+
+  --shadow-ring-accent: var(--focus-ring);
+  --shadow-ring-danger: var(--focus-ring-danger);
+
+  --background-image-gradient-radial: radial-gradient(var(--tw-gradient-stops));
+  --background-image-dot-pattern: radial-gradient(
+    circle,
+    var(--line-subtle) 1px,
+    transparent 1px
+  );
+
+  --background-size-dots: 20px 20px;
+}
+
 
 html,
 body {
@@ -553,29 +641,29 @@ select:-webkit-autofill:focus {
 
 /* ===== UTILITIES ===== */
 
-@layer utilities {
-  .surface-card {
-    background: var(--surface);
-    border: 1px solid var(--line-subtle);
-    border-radius: var(--radius-card);
-  }
+@utility surface-card {
+  background: var(--surface);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-card);
+}
 
-  .focus-ring-accent:focus-visible {
+@utility focus-ring-accent {
+  &:focus-visible {
     outline: none;
     box-shadow: var(--focus-ring);
   }
+}
 
-  .animate-float {
-    animation: float 6s ease-in-out infinite;
-  }
+@utility animate-float {
+  animation: float 6s ease-in-out infinite;
+}
 
-  .animate-float-delayed {
-    animation: float 6s ease-in-out 3s infinite;
-  }
+@utility animate-float-delayed {
+  animation: float 6s ease-in-out 3s infinite;
+}
 
-  .animate-pulse-soft {
-    animation: pulse-soft 3s ease-in-out infinite;
-  }
+@utility animate-pulse-soft {
+  animation: pulse-soft 3s ease-in-out infinite;
 }
 
 @keyframes float {

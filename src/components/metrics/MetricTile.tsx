@@ -122,7 +122,7 @@ export default function MetricTile({
   return (
     <Link
       href={href}
-      className="group block h-full rounded-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      className="group block h-full rounded-card focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
     >
       {tile}
     </Link>

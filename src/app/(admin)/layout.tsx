@@ -157,7 +157,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         width={272}
         collapsedWidth={80}
         collapsed={collapsed}
-        className="!bg-sidebar"
+        className="bg-sidebar!"
         style={{
           position: 'fixed',
           left: 0,
@@ -168,13 +168,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }}
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center gap-3 px-6 h-16 border-b border-[var(--sidebar-border)]">
-            <div className="flex items-center justify-center w-9 h-9 bg-accent rounded-control flex-shrink-0">
+          <div className="flex items-center gap-3 px-6 h-16 border-b border-(--sidebar-border)">
+            <div className="flex items-center justify-center w-9 h-9 bg-accent rounded-control shrink-0">
               <BrandMark size={18} color="var(--accent-on)" />
             </div>
             {!collapsed && (
               <div className="flex items-center gap-2">
-                <Text className="!text-[var(--sidebar-ink)] !text-lg !font-extrabold tracking-tight">Relai</Text>
+                <Text className="text-(--sidebar-ink)! text-lg! font-extrabold! tracking-tight">Relai</Text>
                 <span className="px-1.5 py-0.5 text-[10px] font-bold text-sidebar-ink bg-sidebar-surface rounded-md">ADMIN</span>
               </div>
             )}
@@ -183,7 +183,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="flex-1 py-4 sidebar-nav overflow-y-auto">
             {!collapsed && (
               <div className="px-6 pb-3">
-                <span className="text-[10px] font-bold tracking-[0.1em] text-[var(--sidebar-ink-muted)] uppercase">
+                <span className="text-[10px] font-bold tracking-widest text-(--sidebar-ink-muted) uppercase">
                   Management
                 </span>
               </div>
@@ -208,25 +208,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   type="text"
                   icon={<ArrowLeftOutlined />}
                   onClick={openManagerViewModal}
-                  className="!text-[var(--sidebar-ink-muted)] hover:!text-[var(--sidebar-ink)] !w-full !justify-start !rounded-lg !h-9 !text-sm hover:!bg-[var(--sidebar-hover)]"
+                  className="text-(--sidebar-ink-muted)! hover:text-(--sidebar-ink)! w-full! justify-start! rounded-lg! h-9! text-sm! hover:bg-(--sidebar-hover)!"
                 >
                   {!collapsed && 'Manager View'}
                 </Button>
               )}
               <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} trigger={['click']} placement="topRight">
-                <div className="flex items-center gap-3 cursor-pointer rounded-lg p-2.5 transition-all duration-200 hover:bg-[var(--sidebar-hover)]">
-                  <div className="relative flex-shrink-0">
+                <div className="flex items-center gap-3 cursor-pointer rounded-lg p-2.5 transition-all duration-200 hover:bg-(--sidebar-hover)">
+                  <div className="relative shrink-0">
                     <Avatar
                       size={40}
-                      className="!bg-accent"
+                      className="bg-accent!"
                       icon={<UserOutlined />}
                     />
-                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-accent rounded-full border-2 border-[var(--sidebar-bg)]" />
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-accent rounded-full border-2 border-(--sidebar-bg)" />
                   </div>
                   {!collapsed && (
                     <div className="min-w-0 flex-1">
-                      <Text className="!text-[var(--sidebar-ink)] !text-sm !font-semibold block truncate">{user.name}</Text>
-                      <span className="inline-block mt-0.5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide rounded bg-sidebar-surface text-sidebar-ink">
+                      <Text className="text-(--sidebar-ink)! text-sm! font-semibold! block truncate">{user.name}</Text>
+                      <span className="inline-block mt-0.5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide rounded-sm bg-sidebar-surface text-sidebar-ink">
                         Admin
                       </span>
                     </div>
@@ -240,7 +240,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       <Layout style={{ marginLeft: sidebarWidth, transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
         <Header
-          className="!px-6 flex items-center justify-between border-b border-line-subtle sticky top-0 z-50"
+          className="px-6! flex items-center justify-between border-b border-line-subtle sticky top-0 z-50"
           style={{
             height: 64,
             background: 'var(--surface)',
@@ -251,7 +251,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               type="text"
               icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
               onClick={() => setCollapsed(!collapsed)}
-              className="!text-ink-muted hover:!text-ink-secondary !w-9 !h-9 !rounded-lg"
+              className="text-ink-muted! hover:text-ink-secondary! w-9! h-9! rounded-lg!"
             />
             <div>
               <h1 className="text-base font-bold text-ink leading-tight">{currentPageTitle}</h1>
@@ -259,12 +259,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <ThemeToggle className="!text-ink-muted hover:!text-ink-secondary !w-9 !h-9 !rounded-lg" />
+            <ThemeToggle className="text-ink-muted! hover:text-ink-secondary! w-9! h-9! rounded-lg!" />
             <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} trigger={['click']}>
             <div className="flex items-center gap-2.5 cursor-pointer hover:bg-surface-sunken rounded-xl px-2 py-1.5 transition-colors">
               <Avatar
                 size={32}
-                className="!bg-accent"
+                className="bg-accent!"
                 icon={<UserOutlined />}
               />
               <span className="text-sm font-semibold text-ink">{user.name}</span>

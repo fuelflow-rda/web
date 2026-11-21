@@ -189,7 +189,7 @@ export default function DashboardPage() {
             name
           )}
           {r.flagged > 0 && (
-            <Tag className="!ml-2 !text-[10px]" color="warning">
+            <Tag className="ml-2! text-[10px]!" color="warning">
               {r.flagged} flagged
             </Tag>
           )}
@@ -248,7 +248,7 @@ export default function DashboardPage() {
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2.5">
-            <Title level={3} className="!mb-0">
+            <Title level={3} className="mb-0!">
               {currentStation.name}
             </Title>
             <span className="flex items-center gap-1.5 px-2.5 py-1 bg-accent-tint rounded-full">
@@ -256,7 +256,7 @@ export default function DashboardPage() {
               <span className="text-xs font-semibold text-accent">Live</span>
             </span>
           </div>
-          <Text type="secondary" className="!text-sm">
+          <Text type="secondary" className="text-sm!">
             {data
               ? `${dayjs(data.window.from).format('MMM D')} – ${dayjs(data.window.to).format('MMM D, YYYY')}`
               : 'Loading…'}
@@ -266,7 +266,7 @@ export default function DashboardPage() {
       </div>
 
       {error && (
-        <Card className="!rounded-card" size="small">
+        <Card className="rounded-card!" size="small">
           <Text type="danger">{error}</Text>
         </Card>
       )}
@@ -335,7 +335,7 @@ export default function DashboardPage() {
       {/* Trend + product mix */}
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={16}>
-          <Card title="Revenue trend" className="!rounded-card h-full" size="small">
+          <Card title="Revenue trend" className="rounded-card! h-full" size="small">
             <RevenueChart
               data={chartData}
               onPointClick={(i) => {
@@ -348,7 +348,7 @@ export default function DashboardPage() {
           </Card>
         </Col>
         <Col xs={24} xl={8}>
-          <Card title="Product mix" className="!rounded-card h-full" size="small">
+          <Card title="Product mix" className="rounded-card! h-full" size="small">
             <ProductMixBar
               data={data?.productMix ?? []}
               hrefFor={(row) => transactionsHref({ ...range, product: row.productType })}
@@ -362,10 +362,10 @@ export default function DashboardPage() {
         <Col xs={24} xl={16}>
           <Card
             title="Activity by hour"
-            className="!rounded-card h-full"
+            className="rounded-card! h-full"
             size="small"
             extra={
-              <Text type="secondary" className="!text-xs">
+              <Text type="secondary" className="text-xs!">
                 {data?.window.tz ? `Times in ${data.window.tz}` : 'Station local time'}
               </Text>
             }
@@ -377,7 +377,7 @@ export default function DashboardPage() {
           </Card>
         </Col>
         <Col xs={24} xl={8}>
-          <Card title="How customers paid" className="!rounded-card h-full" size="small">
+          <Card title="How customers paid" className="rounded-card! h-full" size="small">
             {(data?.payments ?? []).length === 0 ? (
               <Empty description={<span className="text-ink-muted">No payments in this period</span>} />
             ) : (
@@ -405,7 +405,7 @@ export default function DashboardPage() {
                     <Link
                       key={p.method}
                       href={transactionsHref({ ...range, payment: p.method })}
-                      className="block -mx-2 px-2 py-1.5 rounded-lg hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                      className="block -mx-2 px-2 py-1.5 rounded-lg hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-accent"
                     >
                       {content}
                     </Link>
@@ -422,7 +422,7 @@ export default function DashboardPage() {
       {/* Rankings */}
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={12}>
-          <Card title="Attendant performance" className="!rounded-card h-full" size="small">
+          <Card title="Attendant performance" className="rounded-card! h-full" size="small">
             <Table
               columns={attendantColumns}
               dataSource={data?.attendants ?? []}
@@ -444,10 +444,10 @@ export default function DashboardPage() {
         <Col xs={24} xl={12}>
           <Card
             title="Dispensing points"
-            className="!rounded-card h-full"
+            className="rounded-card! h-full"
             size="small"
             extra={
-              <Text type="secondary" className="!text-xs">
+              <Text type="secondary" className="text-xs!">
                 Utilisation shown for chargers
               </Text>
             }
@@ -462,7 +462,7 @@ export default function DashboardPage() {
                   <Link
                     key={pump.pumpId}
                     href={pumpsHref(pump.pumpId)}
-                    className="flex items-center gap-3 py-2 -mx-2 px-2 rounded-lg border-b border-line-subtle last:border-0 hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+                    className="flex items-center gap-3 py-2 -mx-2 px-2 rounded-lg border-b border-line-subtle last:border-0 hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-accent"
                   >
                     <span
                       className="w-1 h-9 rounded-full shrink-0"

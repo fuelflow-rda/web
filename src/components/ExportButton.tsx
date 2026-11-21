@@ -97,13 +97,13 @@ export default function ExportButton({ data, columns, filename }: ExportButtonPr
   const items = [
     {
       key: 'excel',
-      icon: <FileExcelOutlined className="!text-accent" />,
+      icon: <FileExcelOutlined className="text-accent!" />,
       label: <span className="font-medium">Export to Excel</span>,
       onClick: exportToExcel,
     },
     {
       key: 'pdf',
-      icon: <FilePdfOutlined className="!text-danger" />,
+      icon: <FilePdfOutlined className="text-danger!" />,
       label: <span className="font-medium">Export to PDF</span>,
       onClick: exportToPdf,
     },
@@ -113,7 +113,7 @@ export default function ExportButton({ data, columns, filename }: ExportButtonPr
     <Dropdown menu={{ items }} trigger={['click']}>
       <Button
         icon={<DownloadOutlined />}
-        className="!rounded-xl !font-semibold !border-line hover:!border-accent hover:!text-accent"
+        className="rounded-xl! font-semibold! border-line! hover:border-accent! hover:text-accent!"
       >
         Export
       </Button>

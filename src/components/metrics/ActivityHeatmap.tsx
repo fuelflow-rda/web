@@ -253,7 +253,7 @@ export default function ActivityHeatmap({ data, metric = 'transactions', hrefFor
                             href={hrefFor(dow, hour)}
                             tabIndex={-1}
                             aria-label={`${DAYS_LONG[dow]} ${hourRange(hour)} transactions`}
-                            className="block h-5 rounded-[3px] cursor-pointer hover:outline hover:outline-2 hover:outline-ink"
+                            className="block h-5 rounded-[3px] cursor-pointer hover:outline-solid hover:outline-2 hover:outline-ink"
                             style={{ background: fill(intensityOf(valueOf(totals))) }}
                           />
                         ) : (

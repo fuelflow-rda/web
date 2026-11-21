@@ -127,7 +127,7 @@ function StatTile({
 }) {
   const card = (
     <Card
-      className={`!rounded-xl h-full ${onClick ? 'hover:shadow-lg hover:border-accent transition-all' : ''}`}
+      className={`rounded-xl! h-full ${onClick ? 'hover:shadow-lg hover:border-accent transition-all' : ''}`}
       styles={{ body: { padding: 16 } }}
     >
       <Statistic
@@ -141,7 +141,7 @@ function StatTile({
         }}
       />
       {hint && (
-        <Text type="secondary" className="!text-xs block mt-1">
+        <Text type="secondary" className="text-xs! block mt-1">
           {hint}
         </Text>
       )}
@@ -385,7 +385,7 @@ function SuperAdminOverview() {
       sorter: (a, b) => num(a.revenue) - num(b.revenue),
       defaultSortOrder: 'descend',
       render: (v: number, r) => (
-        <Space direction="vertical" size={0} className="!items-end">
+        <Space direction="vertical" size={0} className="items-end!">
           <Text strong>{formatRWF(num(v))}</Text>
           <Text type="secondary" className="text-xs">
             {num(r.transactions).toLocaleString()} tx · {num(r.liters).toLocaleString()} L
@@ -482,7 +482,7 @@ function SuperAdminOverview() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <Title level={3} className="!mb-0">
+          <Title level={3} className="mb-0!">
             Platform overview
           </Title>
           <Text type="secondary">
@@ -514,7 +514,7 @@ function SuperAdminOverview() {
         <Alert
           type="warning"
           showIcon
-          className="!rounded-xl"
+          className="rounded-xl!"
           message="Platform statistics unavailable"
           description="The aggregate query did not respond. Companies and users below are still current."
         />
@@ -524,7 +524,7 @@ function SuperAdminOverview() {
         <Alert
           type="info"
           showIcon
-          className="!rounded-xl"
+          className="rounded-xl!"
           message={`No sales recorded in the ${windowLabel}`}
           description="Counts below are current. Widen the range to see earlier activity."
         />
@@ -566,7 +566,7 @@ function SuperAdminOverview() {
         </Col>
       </Row>
 
-      <Card className="!rounded-xl" styles={{ body: { padding: 0 } }}>
+      <Card className="rounded-xl!" styles={{ body: { padding: 0 } }}>
         <div className="flex flex-wrap divide-y md:divide-y-0 divide-line-subtle">
           <CountCell
             label="Companies"
@@ -611,7 +611,7 @@ function SuperAdminOverview() {
         <Col xs={24} xl={14}>
           <Card
             title={`Revenue and transactions · ${windowLabel}`}
-            className="!rounded-xl h-full"
+            className="rounded-xl! h-full"
             styles={{ body: { paddingTop: 8 } }}
           >
             <PlatformTrendChart data={series} height={268} />
@@ -620,7 +620,7 @@ function SuperAdminOverview() {
         <Col xs={24} xl={10}>
           <Card
             title={`Companies · ${windowLabel}`}
-            className="!rounded-xl h-full"
+            className="rounded-xl! h-full"
             extra={
               <Button type="link" size="small" onClick={() => router.push('/admin/companies')}>
                 Manage
@@ -654,9 +654,9 @@ function SuperAdminOverview() {
             )}
           </span>
         }
-        className="!rounded-xl"
+        className="rounded-xl!"
         extra={
-          <Text type="secondary" className="!text-xs">
+          <Text type="secondary" className="text-xs!">
             Sent from the website contact form
           </Text>
         }
@@ -673,7 +673,7 @@ function SuperAdminOverview() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <Text strong>{lead.company}</Text>
-                    <Text type="secondary" className="!text-xs">
+                    <Text type="secondary" className="text-xs!">
                       {lead.createdAt ? dayjs(lead.createdAt).format('D MMM, HH:mm') : ''}
                     </Text>
                   </div>
@@ -696,7 +696,7 @@ function SuperAdminOverview() {
         <Col xs={24} xl={14}>
           <Card
             title="Recent company admins"
-            className="!rounded-xl h-full"
+            className="rounded-xl! h-full"
             extra={
               <Button type="link" size="small" onClick={() => router.push('/admin/users')}>
                 Open users
@@ -724,14 +724,14 @@ function SuperAdminOverview() {
           </Card>
         </Col>
         <Col xs={24} xl={10}>
-          <Card title="Platform mix" className="!rounded-xl h-full">
+          <Card title="Platform mix" className="rounded-xl! h-full">
             <Space direction="vertical" size={16} className="w-full">
               <div>
-                <Text type="secondary" className="!text-xs uppercase tracking-wide">
+                <Text type="secondary" className="text-xs! uppercase tracking-wide">
                   Companies with sales · {windowLabel}
                 </Text>
                 <div className="mt-1.5">
-                  <Text className="!text-xl !font-bold">
+                  <Text className="text-xl! font-bold!">
                     {mergedCompanies.filter((c) => num(c.revenue) > 0).length}
                   </Text>
                   <Text type="secondary"> of {mergedCompanies.length}</Text>
@@ -753,15 +753,15 @@ function SuperAdminOverview() {
               </div>
 
               <div>
-                <Text type="secondary" className="!text-xs uppercase tracking-wide">
+                <Text type="secondary" className="text-xs! uppercase tracking-wide">
                   Fuel vs EV
                 </Text>
                 <div className="mt-1.5 flex items-baseline gap-2">
-                  <Text className="!text-xl !font-bold">
+                  <Text className="text-xl! font-bold!">
                     {num(totals?.pumps) - num(totals?.ev_points)}
                   </Text>
                   <Text type="secondary">fuel pumps</Text>
-                  <Text className="!text-xl !font-bold !ml-3">{num(totals?.ev_points)}</Text>
+                  <Text className="text-xl! font-bold! ml-3!">{num(totals?.ev_points)}</Text>
                   <Text type="secondary">charge points</Text>
                 </div>
                 <Progress
@@ -777,15 +777,15 @@ function SuperAdminOverview() {
               </div>
 
               <div>
-                <Text type="secondary" className="!text-xs uppercase tracking-wide">
+                <Text type="secondary" className="text-xs! uppercase tracking-wide">
                   Busiest company · {windowLabel}
                 </Text>
                 <div className="mt-1.5">
-                  <Text className="!text-base !font-semibold">
+                  <Text className="text-base! font-semibold!">
                     {mergedCompanies[0]?.company_name ?? '—'}
                   </Text>
                   <br />
-                  <Text type="secondary" className="!text-xs">
+                  <Text type="secondary" className="text-xs!">
                     {formatRWF(num(mergedCompanies[0]?.revenue))} ·{' '}
                     {num(mergedCompanies[0]?.transactions).toLocaleString()} transactions
                   </Text>
@@ -898,7 +898,7 @@ export default function AdminDashboardPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <Title level={3} className="!mb-0">Company Overview</Title>
+          <Title level={3} className="mb-0!">Company Overview</Title>
           <Text type="secondary">Cross-station performance for today</Text>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -936,7 +936,7 @@ export default function AdminDashboardPage() {
 
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={8}>
-          <Card className="!rounded-xl">
+          <Card className="rounded-xl!">
             <Statistic
               title="Total Revenue Today"
               value={totalRevenue}
@@ -947,7 +947,7 @@ export default function AdminDashboardPage() {
           </Card>
         </Col>
         <Col xs={24} sm={8}>
-          <Card className="!rounded-xl">
+          <Card className="rounded-xl!">
             <Statistic
               title="Total Transactions"
               value={totalTransactions}
@@ -957,7 +957,7 @@ export default function AdminDashboardPage() {
           </Card>
         </Col>
         <Col xs={24} sm={8}>
-          <Card className="!rounded-xl">
+          <Card className="rounded-xl!">
             <Statistic
               title="Active Stations"
               value={stations.length}
@@ -971,7 +971,7 @@ export default function AdminDashboardPage() {
       <Row gutter={[16, 16]}>
         {stations.map((station) => (
           <Col xs={24} sm={12} lg={8} key={station.stationId}>
-            <Card className="!rounded-xl hover:shadow-lg transition-shadow" styles={{ body: { padding: 20 } }}>
+            <Card className="rounded-xl! hover:shadow-lg transition-shadow" styles={{ body: { padding: 20 } }}>
               <div className="flex items-center justify-between mb-3">
                 <Text strong className="text-base">{station.stationName}</Text>
                 <Tag color={station.activePumps > 0 ? 'green' : 'default'}>
@@ -1000,11 +1000,11 @@ export default function AdminDashboardPage() {
         ))}
       </Row>
 
-      <Card title="Station Comparison" className="!rounded-xl">
+      <Card title="Station Comparison" className="rounded-xl!">
         <ComparisonChart data={chartData} labels={['Revenue', 'Transactions', 'Liters']} />
       </Card>
 
-      <Card title="Station Details" className="!rounded-xl">
+      <Card title="Station Details" className="rounded-xl!">
         <Table
           columns={columns}
           dataSource={stations}

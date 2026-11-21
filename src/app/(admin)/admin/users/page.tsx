@@ -470,7 +470,7 @@ function AdminUsersPageInner() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <Title level={3} className="!mb-0">Users</Title>
+          <Title level={3} className="mb-0!">Users</Title>
           <Text type="secondary">
             {isSuperAdmin
               ? 'Manage managers, attendants, and company administrators'
@@ -482,7 +482,7 @@ function AdminUsersPageInner() {
         </Button>
       </div>
 
-      <Card className="!rounded-xl">
+      <Card className="rounded-xl!">
         <div className="flex flex-wrap items-center gap-3 mb-4">
           <Input.Search
             placeholder="Search name, email or phone"
@@ -718,7 +718,7 @@ function AdminUsersPageInner() {
                   autoSize
                   value={issuedPassword}
                   onFocus={(e) => e.currentTarget.select()}
-                  className="!font-mono"
+                  className="font-mono!"
                 />
               </div>
             }

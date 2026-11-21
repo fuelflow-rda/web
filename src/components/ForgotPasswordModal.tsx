@@ -71,11 +71,11 @@ export function ForgotPasswordModal({
       destroyOnHidden
     >
       {sent ? (
-        <Alert type="success" showIcon message={sent} className="!rounded-xl" />
+        <Alert type="success" showIcon message={sent} className="rounded-xl!" />
       ) : (
         <>
           {error && (
-            <Alert type="error" showIcon message={error} className="!mb-4 !rounded-xl" />
+            <Alert type="error" showIcon message={error} className="mb-4! rounded-xl!" />
           )}
 
           <p className="text-ink-secondary mb-4">
@@ -95,7 +95,7 @@ export function ForgotPasswordModal({
               <Input
                 prefix={<MailOutlined className="text-ink-disabled" />}
                 placeholder="you@company.com"
-                className="!h-11 !rounded-xl"
+                className="h-11! rounded-xl!"
                 autoComplete="email"
               />
             </Form.Item>
@@ -104,7 +104,7 @@ export function ForgotPasswordModal({
               htmlType="submit"
               loading={submitting}
               block
-              className="!h-11 !rounded-xl !font-bold"
+              className="h-11! rounded-xl! font-bold!"
             >
               Send reset link
             </Button>

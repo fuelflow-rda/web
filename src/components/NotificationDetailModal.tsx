@@ -53,9 +53,9 @@ export function NotificationDetailModal({
   return (
     <Modal
       title={
-        <Space align="start" className="!items-start">
+        <Space align="start" className="items-start!">
           <span
-            className="inline-flex w-9 h-9 rounded-lg items-center justify-center text-base flex-shrink-0"
+            className="inline-flex w-9 h-9 rounded-lg items-center justify-center text-base shrink-0"
             style={{ backgroundColor: `${cfg.color}18`, color: cfg.color }}
           >
             {cfg.icon}
@@ -68,24 +68,24 @@ export function NotificationDetailModal({
       open={open}
       onCancel={onClose}
       footer={
-        <Button type="primary" onClick={onClose} className="!rounded-lg">
+        <Button type="primary" onClick={onClose} className="rounded-lg!">
           Close
         </Button>
       }
       width={420}
       centered
       destroyOnHidden
-      classNames={{ body: '!pt-2' }}
+      classNames={{ body: 'pt-2!' }}
     >
       <div className="space-y-3">
         <Space wrap>
           <Tag color={cfg.tagColor}>{notification.type}</Tag>
           {!notification.isRead && <Tag color="orange">Unread</Tag>}
         </Space>
-        <Typography.Paragraph className="!mb-0 !text-ink-secondary whitespace-pre-wrap break-words">
+        <Typography.Paragraph className="mb-0! text-ink-secondary! whitespace-pre-wrap wrap-break-word">
           {notification.message}
         </Typography.Paragraph>
-        <Typography.Text type="secondary" className="!text-xs">
+        <Typography.Text type="secondary" className="text-xs!">
           {created.format('MMM D, YYYY h:mm A')} ({created.fromNow()})
         </Typography.Text>
       </div>

@@ -279,7 +279,7 @@ function PumpsView() {
       render: (v: number) => (
         <Text
           strong
-          className={Math.abs(v) > 0 ? '!text-danger' : '!text-accent'}
+          className={Math.abs(v) > 0 ? 'text-danger!' : 'text-accent!'}
         >
           {formatRWF(v)}
         </Text>
@@ -302,7 +302,7 @@ function PumpsView() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <Title level={3} className="!mb-0">Pump Reports</Title>
+          <Title level={3} className="mb-0!">Pump Reports</Title>
           <Text type="secondary">
             Pumps are assigned to the current station. Use &quot;Add Pump&quot; to create a new pump here; select a pump below to view reports.
           </Text>
@@ -324,7 +324,7 @@ function PumpsView() {
       >
         <Form form={form} layout="vertical" onFinish={handleAddPump}>
           <Form.Item name="pumpNumber" label="Number" rules={[{ required: true, type: 'number', min: 1 }]}>
-            <InputNumber className="!w-full" placeholder="e.g. 1" min={1} />
+            <InputNumber className="w-full!" placeholder="e.g. 1" min={1} />
           </Form.Item>
           <Form.Item name="productType" label="Product" rules={[{ required: true }]} initialValue="GASOLINE">
             <Select
@@ -367,7 +367,7 @@ function PumpsView() {
                     label="Rated Power (kW)"
                     rules={[{ required: true, type: 'number', min: 0.1, message: 'Enter the rated output in kW' }]}
                   >
-                    <InputNumber className="!w-full" placeholder="e.g. 60" min={0.1} step={1} />
+                    <InputNumber className="w-full!" placeholder="e.g. 60" min={0.1} step={1} />
                   </Form.Item>
                 </>
               ) : null
@@ -381,7 +381,7 @@ function PumpsView() {
         </Form>
       </Modal>
 
-      <Card className="!rounded-xl">
+      <Card className="rounded-xl!">
         <div className="flex flex-wrap items-center gap-4 mb-6">
           <Radio.Group
             value={viewMode}
@@ -410,7 +410,7 @@ function PumpsView() {
         <PumpPerformanceChart data={reports} />
       </Card>
 
-      <Card className="!rounded-xl" title="Detailed Report">
+      <Card className="rounded-xl!" title="Detailed Report">
         <Table
           columns={columns}
           dataSource={reports}

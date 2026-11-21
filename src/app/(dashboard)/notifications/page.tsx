@@ -104,7 +104,7 @@ export default function NotificationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <Title level={3} className="!mb-0">
+          <Title level={3} className="mb-0!">
             <Space>
               <BellOutlined />
               Notifications
@@ -154,7 +154,7 @@ export default function NotificationsPage() {
         </Space>
       </div>
 
-      <Card className="!rounded-xl" styles={{ body: { padding: 0 } }}>
+      <Card className="rounded-xl!" styles={{ body: { padding: 0 } }}>
         <List
           loading={loading}
           dataSource={filteredNotifications}
@@ -163,7 +163,7 @@ export default function NotificationsPage() {
             const config = notificationTypeVisuals[notification.type] || notificationTypeVisuals.INFO;
             return (
               <List.Item
-                className={`!px-6 !py-4 cursor-pointer hover:bg-surface-sunken transition-colors ${
+                className={`px-6! py-4! cursor-pointer hover:bg-surface-sunken transition-colors ${
                   !notification.isRead ? 'bg-warn-tint' : ''
                 }`}
                 onClick={() => {
@@ -199,7 +199,7 @@ export default function NotificationsPage() {
                     <Space>
                       {!notification.isRead && <Badge status="processing" />}
                       <Text strong={!notification.isRead}>{notification.title}</Text>
-                      <Tag color={config.tagColor} className="!text-xs">
+                      <Tag color={config.tagColor} className="text-xs!">
                         {notification.type}
                       </Tag>
                     </Space>
@@ -208,7 +208,7 @@ export default function NotificationsPage() {
                     <div>
                       <Text type="secondary">{notification.message}</Text>
                       <br />
-                      <Text type="secondary" className="!text-xs">
+                      <Text type="secondary" className="text-xs!">
                         {dayjs(notification.createdAt).fromNow()}
                       </Text>
                     </div>

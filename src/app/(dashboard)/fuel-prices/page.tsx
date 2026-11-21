@@ -177,7 +177,7 @@ export default function FuelPricesPage() {
       render: (_: unknown, record: FuelPrice) => (
         <Text strong>
           {formatRWF(record.price)}
-          <Text type="secondary" className="!text-xs">
+          <Text type="secondary" className="text-xs!">
             {' '}
             /{unitLabel(record.unit)}
           </Text>
@@ -199,7 +199,7 @@ export default function FuelPricesPage() {
             ) : (
               <ArrowDownOutlined className="text-accent" />
             )}
-            <Text className={diff > 0 ? '!text-danger' : '!text-accent'}>
+            <Text className={diff > 0 ? 'text-danger!' : 'text-accent!'}>
               {formatRWF(Math.abs(diff))} ({pct}%)
             </Text>
           </Space>
@@ -227,7 +227,7 @@ export default function FuelPricesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <Title level={3} className="!mb-0">Prices</Title>
+          <Title level={3} className="mb-0!">Prices</Title>
           <Text type="secondary">
             Fuel is priced per liter, EV charging per kWh — fast charging carries its own rate.
           </Text>
@@ -245,7 +245,7 @@ export default function FuelPricesPage() {
           return (
             <Col key={product} xs={24} sm={12} lg={8}>
               <Card
-                className="!rounded-xl !border-2 h-full"
+                className="rounded-xl! border-2! h-full"
                 style={{ borderColor: price > 0 ? color : 'var(--line)' }}
                 styles={{ body: { padding: '20px' } }}
               >
@@ -264,7 +264,7 @@ export default function FuelPricesPage() {
                         valueStyle={{ color, fontSize: 30, fontWeight: 800 }}
                       />
                     ) : (
-                      <Text type="secondary" className="block !text-2xl !font-bold !mt-2">
+                      <Text type="secondary" className="block text-2xl! font-bold! mt-2!">
                         Not set
                       </Text>
                     )}
@@ -286,7 +286,7 @@ export default function FuelPricesPage() {
 
       <Card
         title="Price Trend"
-        className="!rounded-xl"
+        className="rounded-xl!"
         extra={
           <Space>
             <Select
@@ -302,7 +302,7 @@ export default function FuelPricesPage() {
         <RevenueChart data={priceChartData} />
       </Card>
 
-      <Card title="Price History" className="!rounded-xl">
+      <Card title="Price History" className="rounded-xl!">
         <Table
           columns={historyColumns}
           dataSource={history}
@@ -369,7 +369,7 @@ export default function FuelPricesPage() {
                   ]}
                 >
                   <InputNumber
-                    className="!w-full"
+                    className="w-full!"
                     formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                     parser={(value) => Number(value!.replace(/,/g, ''))}
                     placeholder={isEvProductType(product) ? 'e.g. 420' : 'e.g. 1,350'}
@@ -378,7 +378,7 @@ export default function FuelPricesPage() {
               );
             }}
           </Form.Item>
-          <Form.Item className="!mb-0 text-right">
+          <Form.Item className="mb-0! text-right">
             <Space>
               <Button onClick={() => setModalOpen(false)}>Cancel</Button>
               <Button type="primary" htmlType="submit" loading={submitting}>

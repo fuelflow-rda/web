@@ -46,7 +46,7 @@ export default function TransactionFeed({ transactions }: TransactionFeedProps) 
           >
             <div className="flex items-center gap-3 min-w-0">
               <div
-                className="w-9 h-9 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
+                className="w-9 h-9 rounded-lg flex items-center justify-center text-sm shrink-0"
                 style={{ background: payment.bg }}
               >
                 {payment.icon}
@@ -54,23 +54,23 @@ export default function TransactionFeed({ transactions }: TransactionFeedProps) 
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span
-                    className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm"
                     style={{ background: tint, color: accent }}
                   >
                     {productLabel(tx.productType)}
                   </span>
-                  <Text className="!text-xs !text-ink-secondary !font-medium">
+                  <Text className="text-xs! text-ink-secondary! font-medium!">
                     {formatQuantity(tx.quantity, tx.unit, 1)}
                   </Text>
                 </div>
-                <Text className="!text-[11px] !text-ink-muted block truncate mt-0.5">
+                <Text className="text-[11px]! text-ink-muted! block truncate mt-0.5">
                   {tx.vehiclePlate || 'No plate'} &middot; {tx.paymentMethod}
                 </Text>
               </div>
             </div>
-            <div className="text-right flex-shrink-0 ml-3">
-              <Text strong className="!text-sm block !text-ink">{formatRWF(tx.totalAmount)}</Text>
-              <Text className="!text-[11px] !text-ink-muted">
+            <div className="text-right shrink-0 ml-3">
+              <Text strong className="text-sm! block text-ink!">{formatRWF(tx.totalAmount)}</Text>
+              <Text className="text-[11px]! text-ink-muted!">
                 {dayjs(tx.createdAt).format('HH:mm')}
               </Text>
             </div>

@@ -198,7 +198,7 @@ export default function AdminCompanyDetailPage() {
         <Link href="/admin/companies" className="inline-flex items-center gap-2 text-accent">
           <ArrowLeftOutlined /> Companies
         </Link>
-        <Card className="!rounded-xl">
+        <Card className="rounded-xl!">
           <Text>This company could not be found. It may have been deleted.</Text>
         </Card>
       </div>
@@ -283,7 +283,7 @@ export default function AdminCompanyDetailPage() {
           <div className="flex items-center gap-4">
             <InitialsAvatar name={company.name} size={52} square />
             <div>
-              <Title level={3} className="!mb-0">
+              <Title level={3} className="mb-0!">
                 {company.name}
               </Title>
               <Text type="secondary">
@@ -320,7 +320,7 @@ export default function AdminCompanyDetailPage() {
       </div>
 
       <Card
-        className="!rounded-xl"
+        className="rounded-xl!"
         title="Administrators"
         extra={
           <Link href={`/admin/users?company_id=${company.id}&role=ADMIN`} className="text-accent">
@@ -352,7 +352,7 @@ export default function AdminCompanyDetailPage() {
       </Card>
 
       <Card
-        className="!rounded-xl"
+        className="rounded-xl!"
         title="Stations"
         extra={
           <Link href={`/admin/stations?company_id=${company.id}`} className="text-accent">

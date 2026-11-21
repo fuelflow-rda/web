@@ -334,7 +334,7 @@ function TransactionsView() {
           <div>{dayjs(date).format('MMM D, HH:mm')}</div>
           {record.isFlagged && (
             <div className="mt-0.5 flex items-start gap-1 text-xs font-medium text-danger leading-snug">
-              <FlagOutlined className="mt-0.5 flex-shrink-0" aria-hidden="true" />
+              <FlagOutlined className="mt-0.5 shrink-0" aria-hidden="true" />
               <span>{record.flagReason ?? 'Flagged, no reason recorded'}</span>
             </div>
           )}
@@ -354,7 +354,7 @@ function TransactionsView() {
       key: 'productType',
       width: 140,
       render: (type: string) => (
-        <Tag color={productTagColor(type)} className="!font-medium">
+        <Tag color={productTagColor(type)} className="font-medium!">
           {productLabel(type)}
         </Tag>
       ),
@@ -420,7 +420,7 @@ function TransactionsView() {
             danger={record.isFlagged}
             aria-label={record.isFlagged ? 'Edit flag' : 'Flag transaction'}
             onClick={() => openFlagModal(record)}
-            className={record.isFlagged ? '!text-danger' : ''}
+            className={record.isFlagged ? 'text-danger!' : ''}
           />
         </Tooltip>
       ),
@@ -456,20 +456,20 @@ function TransactionsView() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <Title level={3} className="!mb-0">Transactions</Title>
+          <Title level={3} className="mb-0!">Transactions</Title>
           <Text type="secondary">View and manage all fuel transactions</Text>
         </div>
         <ExportButton data={exportData} columns={exportColumns} filename="transactions" />
       </div>
 
-      <Card className="!rounded-xl">
+      <Card className="rounded-xl!">
         <div className="flex flex-wrap gap-3 mb-4">
           <RangePicker
             value={filters.dateRange}
             onChange={(dates) =>
               setFilters((f) => ({ ...f, dateRange: dates as [Dayjs, Dayjs] | null }))
             }
-            className="!rounded-lg"
+            className="rounded-lg!"
           />
           <Select
             value={filters.pumpId}
@@ -523,7 +523,7 @@ function TransactionsView() {
             placeholder="Search plate or phone..."
             value={filters.search}
             onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
-            className="w-56 !rounded-lg"
+            className="w-56 rounded-lg!"
             allowClear
           />
           {/* No control sets this; it only arrives from the dashboard heatmap. */}
@@ -531,7 +531,7 @@ function TransactionsView() {
             <Tag
               closable
               onClose={() => setFilters((f) => ({ ...f, dow: undefined, hour: undefined }))}
-              className="!flex !items-center !m-0 !px-3 !text-sm"
+              className="flex! items-center! m-0! px-3! text-sm!"
             >
               {localTimeLabel(filters.dow, filters.hour)}
             </Tag>

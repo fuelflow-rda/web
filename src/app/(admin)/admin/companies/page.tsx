@@ -119,7 +119,7 @@ export default function AdminCompaniesPage() {
       align: 'right',
       render: (n: number) =>
         n === 0 ? (
-          <Text className="!text-warn font-medium">None yet</Text>
+          <Text className="text-warn! font-medium">None yet</Text>
         ) : (
           n
         ),
@@ -143,7 +143,7 @@ export default function AdminCompaniesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <Title level={3} className="!mb-0">
+          <Title level={3} className="mb-0!">
             Companies
           </Title>
           <Text type="secondary">
@@ -163,7 +163,7 @@ export default function AdminCompaniesPage() {
         </Button>
       </div>
 
-      <Card className="!rounded-xl" styles={{ body: { padding: 0 } }}>
+      <Card className="rounded-xl!" styles={{ body: { padding: 0 } }}>
         <Table
           columns={columns}
           dataSource={rows}

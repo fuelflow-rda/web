@@ -97,10 +97,10 @@ export default function LoginPage() {
           </div>
 
           <div className="mb-8">
-            <Title level={2} className="!mb-1.5 !text-ink !text-2xl !font-extrabold">
+            <Title level={2} className="mb-1.5! text-ink! text-2xl! font-extrabold!">
               Welcome back
             </Title>
-            <Text className="!text-ink-muted !text-sm">
+            <Text className="text-ink-muted! text-sm!">
               Sign in to your management portal
             </Text>
           </div>
@@ -117,7 +117,7 @@ export default function LoginPage() {
               <Input
                 prefix={<MailOutlined className="text-ink-disabled" />}
                 placeholder="you@company.com"
-                className="!h-12 !rounded-xl !bg-surface"
+                className="h-12! rounded-xl! bg-surface!"
               />
             </Form.Item>
 
@@ -125,12 +125,12 @@ export default function LoginPage() {
               name="password"
               label={<span className="text-sm font-semibold text-ink-secondary">Password</span>}
               rules={[{ required: true, message: 'Please enter your password' }]}
-              className="!mb-2"
+              className="mb-2!"
             >
               <Input.Password
                 prefix={<LockOutlined className="text-ink-disabled" />}
                 placeholder="Enter your password"
-                className="!h-12 !rounded-xl !bg-surface"
+                className="h-12! rounded-xl! bg-surface!"
               />
             </Form.Item>
 
@@ -160,13 +160,13 @@ export default function LoginPage() {
               </div>
             )}
 
-            <Form.Item className="!mb-0">
+            <Form.Item className="mb-0!">
               <Button
                 type="primary"
                 htmlType="submit"
                 loading={loading}
                 block
-                className="!h-12 !rounded-xl !text-base !font-bold"
+                className="h-12! rounded-xl! text-base! font-bold!"
               >
                 Sign In
               </Button>

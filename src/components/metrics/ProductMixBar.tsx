@@ -75,7 +75,7 @@ export default function ProductMixBar({
             <>
 
             <span
-              className="w-2.5 h-2.5 rounded-sm shrink-0"
+              className="w-2.5 h-2.5 rounded-xs shrink-0"
               style={{ background: productColor(row.productType) }}
               aria-hidden
             />
@@ -98,7 +98,7 @@ export default function ProductMixBar({
             <Link
               key={row.productType}
               href={hrefFor(row)}
-              className={`${rowClass} hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent`}
+              className={`${rowClass} hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-accent`}
             >
               {content}
             </Link>

@@ -43,7 +43,7 @@ export default function PumpCard({ pump }: PumpCardProps) {
             {pump.pumpNumber}
           </div>
           <div>
-            <Text strong className="!text-sm">
+            <Text strong className="text-sm!">
               {isEv ? 'Charger' : 'Pump'} #{pump.pumpNumber}
             </Text>
             <div className="flex items-center gap-1.5 mt-0.5">
@@ -57,7 +57,7 @@ export default function PumpCard({ pump }: PumpCardProps) {
         </div>
         <div className="text-right">
           <Tag
-            className="!font-semibold !text-xs !rounded-lg !border-0 !mr-0"
+            className="font-semibold! text-xs! rounded-lg! border-0! mr-0!"
             style={{ background: tint, color: accent }}
           >
             {productName}
@@ -74,7 +74,7 @@ export default function PumpCard({ pump }: PumpCardProps) {
         <div className="w-6 h-6 rounded-full bg-surface-muted flex items-center justify-center">
           <UserOutlined className="text-xs text-ink-muted" />
         </div>
-        <Text className="!text-xs !text-ink-secondary">
+        <Text className="text-xs! text-ink-secondary!">
           {pump.currentAttendant?.name || 'No attendant assigned'}
         </Text>
       </div>

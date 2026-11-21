@@ -259,7 +259,7 @@ export default function AdminStationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <Title level={3} className="!mb-0">Stations</Title>
+          <Title level={3} className="mb-0!">Stations</Title>
           <Text type="secondary">Manage all fuel stations</Text>
         </div>
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
@@ -267,7 +267,7 @@ export default function AdminStationsPage() {
         </Button>
       </div>
 
-      <Card className="!rounded-xl">
+      <Card className="rounded-xl!">
         <div className="flex flex-wrap gap-3 mb-4">
           {isSuperAdmin && (
             <Select

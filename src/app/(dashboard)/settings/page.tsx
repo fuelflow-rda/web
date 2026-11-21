@@ -48,15 +48,15 @@ export default function SettingsPage() {
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6">
       <div>
-        <Title level={3} className="!mb-0">Settings</Title>
+        <Title level={3} className="mb-0!">Settings</Title>
         <Text type="secondary">Manage your account and preferences</Text>
       </div>
 
       <Row gutter={[24, 24]} align="stretch">
         <Col xs={24} lg={14} xl={15}>
-          <Card title="Profile" className="!rounded-xl h-full">
+          <Card title="Profile" className="rounded-xl! h-full">
             <div className="flex items-center gap-4 mb-6">
-              <Avatar size={64} className="!bg-accent" icon={<UserOutlined />} />
+              <Avatar size={64} className="bg-accent!" icon={<UserOutlined />} />
               <div>
                 <Text strong className="text-lg block">{user?.name}</Text>
                 <Text type="secondary">{user?.role}</Text>
@@ -99,7 +99,7 @@ export default function SettingsPage() {
         <Col xs={24} lg={10} xl={9}>
           <Card
             title="Change Password"
-            className="!rounded-xl h-full lg:sticky lg:top-24"
+            className="rounded-xl! h-full lg:sticky lg:top-24"
           >
             <Form form={passwordForm} layout="vertical" onFinish={handlePasswordChange}>
               <Form.Item
@@ -148,7 +148,7 @@ export default function SettingsPage() {
         </Col>
       </Row>
 
-      <Card title="Notification Preferences" className="!rounded-xl">
+      <Card title="Notification Preferences" className="rounded-xl!">
         <Space direction="vertical" className="w-full" size="middle">
           <div className="flex items-center justify-between">
             <div>
@@ -158,7 +158,7 @@ export default function SettingsPage() {
             </div>
             <Switch defaultChecked />
           </div>
-          <Divider className="!my-2" />
+          <Divider className="my-2!" />
           <div className="flex items-center justify-between">
             <div>
               <Text strong>Discrepancy Alerts</Text>
@@ -167,7 +167,7 @@ export default function SettingsPage() {
             </div>
             <Switch defaultChecked />
           </div>
-          <Divider className="!my-2" />
+          <Divider className="my-2!" />
           <div className="flex items-center justify-between">
             <div>
               <Text strong>Inactive Pump Alerts</Text>

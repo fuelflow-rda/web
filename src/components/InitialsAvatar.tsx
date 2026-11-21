@@ -29,7 +29,7 @@ export function InitialsAvatar({
     <Avatar
       size={size}
       shape={square ? 'square' : 'circle'}
-      className="!bg-accent-tint !text-accent !font-semibold flex-shrink-0"
+      className="bg-accent-tint! text-accent! font-semibold! shrink-0"
       style={{ fontSize: Math.round(size * 0.36), borderRadius: square ? 8 : undefined }}
     >
       {initials(name)}

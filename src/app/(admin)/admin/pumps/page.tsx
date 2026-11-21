@@ -229,11 +229,11 @@ export default function AdminPumpsPage() {
       key: 'productType',
       render: (type: string, record: Pump) => (
         <Space direction="vertical" size={2}>
-          <Tag color={productTagColor(type)} className="!font-medium">
+          <Tag color={productTagColor(type)} className="font-medium!">
             {productLabel(type)}
           </Tag>
           {isEvProductType(type) && (
-            <Text type="secondary" className="!text-xs">
+            <Text type="secondary" className="text-xs!">
               {connectorLabel(record.connectorType)} · {record.powerKw ?? 0} kW
             </Text>
           )}
@@ -275,7 +275,7 @@ export default function AdminPumpsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <Title level={3} className="!mb-0">Pumps</Title>
+          <Title level={3} className="mb-0!">Pumps</Title>
           <Text type="secondary">Manage pumps across all stations</Text>
         </div>
         <Space wrap>
@@ -323,7 +323,7 @@ export default function AdminPumpsPage() {
         </Space>
       </div>
 
-      <Card className="!rounded-xl">
+      <Card className="rounded-xl!">
         <Table
           columns={columns}
           dataSource={pumps}
@@ -364,7 +364,7 @@ export default function AdminPumpsPage() {
             label="Pump Number"
             rules={[{ required: true, type: 'number', min: 1 }]}
           >
-            <InputNumber className="!w-full" min={1} placeholder="Next available (auto-filled when station selected)" />
+            <InputNumber className="w-full!" min={1} placeholder="Next available (auto-filled when station selected)" />
           </Form.Item>
           <Form.Item name="productType" label="Product" rules={[{ required: true }]}>
             <Select
@@ -407,7 +407,7 @@ export default function AdminPumpsPage() {
                     label="Rated Power (kW)"
                     rules={[{ required: true, type: 'number', min: 0.1, message: 'Enter the rated output in kW' }]}
                   >
-                    <InputNumber className="!w-full" placeholder="e.g. 60" min={0.1} step={1} />
+                    <InputNumber className="w-full!" placeholder="e.g. 60" min={0.1} step={1} />
                   </Form.Item>
                 </>
               ) : null

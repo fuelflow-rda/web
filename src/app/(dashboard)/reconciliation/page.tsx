@@ -135,7 +135,7 @@ export default function ReconciliationPage() {
         record.variance == null ? (
           <Text type="secondary">—</Text>
         ) : (
-          <Text strong className={record.variance !== 0 ? '!text-danger' : '!text-accent'}>
+          <Text strong className={record.variance !== 0 ? 'text-danger!' : 'text-accent!'}>
             {record.variance > 0 ? '+' : ''}
             {formatQuantity(record.variance, record.unit)}
           </Text>
@@ -161,7 +161,7 @@ export default function ReconciliationPage() {
       key: 'difference',
       align: 'right',
       render: (v: number) => (
-        <Text strong className={v !== 0 ? '!text-danger' : '!text-accent'}>
+        <Text strong className={v !== 0 ? 'text-danger!' : 'text-accent!'}>
           {formatRWF(v)}
         </Text>
       ),
@@ -295,7 +295,7 @@ export default function ReconciliationPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <Title level={3} className="!mb-0">Reconciliation</Title>
+          <Title level={3} className="mb-0!">Reconciliation</Title>
           <Text type="secondary">End of day revenue reconciliation · Select a date, then generate</Text>
         </div>
         <Space wrap align="center">
@@ -359,7 +359,7 @@ export default function ReconciliationPage() {
 
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={8}>
-              <Card className="!rounded-xl">
+              <Card className="rounded-xl!">
                 <Statistic
                   title="Expected Revenue"
                   value={report.expectedRevenue}
@@ -369,7 +369,7 @@ export default function ReconciliationPage() {
               </Card>
             </Col>
             <Col xs={24} sm={8}>
-              <Card className="!rounded-xl">
+              <Card className="rounded-xl!">
                 <Statistic
                   title="Recorded Revenue"
                   value={report.recordedRevenue}
@@ -379,7 +379,7 @@ export default function ReconciliationPage() {
               </Card>
             </Col>
             <Col xs={24} sm={8}>
-              <Card className="!rounded-xl">
+              <Card className="rounded-xl!">
                 <div className="flex items-center justify-between">
                   <Statistic
                     title="Difference"
@@ -390,11 +390,11 @@ export default function ReconciliationPage() {
                     }}
                   />
                   {report.status === 'BALANCED' ? (
-                    <Tag icon={<CheckCircleOutlined />} color="success" className="!text-base !px-4 !py-1">
+                    <Tag icon={<CheckCircleOutlined />} color="success" className="text-base! px-4! py-1!">
                       Balanced
                     </Tag>
                   ) : (
-                    <Tag icon={<WarningOutlined />} color="warning" className="!text-base !px-4 !py-1">
+                    <Tag icon={<WarningOutlined />} color="warning" className="text-base! px-4! py-1!">
                       Discrepancy
                     </Tag>
                   )}
@@ -410,7 +410,7 @@ export default function ReconciliationPage() {
                 Attendants who worked
               </span>
             }
-            className="!rounded-xl"
+            className="rounded-xl!"
           >
             <Table
               columns={attendantColumns}
@@ -422,7 +422,7 @@ export default function ReconciliationPage() {
             />
           </Card>
 
-          <Card title="Breakdown by Pump" className="!rounded-xl">
+          <Card title="Breakdown by Pump" className="rounded-xl!">
             <Table
               columns={pumpColumns}
               dataSource={report.pumpBreakdown}
@@ -435,7 +435,7 @@ export default function ReconciliationPage() {
             />
           </Card>
 
-          <Card title="Breakdown by Payment Method" className="!rounded-xl">
+          <Card title="Breakdown by Payment Method" className="rounded-xl!">
             <Table
               columns={paymentColumns}
               dataSource={report.paymentBreakdown}
@@ -446,7 +446,7 @@ export default function ReconciliationPage() {
           </Card>
         </>
       ) : (
-        <Card className="!rounded-xl text-center py-12">
+        <Card className="rounded-xl! text-center py-12">
           <FileTextOutlined className="text-5xl text-ink-disabled mb-4" />
           <Title level={4} type="secondary">No Report Found</Title>
           <Text type="secondary">

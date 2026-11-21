@@ -307,7 +307,7 @@ function AttendantsView() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <Title level={3} className="!mb-0">Attendant Reports</Title>
+          <Title level={3} className="mb-0!">Attendant Reports</Title>
           <Text type="secondary">Performance breakdown by attendant</Text>
         </div>
         <Space wrap>
@@ -349,7 +349,7 @@ function AttendantsView() {
       </Modal>
 
       {compareIds.length === 2 && (
-        <Card className="!rounded-xl">
+        <Card className="rounded-xl!">
           <div className="flex items-center justify-between mb-4">
             <Space>
               <BarChartOutlined />
@@ -366,12 +366,12 @@ function AttendantsView() {
       )}
 
       {compareIds.length === 1 && (
-        <Tag color="orange" className="!text-sm !px-3 !py-1">
+        <Tag color="orange" className="text-sm! px-3! py-1!">
           Select one more attendant to compare
         </Tag>
       )}
 
-      <Card className="!rounded-xl overflow-hidden">
+      <Card className="rounded-xl! overflow-hidden">
         <Table
           columns={columns}
           dataSource={reports}
@@ -393,7 +393,7 @@ function AttendantsView() {
         {selectedAttendant && (
           <div className="space-y-6">
             {/* Profile Info */}
-            <Card size="small" className="!rounded-lg">
+            <Card size="small" className="rounded-lg!">
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <UserOutlined className="text-ink-muted" />
@@ -457,7 +457,7 @@ function AttendantsView() {
             </Row>
 
             {/* Payment Breakdown */}
-            <Card title="Payment Breakdown" size="small" className="!rounded-lg">
+            <Card title="Payment Breakdown" size="small" className="rounded-lg!">
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <Text>Cash</Text>
@@ -478,7 +478,7 @@ function AttendantsView() {
             <Card
               title={<span><LockOutlined className="mr-2" />Reset PIN</span>}
               size="small"
-              className="!rounded-lg"
+              className="rounded-lg!"
             >
               <Form form={pinResetForm} layout="vertical" onFinish={handleResetPin}>
                 <Form.Item
