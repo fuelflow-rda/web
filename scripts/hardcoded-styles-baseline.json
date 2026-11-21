@@ -22,9 +22,6 @@
     "src/app/(admin)/admin/users/page.tsx": {
       "type": 3
     },
-    "src/app/(admin)/layout.tsx": {
-      "type": 10
-    },
     "src/app/(dashboard)/attendants/page.tsx": {
       "type": 3
     },
@@ -33,10 +30,6 @@
     },
     "src/app/(dashboard)/fuel-prices/page.tsx": {
       "type": 5,
-      "spacing": 1
-    },
-    "src/app/(dashboard)/layout.tsx": {
-      "type": 15,
       "spacing": 1
     },
     "src/app/(dashboard)/notifications/page.tsx": {

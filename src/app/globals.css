@@ -28,6 +28,19 @@
   --background-size-dots: 20px 20px;
 }
 
+/*
+ * The one part of Preflight the redesign needs: a width or height includes
+ * padding and border, as every Tailwind layout and every antd component
+ * assumes. In the base layer, so any component that wants otherwise can say so.
+ */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    box-sizing: border-box;
+  }
+}
+
 html,
 body {
   margin: 0;
