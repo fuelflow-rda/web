@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { UserPlus } from 'lucide-react';
+import { ShieldCheck, UserPlus } from 'lucide-react';
 import ExportButton from '@/components/ExportButton';
 import { Banner, Button, PageHeader, Panel } from '@/components/ui';
 import { PanelError, PanelSkeleton } from '@/components/overview/panels';
@@ -13,6 +13,7 @@ import {
   AttendantDrawer,
   RosterTable,
   shiftLabel,
+  type RowAction,
   varianceLabel,
 } from '@/components/attendants/views';
 import { formatRwandaPhone } from '@/lib/phone';
@@ -41,6 +42,7 @@ function AttendantsView() {
   const search = (params.get('search') ?? '').trim().toLowerCase();
   const [adding, setAdding] = useState(false);
   const [openId, setOpenId] = useState<string | null>(() => params.get('attendant'));
+  const [openIn, setOpenIn] = useState<RowAction>('view');
   const [notice, setNotice] = useState<string | null>(null);
 
   const all = [...(roster.data ?? [])].sort(
@@ -125,10 +127,18 @@ function AttendantsView() {
               : 'No attendants yet. Add the people who will record sales on the app.'}
           </p>
         ) : (
-          <RosterTable rows={rows} onOpen={(r) => setOpenId(r.id)} />
+          <RosterTable
+            rows={rows}
+            canManage={canManage}
+            onOpen={(r, action = 'view') => {
+              setOpenIn(action);
+              setOpenId(r.id);
+            }}
+          />
         )}
       </Panel>
-      <p className="m-0 text-12 text-text-muted">
+      <p className="m-0 flex items-start gap-2 text-12 text-text-muted">
+        <ShieldCheck size={14} aria-hidden className="mt-px shrink-0" />
         Attendants only use the mobile app. They cannot open this dashboard, and a locked PIN can only be reset by a
         manager.
       </p>
@@ -144,6 +154,7 @@ function AttendantsView() {
       />
       <AttendantDrawer
         row={open}
+        startIn={openIn}
         stationId={stationId}
         canManage={canManage}
         onClose={() => setOpenId(null)}

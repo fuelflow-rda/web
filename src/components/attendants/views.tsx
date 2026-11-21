@@ -5,6 +5,8 @@ import { Drawer, Segmented } from 'antd';
 import {
   CircleCheck,
   CircleDashed,
+  Clock3,
+  Eye,
   KeyRound,
   LockKeyhole,
   Pencil,
@@ -13,7 +15,7 @@ import {
   UserX,
   type LucideIcon,
 } from 'lucide-react';
-import { Banner, Button, StatusChip, TextField, type StatusTone } from '@/components/ui';
+import { Banner, Button, RowMenu, StatusChip, TextField, type StatusTone } from '@/components/ui';
 import { focusRing } from '@/components/ui/focus';
 import { initialsOf } from '@/components/ui/Avatar';
 import { PanelError, PanelSkeleton, clock, num, rwf } from '@/components/overview/panels';
@@ -26,7 +28,7 @@ import { addAttendant, getAttendantSummary, unlockPin, updateAttendant, type Ros
 const STATUS: Record<RosterRow['status'], { label: string; tone: StatusTone; icon: LucideIcon }> = {
   on_shift: { label: 'On shift', tone: 'success', icon: CircleCheck },
   off_shift: { label: 'Off shift', tone: 'neutral', icon: CircleDashed },
-  pin_locked: { label: 'PIN locked', tone: 'danger', icon: LockKeyhole },
+  pin_locked: { label: 'PIN locked', tone: 'warning', icon: Clock3 },
   deactivated: { label: 'Deactivated', tone: 'neutral', icon: UserX },
 };
 
@@ -63,7 +65,17 @@ export function varianceLabel(v: RosterRow['varianceWeek']): string {
   return `${l < 0 ? '−' : l > 0 ? '+' : ''}${formatMeter(Math.abs(l), 'L')}`;
 }
 
-export function RosterTable({ rows, onOpen }: { rows: RosterRow[]; onOpen: (r: RosterRow) => void }) {
+export type RowAction = 'view' | 'pin' | 'edit';
+
+export function RosterTable({
+  rows,
+  onOpen,
+  canManage = false,
+}: {
+  rows: RosterRow[];
+  onOpen: (r: RosterRow, action?: RowAction) => void;
+  canManage?: boolean;
+}) {
   const head =
     'px-3 py-2.5 text-left type-overline text-11 font-medium whitespace-nowrap text-text-muted first:pl-5 last:pr-5';
   const cell = 'border-t border-border px-3 py-3 first:pl-5 last:pr-5';
@@ -93,6 +105,9 @@ export function RosterTable({ rows, onOpen }: { rows: RosterRow[]; onOpen: (r: R
               title="Recorded minus metered over their shifts in the last 7 days"
             >
               7-day variance
+            </th>
+            <th scope="col" className={cx(head, 'w-12')}>
+              <span className="sr-only">Actions</span>
             </th>
           </tr>
         </thead>
@@ -144,6 +159,25 @@ export function RosterTable({ rows, onOpen }: { rows: RosterRow[]; onOpen: (r: R
                   className={cx(cell, 'text-right font-mono text-13 font-semibold', off ? 'text-danger' : 'text-text')}
                 >
                   {varianceLabel(r.varianceWeek)}
+                </td>
+                <td className={cx(cell, 'py-2 text-right')}>
+                  <RowMenu
+                    label={`Actions for ${r.name}`}
+                    items={[
+                      { key: 'view', label: 'View details', icon: Eye, onClick: () => onOpen(r, 'view') },
+                      ...(canManage
+                        ? [
+                            {
+                              key: 'pin',
+                              label: r.status === 'pin_locked' ? 'Unlock with a new PIN' : 'Set a new PIN',
+                              icon: KeyRound,
+                              onClick: () => onOpen(r, 'pin'),
+                            },
+                            { key: 'edit', label: 'Edit name or phone', icon: Pencil, onClick: () => onOpen(r, 'edit') },
+                          ]
+                        : []),
+                    ]}
+                  />
                 </td>
               </tr>
             );
@@ -221,7 +255,7 @@ export function AddAttendantDrawer({
       size={460}
       title="Add attendant"
       footer={
-        <div className="flex gap-2.5 py-1">
+        <div className="flex justify-end gap-2.5 py-1">
           <Button kind="ghost" onClick={() => (reset(), onClose())}>
             Cancel
           </Button>
@@ -261,7 +295,7 @@ export function AddAttendantDrawer({
           error={errors.pin}
           hint="4 to 6 digits. Share it in person, never by message."
           inputMode="numeric"
-          type="password"
+          revealable
           mono
           autoComplete="new-password"
         />
@@ -289,12 +323,15 @@ const PERIODS = [
 
 export function AttendantDrawer({
   row,
+  startIn = 'view',
   stationId,
   canManage,
   onClose,
   onChanged,
 }: {
   row: RosterRow | null;
+  /** What the drawer opens on: the details, the new-PIN form or the edit form. */
+  startIn?: RowAction;
   stationId: string;
   canManage: boolean;
   onClose: () => void;
@@ -313,7 +350,12 @@ export function AttendantDrawer({
   const [lastId, setLastId] = useState<string | null>(null);
   if ((row?.id ?? null) !== lastId) {
     setLastId(row?.id ?? null);
-    setMode('view');
+    const start = row && canManage ? startIn : 'view';
+    setMode(start);
+    if (start === 'edit' && row) {
+      setName(row.name);
+      setPhone(formatRwandaPhone(row.phone));
+    }
     setPin('');
     setProblem('');
     setDays(1);
