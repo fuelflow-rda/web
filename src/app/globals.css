@@ -161,6 +161,16 @@ select:-webkit-autofill:focus {
   border-bottom: 1px solid var(--border);
 }
 
+/* The drawer's close button, at the top right: a bordered 34px square. */
+.ant-drawer .ant-drawer-close {
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  color: var(--text-secondary);
+}
+
 /* antd pads the whole dialog too, which put a dialog's title 28px in from its
    body. The padding sits on head, body and footer instead, on one 28px edge.
    Confirm dialogs have no head, so their body takes all of it. */

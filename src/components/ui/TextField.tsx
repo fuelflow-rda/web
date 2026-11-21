@@ -1,9 +1,10 @@
 'use client';
 
-import { useId, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { Input, type InputProps } from 'antd';
-import type { LucideIcon } from 'lucide-react';
+import { Eye, EyeOff, type LucideIcon } from 'lucide-react';
 import { cx } from '@/lib/cx';
+import { focusRing } from './focus';
 
 export interface TextFieldProps extends Omit<InputProps, 'prefix' | 'suffix' | 'status' | 'size'> {
   /** Always visible above the field. Placeholders are not labels. */
@@ -16,6 +17,8 @@ export interface TextFieldProps extends Omit<InputProps, 'prefix' | 'suffix' | '
   trailingIcon?: LucideIcon;
   /** Set numbers in Geist Mono, as the design does for every figure. */
   mono?: boolean;
+  /** For a PIN: the value is hidden, and an eye button after it shows it. Replaces trailingIcon. */
+  revealable?: boolean;
 }
 
 /**
@@ -30,11 +33,14 @@ export function TextField({
   leadingIcon: Leading,
   trailingIcon: Trailing,
   mono,
+  revealable,
   id,
   className,
   ...rest
 }: TextFieldProps) {
   const auto = useId();
+  const [shown, setShown] = useState(false);
+  const Reveal = shown ? EyeOff : Eye;
   const inputId = id ?? `field-${auto}`;
   const noteId = `${inputId}-note`;
   const note = error ?? hint;
@@ -50,9 +56,27 @@ export function TextField({
         aria-invalid={error ? true : undefined}
         aria-describedby={note ? noteId : undefined}
         prefix={Leading ? <Leading size={16} aria-hidden className="text-text-muted" /> : undefined}
-        suffix={Trailing ? <Trailing size={16} aria-hidden className="text-text-muted" /> : undefined}
+        suffix={
+          revealable ? (
+            <button
+              type="button"
+              aria-label={shown ? `Hide ${label}` : `Show ${label}`}
+              aria-pressed={shown}
+              onClick={() => setShown((v) => !v)}
+              className={cx(
+                '-mr-1 inline-flex cursor-pointer items-center justify-center rounded-4 border-0 bg-transparent p-1 text-text-muted hover:text-text',
+                focusRing,
+              )}
+            >
+              <Reveal size={16} aria-hidden />
+            </button>
+          ) : Trailing ? (
+            <Trailing size={16} aria-hidden className="text-text-muted" />
+          ) : undefined
+        }
         className={mono ? 'font-mono' : undefined}
         {...rest}
+        {...(revealable ? { type: shown ? 'text' : 'password' } : {})}
       />
       {note ? (
         <p id={noteId} className={cx('m-0 text-12', error ? 'text-danger' : 'text-text-muted')}>

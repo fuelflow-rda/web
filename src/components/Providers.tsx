@@ -5,6 +5,7 @@ import React, { useEffect } from 'react';
 // so this StyleProvider and antd share one cssinjs context.
 import { StyleProvider } from '@ant-design/cssinjs';
 import { App as AntApp, ConfigProvider } from 'antd';
+import { X } from 'lucide-react';
 import { AuthBootstrap } from '@/components/AuthBootstrap';
 import { useThemeStore } from '@/store/theme-store';
 import { buildAntdTheme } from '@/theme/antd-theme';
@@ -14,6 +15,9 @@ import { buildAntdTheme } from '@/theme/antd-theme';
  * auth bootstrap. Lives below the root layout so that layout can stay a server
  * component and own the page metadata.
  */
+/** The design's drawer closes from a bordered square at its top right. */
+const DRAWER = { closable: { placement: 'end' as const }, closeIcon: <X size={18} aria-hidden /> };
+
 export function Providers({ children }: { children: React.ReactNode }) {
   const mode = useThemeStore((s) => s.mode);
   const initialize = useThemeStore((s) => s.initialize);
@@ -29,7 +33,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   // element or its children.
   return (
     <StyleProvider layer>
-      <ConfigProvider theme={buildAntdTheme(mode)}>
+      <ConfigProvider theme={buildAntdTheme(mode)} drawer={DRAWER}>
         {/* Gives modal.confirm (App.useApp) the theme; the static Modal.confirm
             renders outside this provider in antd's default colours. */}
         <AntApp component={false}>
