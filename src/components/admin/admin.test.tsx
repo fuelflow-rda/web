@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { CompaniesTable, duration, shortAgo, stationWords } from './PlatformOverview';
 import { lastActive } from './format';
+import { RolePill } from './roles';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => '/admin' }));
 
@@ -50,5 +51,15 @@ describe('CompaniesTable', () => {
     expect(second.textContent).toContain('Never');
     expect(within(second).getByText('Onboarding')).toBeTruthy();
     expect(within(first).getByRole('link').getAttribute('href')).toBe('/admin/companies/a');
+  });
+});
+
+describe('RolePill', () => {
+  it('names the role beside a dot coloured for it', () => {
+    const { container, rerender } = render(<RolePill role="station_manager" />);
+    expect(container.textContent).toBe('Station manager');
+    expect(container.querySelector('[aria-hidden]')?.className).toContain('bg-info');
+    rerender(<RolePill role="attendant" />);
+    expect(container.querySelector('[aria-hidden]')?.className).toContain('bg-accent');
   });
 });

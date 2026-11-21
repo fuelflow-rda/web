@@ -3,30 +3,25 @@
 import { Suspense, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { App, Drawer, Input, Select } from 'antd';
-import { KeyRound, MailPlus, Search, Trash2, UserX } from 'lucide-react';
+import { ChevronLeft, Eye, KeyRound, MailPlus, Search, Trash2, UserPlus, UserX } from 'lucide-react';
 import api from '@/lib/api';
 import ExportButton from '@/components/ExportButton';
-import { Banner, Button, PageHeader, StatusChip, TextField, type StatusTone } from '@/components/ui';
+import { Banner, Button, PageHeader, RowMenu, StatusChip, TextField, type StatusTone } from '@/components/ui';
 import { focusRing } from '@/components/ui/focus';
 import { initialsOf } from '@/components/ui/Avatar';
 import { PanelError, PanelSkeleton, num } from '@/components/overview/panels';
 import { getUsers, resendInvite, type Paged, type UserRow } from '@/components/admin/data';
 import { lastActive } from '@/components/admin/format';
+import { ROLE, RolePill } from '@/components/admin/roles';
 import { cx } from '@/lib/cx';
 import { formatRwandaPhone } from '@/lib/phone';
 import { useAuthStore } from '@/store/auth-store';
 import { useStationStore } from '@/store/station-store';
 
-const ROLE: Record<UserRow['role'], string> = {
-  superadmin: 'Platform admin',
-  company_admin: 'Company admin',
-  station_manager: 'Station manager',
-  attendant: 'Attendant',
-};
 const STATUS: Record<UserRow['account_status'], { label: string; tone: StatusTone }> = {
   active: { label: 'Active', tone: 'success' },
   on_shift: { label: 'On shift', tone: 'success' },
-  pin_locked: { label: 'PIN locked', tone: 'danger' },
+  pin_locked: { label: 'PIN locked', tone: 'warning' },
   not_synced: { label: 'Not synced', tone: 'warning' },
   invited: { label: 'Invite sent', tone: 'info' },
   deactivated: { label: 'Deactivated', tone: 'neutral' },
@@ -64,6 +59,7 @@ function UsersView() {
   const [companies, setCompanies] = useState<Array<{ id: string; name: string }>>([]);
   const [inviting, setInviting] = useState(false);
   const [open, setOpen] = useState<UserRow | null>(null);
+  const [openOnPin, setOpenOnPin] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -153,7 +149,7 @@ function UsersView() {
                 { header: 'Status', key: 'status' },
               ]}
             />
-            <Button kind="primary" icon={MailPlus} onClick={() => setInviting(true)}>
+            <Button kind="primary" icon={UserPlus} onClick={() => setInviting(true)}>
               Invite user
             </Button>
           </>
@@ -242,6 +238,9 @@ function UsersView() {
                       {h}
                     </th>
                   ))}
+                  <th scope="col" className={cx(head, 'w-12')}>
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -254,13 +253,13 @@ function UsersView() {
                   return (
                     <tr
                       key={u.id}
-                      onClick={() => setOpen(u)}
+                      onClick={() => (setOpenOnPin(false), setOpen(u))}
                       className="cursor-pointer transition-colors hover:bg-surface-muted"
                     >
                       <th scope="row" className={cx(cell, 'text-left font-normal')}>
                         <button
                           type="button"
-                          onClick={(e) => (e.stopPropagation(), setOpen(u))}
+                          onClick={(e) => (e.stopPropagation(), setOpenOnPin(false), setOpen(u))}
                           className={cx(
                             'flex cursor-pointer items-center gap-3 border-0 bg-transparent p-0 text-left',
                             focusRing,
@@ -278,7 +277,9 @@ function UsersView() {
                           </span>
                         </button>
                       </th>
-                      <td className={cx(cell, 'text-14 whitespace-nowrap text-text')}>{ROLE[u.role]}</td>
+                      <td className={cell}>
+                        <RolePill role={u.role} />
+                      </td>
                       {platform ? <td className={cx(cell, 'text-14 text-text')}>{u.companies?.name ?? '—'}</td> : null}
                       <td className={cx(cell, 'text-14 text-text')}>
                         {u.role === 'company_admin'
@@ -288,6 +289,29 @@ function UsersView() {
                       <td className={cx(cell, 'text-14 whitespace-nowrap text-text-secondary')}>{lastActive(u)}</td>
                       <td className={cell}>
                         <StatusChip tone={s.tone}>{s.label}</StatusChip>
+                      </td>
+                      <td className={cx(cell, 'py-2 text-right')}>
+                        <RowMenu
+                          label={`Actions for ${u.name || u.email || 'this person'}`}
+                          items={[
+                            {
+                              key: 'view',
+                              label: 'View details',
+                              icon: Eye,
+                              onClick: () => (setOpenOnPin(false), setOpen(u)),
+                            },
+                            ...(u.role === 'attendant'
+                              ? [
+                                  {
+                                    key: 'pin',
+                                    label: u.pin_locked_at ? 'Unlock with a new PIN' : 'Set a new PIN',
+                                    icon: KeyRound,
+                                    onClick: () => (setOpenOnPin(true), setOpen(u)),
+                                  },
+                                ]
+                              : []),
+                          ]}
+                        />
                       </td>
                     </tr>
                   );
@@ -303,7 +327,7 @@ function UsersView() {
               : `Showing ${num((page - 1) * PAGE + 1)} to ${num(Math.min(page * PAGE, total))} of ${num(total)}`}
           </p>
           <div className="flex gap-2">
-            <Button disabled={page <= 1 || loading} onClick={() => setPage((p) => p - 1)}>
+            <Button icon={ChevronLeft} disabled={page <= 1 || loading} onClick={() => setPage((p) => p - 1)}>
               Previous
             </Button>
             <Button disabled={page * PAGE >= total || loading} onClick={() => setPage((p) => p + 1)}>
@@ -320,7 +344,13 @@ function UsersView() {
         onClose={() => setInviting(false)}
         onDone={changed}
       />
-      <UserDrawer user={open} meId={me?.id ?? null} onClose={() => setOpen(null)} onDone={changed} />
+      <UserDrawer
+        user={open}
+        focusPin={openOnPin}
+        meId={me?.id ?? null}
+        onClose={() => setOpen(null)}
+        onDone={changed}
+      />
     </>
   );
 }
@@ -462,11 +492,14 @@ function InviteUserDrawer({
 
 function UserDrawer({
   user,
+  focusPin = false,
   meId,
   onClose,
   onDone,
 }: {
   user: UserRow | null;
+  /** Opened from the row menu's PIN item: the PIN field takes focus. */
+  focusPin?: boolean;
   meId: string | null;
   onClose: () => void;
   onDone: (m: string) => void;
@@ -573,9 +606,10 @@ function UserDrawer({
                 label={user.pin_locked_at ? 'Unlock with a new PIN' : 'New PIN'}
                 value={pin}
                 onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                type="password"
+                revealable
                 inputMode="numeric"
                 mono
+                autoFocus={focusPin}
                 className="flex-1"
               />
               <Button htmlType="submit" loading={busy === 'pin'}>
