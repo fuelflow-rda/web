@@ -45,8 +45,9 @@ export function AuthLayout({ title, description, children }: { title: string; de
         </p>
       </aside>
 
-      <main className="flex min-w-0 flex-1 flex-col items-center justify-center gap-12 px-6 py-12">
-        <div className="flex w-full max-w-100 flex-col gap-6">
+      {/* Three rows: the form centred in the window, the legal links at its foot. */}
+      <main className="grid min-w-0 flex-1 grid-rows-[1fr_auto_1fr] justify-items-center gap-y-12 px-6 py-12">
+        <div className="row-start-2 flex w-full max-w-100 flex-col gap-6">
           <span className="text-primary lg:hidden">
             <RelaiLockup />
           </span>
@@ -56,7 +57,7 @@ export function AuthLayout({ title, description, children }: { title: string; de
           </div>
           {children}
         </div>
-        <nav aria-label="Legal" className="flex gap-5">
+        <nav aria-label="Legal" className="row-start-3 flex gap-5 self-end">
           {[
             ['Privacy', '/privacy'],
             ['Terms', '/terms'],
