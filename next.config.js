@@ -17,6 +17,12 @@ const securityHeaders = [
   // Features this app never uses.
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=()' },
   { key: 'X-DNS-Prefetch-Control', value: 'off' },
+  // Once a browser has reached the console over HTTPS, it refuses plain HTTP to
+  // this host for a year, so a network attacker cannot downgrade a later visit.
+  // Browsers ignore the header on plain-HTTP responses, so local dev is
+  // unaffected. includeSubDomains and preload are left off on purpose: they
+  // would bind every other subdomain of the production domain as well.
+  { key: 'Strict-Transport-Security', value: 'max-age=31536000' },
 ];
 
 const nextConfig = {
