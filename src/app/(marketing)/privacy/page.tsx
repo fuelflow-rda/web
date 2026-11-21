@@ -49,16 +49,16 @@ export default function PrivacyPage() {
         Logs are deleted after 30 days.
       </p>
       <p>
-        The site sets no cookies and uses no analytics or advertising trackers. The only item
-        it stores in your browser is your light or dark theme preference, and that never leaves
-        your device. See the <Link href="/cookies">Cookie Policy</Link>.
+        The site sets no cookies, uses no analytics or advertising trackers, and stores nothing
+        in your browser. The portal stores a little more once you sign in; see the{' '}
+        <Link href="/cookies">Cookie Policy</Link>.
       </p>
 
       <h3>3.2 Demo request form</h3>
       <p>The form asks for:</p>
       <ul>
-        <li>your name, work email address and company name (required);</li>
-        <li>the number of stations you operate and a message (optional).</li>
+        <li>your name and company name, and an email address or a phone number to reply to (required);</li>
+        <li>roughly how many stations you operate (optional).</li>
       </ul>
       <p>
         We use these details for one purpose: to reply to your request and arrange a demo. The
@@ -90,18 +90,37 @@ export default function PrivacyPage() {
         We process them on that company&rsquo;s instructions and do not use them for any purpose
         of our own.
       </p>
-
-      <h3>3.5 Sessions</h3>
       <p>
-        After you sign in to the portal, your browser holds an access token so you stay signed
-        in. The attendant app holds its session in the device&rsquo;s secure storage for up to
-        seven days. Signing out removes both.
+        The platform also keeps an audit log for each company: who changed a price, put a pump
+        under maintenance, reviewed a reconciliation, invited or changed an account, and failed
+        sign-in attempts (with the phone number or email partly hidden). It lets the company and
+        us answer the question &ldquo;who did this, and when&rdquo;. If an account is later
+        deleted, the log keeps the name recorded at the time.
       </p>
 
-      <h3>3.6 Emails we send</h3>
+      <h3>3.5 Reports from the attendant app</h3>
       <p>
-        We send account welcome messages and password reset links to administrators and managers.
-        These are transactional; we do not send marketing email.
+        While an attendant is signed in, the app reports to the platform every few minutes: a
+        random identifier created when the app was installed, the phone&rsquo;s platform and app
+        version, how many sales are still waiting on the phone, when the oldest of them was
+        made, and when the phone last sent sales successfully. It contains no location and no
+        other content from the phone. The company&rsquo;s administrators and our support team
+        use it to spot a phone whose sales are not reaching the platform. Only the latest report
+        per phone is kept, and it is deleted with the attendant&rsquo;s account.
+      </p>
+
+      <h3>3.6 Sessions</h3>
+      <p>
+        After you sign in to the portal, your browser holds an access token so you stay signed
+        in: until you close the tab, or until you sign out if you chose &ldquo;Keep me signed
+        in&rdquo;. The attendant app holds its session in the device&rsquo;s secure storage for
+        up to seven days. Signing out removes both.
+      </p>
+
+      <h3>3.7 Emails we send</h3>
+      <p>
+        We send invitations to set a password, and password reset links, to administrators and
+        managers. These are transactional; we do not send marketing email.
       </p>
 
       <h2>4. Who we share data with</h2>
@@ -151,9 +170,10 @@ export default function PrivacyPage() {
         <li>Server logs: 30 days.</li>
         <li>Demo requests: until closed, and no longer than 12 months.</li>
         <li>User accounts: for as long as the account exists. Your employer can deactivate it at any time.</li>
+        <li>Reports from the attendant app: the latest one per phone, deleted with the account.</li>
         <li>
-          Operational records: for the life of the customer contract and for 60 days after it
-          ends, so the customer can export them. They are then deleted.
+          Operational records and the audit log: for the life of the customer contract and for
+          60 days after it ends, so the customer can export them. They are then deleted.
         </li>
       </ul>
 

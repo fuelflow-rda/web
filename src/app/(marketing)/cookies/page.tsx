@@ -13,7 +13,7 @@ export default function CookiesPage() {
   return (
     <LegalPage
       title="Cookie Policy"
-      summary="The Relai website sets no cookies. This page lists the small amount of information the site and the web portal keep in your browser, what it is for, and how to remove it."
+      summary="The Relai website sets no cookies and stores nothing in your browser. This page lists the small amount of information the web portal and the attendant app keep on your device, what it is for, and how to remove it."
     >
       <h2>1. Cookies</h2>
       <p>
@@ -22,11 +22,17 @@ export default function CookiesPage() {
         an advertising or analytics network.
       </p>
 
-      <h2>2. Browser storage we do use</h2>
+      <h2>2. Browser storage the portal uses</h2>
       <p>
-        The site and portal use the browser&rsquo;s local storage for the items below. Local
-        storage is not sent to our servers with each request the way a cookie is; it stays on
-        your device and is read only by the page that wrote it.
+        The public website stores nothing in your browser. Once you sign in, the portal uses the
+        browser&rsquo;s storage for the items below. Browser storage is not sent to our servers
+        with each request the way a cookie is; it stays on your device and is read only by the
+        page that wrote it.
+      </p>
+      <p>
+        The two sign-in items go to <em>session storage</em>, which the browser clears when you
+        close the tab, unless you tick &ldquo;Keep me signed in&rdquo;. Then they go to{' '}
+        <em>local storage</em> and stay until you sign out.
       </p>
       <table>
         <thead>
@@ -40,7 +46,7 @@ export default function CookiesPage() {
         <tbody>
           <tr>
             <td><code>relai_theme</code></td>
-            <td>Website and portal</td>
+            <td>Portal</td>
             <td>Remembers whether you chose the light or dark theme. Absent until you use the theme switch.</td>
             <td>Until you clear it</td>
           </tr>
@@ -48,27 +54,29 @@ export default function CookiesPage() {
             <td><code>relai_token</code></td>
             <td>Portal, after sign-in</td>
             <td>Keeps you signed in between page loads.</td>
-            <td>Until you sign out, or the token expires</td>
+            <td>Until you close the tab, or until you sign out with &ldquo;Keep me signed in&rdquo;</td>
           </tr>
           <tr>
             <td><code>relai_user</code></td>
             <td>Portal, after sign-in</td>
             <td>Your name, role and station so the portal can draw the right screens without a round trip.</td>
-            <td>Until you sign out</td>
+            <td>As <code>relai_token</code></td>
           </tr>
         </tbody>
       </table>
       <p>
         All three are strictly necessary for the feature you asked for: the theme switch or
-        signing in. None of them identifies you to us on the public website, and none is used for
-        tracking.
+        signing in. None of them is used for tracking.
       </p>
 
       <h2>3. The attendant app</h2>
       <p>
         The mobile app is not a website and has no cookies. It keeps your session in the
         device&rsquo;s secure storage for up to seven days after sign-in, and keeps a local queue
-        of sales recorded while offline until they sync. Signing out clears the session.
+        of sales recorded while offline until they sync. It also creates a random identifier for
+        the phone when it is first opened, which it sends with its reports of unsent sales (see
+        the <Link href="/privacy">Privacy Policy</Link>, section 3.5). Signing out clears the
+        session; the queue and the identifier stay, so sales recorded offline are never lost.
       </p>
 
       <h2>4. Third-party content</h2>
@@ -89,9 +97,10 @@ export default function CookiesPage() {
 
       <h2>6. How to remove stored data</h2>
       <p>
-        Sign out of the portal to remove the session keys. To remove the theme preference, clear
-        site data for {BUSINESS.siteUrl} in your browser settings. Doing so has no effect other
-        than returning the theme to your operating system&rsquo;s setting.
+        Sign out of the portal, or close the tab if you did not tick &ldquo;Keep me signed
+        in&rdquo;, to remove the session keys. To remove the theme preference, clear site data
+        for {BUSINESS.siteUrl} in your browser settings. Doing so has no effect other than
+        returning the theme to your operating system&rsquo;s setting.
       </p>
 
       <h2>7. More information</h2>
