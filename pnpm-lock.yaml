@@ -11,9 +11,6 @@ importers:
       '@ant-design/cssinjs':
         specifier: ~2.1.2
         version: 2.1.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
-      '@ant-design/icons':
-        specifier: ^6.3.4
-        version: 6.3.4(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       antd:
         specifier: ^6.7.1
         version: 6.7.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
