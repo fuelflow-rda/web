@@ -1,13 +1,4 @@
 {
   "$description": "Hardcoded style values in pages built before the redesign. Counts may only go down; regenerate with `node scripts/check-hardcoded-styles.mjs --update` after removing some.",
-  "files": {
-    "src/components/ExportButton.tsx": {
-      "type": 1
-    },
-    "src/components/metrics/ActivityHeatmap.tsx": {
-      "type": 12,
-      "spacing": 1,
-      "radius": 5
-    }
-  }
+  "files": {}
 }

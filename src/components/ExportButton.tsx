@@ -4,6 +4,20 @@ import React from 'react';
 import { Dropdown } from 'antd';
 import { Download, FileSpreadsheet, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { themedColors } from '@/theme/tokens';
+
+/**
+ * Exports are printed and filed, so they use the light theme's brand colours
+ * whatever the screen shows: a forest header with cream text, and the page
+ * colour on alternate rows.
+ */
+const BRAND = themedColors.light;
+const toRgb = (hex: string): [number, number, number] => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number];
+const argb = (hex: string) => `FF${hex.slice(1).toUpperCase()}`;
+/** jsPDF sizes in points: a table that fits a landscape page. */
+const PDF_TABLE_PT = 8;
+const PDF_TITLE_PT = 16;
+const PDF_NOTE_PT = 10;
 
 interface ExportColumn {
   header: string;
@@ -28,11 +42,11 @@ export default function ExportButton({ data, columns, filename }: ExportButtonPr
       width: 20,
     }));
 
-    worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    worksheet.getRow(1).font = { bold: true, color: { argb: argb(BRAND['on-primary']) } };
     worksheet.getRow(1).fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FF2E5E52' },
+      fgColor: { argb: argb(BRAND.primary) },
     };
 
     data.forEach((row) => {
@@ -62,12 +76,12 @@ export default function ExportButton({ data, columns, filename }: ExportButtonPr
 
     const doc = new jsPDF({ orientation: 'landscape' });
 
-    doc.setFontSize(16);
-    doc.setTextColor(249, 115, 22);
+    doc.setFontSize(PDF_TITLE_PT);
+    doc.setTextColor(...toRgb(BRAND.primary));
     doc.text('Relai Report', 14, 15);
 
-    doc.setFontSize(10);
-    doc.setTextColor(100);
+    doc.setFontSize(PDF_NOTE_PT);
+    doc.setTextColor(...toRgb(BRAND['text-muted']));
     doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22);
 
     const headers = columns.map((c) => c.header);
@@ -80,12 +94,12 @@ export default function ExportButton({ data, columns, filename }: ExportButtonPr
       body: rows,
       startY: 28,
       headStyles: {
-        fillColor: [249, 115, 22],
-        textColor: [255, 255, 255],
+        fillColor: toRgb(BRAND.primary),
+        textColor: toRgb(BRAND['on-primary']),
         fontStyle: 'bold',
       },
-      alternateRowStyles: { fillColor: [255, 247, 237] },
-      styles: { fontSize: 8 },
+      alternateRowStyles: { fillColor: toRgb(BRAND.bg) },
+      styles: { fontSize: PDF_TABLE_PT, textColor: toRgb(BRAND.text) },
     });
 
     doc.save(`${filename}.pdf`);
