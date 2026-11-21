@@ -3,10 +3,9 @@
 /**
  * Response headers for every route.
  *
- * No CSP here: Ant Design and the chart libraries inject styles at runtime, and
- * the pre-paint theme script is inline, so a policy strict enough to be worth
- * having would need nonce plumbing through the App Router. Tracked separately —
- * these are the headers that are safe to set unconditionally.
+ * The Content-Security-Policy is not here: it carries a fresh nonce for every
+ * response, so src/proxy.ts sets it (policy in src/lib/csp.ts). These are the
+ * headers that are the same on every response.
  */
 const securityHeaders = [
   // Stop MIME sniffing turning a response into something executable.
