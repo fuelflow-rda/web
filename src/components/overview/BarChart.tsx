@@ -72,7 +72,7 @@ export function BarChart({ bars, summary, format }: { bars: Bar[]; summary: stri
                     />
                   ) : null}
                 </div>
-                <span className="h-3.5 text-center font-mono text-11 leading-none text-text-muted">
+                <span className="h-3.5 text-center font-mono text-11 leading-none whitespace-nowrap text-text-muted">
                   {b.label ?? '·'}
                 </span>
               </div>

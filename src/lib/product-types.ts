@@ -189,3 +189,17 @@ export function formatMeter(quantity: number | undefined | null, unit: ProductUn
   const v = Number(quantity ?? 0);
   return `${v.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ${unitLabel(unit)}`;
 }
+
+/** The design's short connector names, for card meta: "CCS2", "Type 2". */
+const CONNECTOR_SHORT: Record<ConnectorType, string> = {
+  TYPE2: 'Type 2',
+  CCS: 'CCS2',
+  CHADEMO: 'CHAdeMO',
+  GBT: 'GB/T',
+  TESLA: 'Tesla',
+};
+
+export function connectorShort(connector: string | undefined | null): string {
+  const u = String(connector ?? '').toUpperCase() as ConnectorType;
+  return CONNECTOR_SHORT[u] ?? (connector ? String(connector) : '');
+}
