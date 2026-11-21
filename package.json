@@ -12,11 +12,12 @@
     "start": "next start -p 3001",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "pnpm run typecheck && pnpm run tokens:check && pnpm run check:contrast && pnpm run test:unit",
+    "test": "pnpm run typecheck && pnpm run tokens:check && pnpm run check:contrast && pnpm run check:styles && pnpm run test:unit",
     "check:contrast": "node scripts/check-contrast.mjs",
     "tokens": "node scripts/build-tokens.mjs",
     "tokens:check": "node scripts/build-tokens.mjs --check",
-    "test:unit": "vitest run"
+    "test:unit": "vitest run",
+    "check:styles": "node scripts/check-hardcoded-styles.mjs"
   },
   "dependencies": {
     "@ant-design/cssinjs": "~2.1.2",
