@@ -22,9 +22,6 @@
     "src/app/(admin)/admin/users/page.tsx": {
       "type": 3
     },
-    "src/app/(dashboard)/attendants/page.tsx": {
-      "type": 3
-    },
     "src/app/(dashboard)/fuel-prices/page.tsx": {
       "type": 5,
       "spacing": 1

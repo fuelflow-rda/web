@@ -1,42 +1,26 @@
 'use client';
 
-import React, { Suspense, useEffect, useRef, useState, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
-import {
-  Table,
-  Card,
-  DatePicker,
-  Typography,
-  Row,
-  Col,
-  Space,
-  Button,
-  Drawer,
-  Statistic,
-  Checkbox,
-  Modal,
-  Form,
-  Input,
-  Select,
-  Tag,
-  message,
-} from 'antd';
-import { UserOutlined, BarChartOutlined, PlusOutlined, PhoneOutlined, CalendarOutlined, LockOutlined, SafetyOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import dayjs, { Dayjs } from 'dayjs';
-import api from '@/lib/api';
-import { formatRWF } from '@/lib/format';
-import { useStationStore } from '@/store/station-store';
-import { useAuthStore } from '@/store/auth-store';
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { UserPlus } from 'lucide-react';
 import ExportButton from '@/components/ExportButton';
-import ComparisonChart from '@/components/charts/ComparisonChart';
-import { readDay } from '@/lib/links';
-import type { AttendantReport } from '@/types';
+import { Banner, Button, PageHeader, Panel } from '@/components/ui';
+import { PanelError, PanelSkeleton } from '@/components/overview/panels';
+import { usePolled } from '@/components/overview/data';
+import { getRoster, type RosterRow } from '@/components/attendants/data';
+import {
+  AddAttendantDrawer,
+  AttendantDrawer,
+  RosterTable,
+  shiftLabel,
+  varianceLabel,
+} from '@/components/attendants/views';
+import { formatRwandaPhone } from '@/lib/phone';
+import { useAuthStore } from '@/store/auth-store';
+import { useStationStore } from '@/store/station-store';
 
-const { Title, Text } = Typography;
-const { RangePicker } = DatePicker;
+const ORDER: Record<RosterRow['status'], number> = { on_shift: 0, pin_locked: 1, off_shift: 2, deactivated: 3 };
 
-// useSearchParams needs a Suspense boundary for Next to prerender the page.
 export default function AttendantsPage() {
   return (
     <Suspense>
@@ -46,466 +30,125 @@ export default function AttendantsPage() {
 }
 
 function AttendantsView() {
+  const router = useRouter();
+  const params = useSearchParams();
   const { currentStation } = useStationStore();
-  const authUser = useAuthStore((s) => s.user);
-  const searchParams = useSearchParams();
-  const [reports, setReports] = useState<AttendantReport[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>(() => {
-    // A dashboard link carries its period so the numbers match what was clicked.
-    const from = readDay(searchParams, 'from');
-    const to = readDay(searchParams, 'to');
-    return from && to
-      ? [dayjs(from).startOf('day'), dayjs(to).endOf('day')]
-      : [dayjs().startOf('month'), dayjs()];
-  });
-  const [selectedAttendant, setSelectedAttendant] = useState<AttendantReport | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [compareIds, setCompareIds] = useState<string[]>([]);
-  const [addModalOpen, setAddModalOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [pinResetLoading, setPinResetLoading] = useState(false);
-  const [form] = Form.useForm();
+  const role = useAuthStore((s) => s.user?.role);
+  const canManage = role === 'ADMIN' || role === 'MANAGER' || role === 'SUPERADMIN';
+  const stationId = currentStation?.id ?? null;
+  const roster = usePolled(stationId, () => getRoster(stationId!), 30_000);
 
-  // Open the attendant a dashboard link points at, once, when their row has loaded.
-  const deepLinkOpened = useRef(false);
-  useEffect(() => {
-    const id = searchParams.get('attendant');
-    if (!id || deepLinkOpened.current) return;
-    const row = reports.find((r) => r.attendantId === id);
-    if (!row) return;
-    deepLinkOpened.current = true;
-    setSelectedAttendant(row);
-    setDrawerOpen(true);
-  }, [reports, searchParams]);
-  const [pinResetForm] = Form.useForm();
+  const search = (params.get('search') ?? '').trim().toLowerCase();
+  const [adding, setAdding] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(() => params.get('attendant'));
+  const [notice, setNotice] = useState<string | null>(null);
 
-  const fetchReports = useCallback(async () => {
-    if (!currentStation) return;
-    setLoading(true);
-    try {
-      const [attendantsRes, reportRes] = await Promise.all([
-        api.get(`/users/attendants/${currentStation.id}`),
-        api.get(`/reports/station/${currentStation.id}`, {
-          params: { from: dateRange[0].toISOString(), to: dateRange[1].toISOString() },
-        }),
-      ]);
-      const attendants = (Array.isArray(attendantsRes.data) ? attendantsRes.data : []) as Array<{
-        id: string;
-        name: string;
-        phone?: string | null;
-        is_active?: boolean;
-        created_at?: string | null;
-      }>;
-      const perfList = (reportRes.data?.attendant_performance ?? []) as Array<{
-        id: string;
-        name: string;
-        transactions: number;
-        revenue: number;
-        liters: number;
-        kwh?: number;
-        cash: number;
-        card: number;
-        momo: number;
-      }>;
-      const perfByAtt = new Map(perfList.map((p) => [p.id, p]));
-      const rows: AttendantReport[] = attendants.map((att) => {
-        const p = perfByAtt.get(att.id);
-        return {
-          attendantId: att.id,
-          attendantName: att.name ?? 'Unknown',
-          phone: att.phone ?? null,
-          isActive: att.is_active ?? true,
-          createdAt: att.created_at ?? null,
-          totalTransactions: p?.transactions ?? 0,
-          totalLiters: p?.liters ?? 0,
-          totalKwh: p?.kwh ?? 0,
-          totalRevenue: p?.revenue ?? 0,
-          cashAmount: p?.cash ?? 0,
-          cardAmount: p?.card ?? 0,
-          momoAmount: p?.momo ?? 0,
-        };
-      });
-      setReports(rows);
-    } catch {
-      setReports([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentStation, dateRange]);
+  const all = [...(roster.data ?? [])].sort(
+    (a, b) => ORDER[a.status] - ORDER[b.status] || a.name.localeCompare(b.name),
+  );
+  const rows = search
+    ? all.filter(
+        (r) => r.name.toLowerCase().includes(search) || (r.phone ?? '').includes(search.replace(/\D/g, '') || '\u0000'),
+      )
+    : all;
+  const onShift = all.filter((r) => r.status === 'on_shift').length;
+  const open = all.find((r) => r.id === openId) ?? null;
 
-  useEffect(() => {
-    fetchReports();
-  }, [fetchReports]);
-
-  const handleAddAttendant = async (values: { name: string; phone: string; pin: string }) => {
-    if (!currentStation || !authUser?.companyId) {
-      message.error('Station or company not set.');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await api.post('/users', {
-        name: values.name,
-        company_id: authUser.companyId,
-        station_id: currentStation.id,
-        role: 'attendant',
-        phone: values.phone?.trim() || undefined,
-        pin: String(values.pin || '').padEnd(4, '0').slice(0, 6),
-      });
-      message.success('Attendant added. They can log in on the mobile app with phone + PIN.');
-      setAddModalOpen(false);
-      form.resetFields();
-      fetchReports();
-    } catch (err: unknown) {
-      const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message: string }).message) : 'Failed to add attendant';
-      message.error(msg);
-    } finally {
-      setSubmitting(false);
-    }
+  const changed = (message: string) => {
+    setNotice(message);
+    roster.reload();
   };
 
-  const handleResetPin = async (values: { newPin: string }) => {
-    if (!selectedAttendant) return;
-    setPinResetLoading(true);
-    try {
-      await api.patch(`/users/${selectedAttendant.attendantId}`, {
-        pin: values.newPin,
-      });
-      message.success(`PIN updated for ${selectedAttendant.attendantName}.`);
-      pinResetForm.resetFields();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to reset PIN';
-      message.error(msg);
-    } finally {
-      setPinResetLoading(false);
-    }
-  };
-
-  const toggleCompare = (id: string) => {
-    setCompareIds((prev) => {
-      if (prev.includes(id)) return prev.filter((i) => i !== id);
-      if (prev.length >= 2) return [prev[1], id];
-      return [...prev, id];
-    });
-  };
-
-  const columns: ColumnsType<AttendantReport> = [
-    {
-      title: '',
-      key: 'compare',
-      width: 40,
-      render: (_: unknown, record: AttendantReport) => (
-        <Checkbox
-          checked={compareIds.includes(record.attendantId)}
-          onChange={() => toggleCompare(record.attendantId)}
-        />
-      ),
-    },
-    {
-      title: 'Attendant',
-      dataIndex: 'attendantName',
-      key: 'attendantName',
-      width: 180,
-      ellipsis: true,
-      sorter: (a, b) => a.attendantName.localeCompare(b.attendantName),
-      render: (name: string, record: AttendantReport) => (
-        <div>
-          <Space>
-            <UserOutlined />
-            <Text strong>{name}</Text>
-          </Space>
-          {record.phone && (
-            <div className="text-xs text-text-muted mt-0.5 ml-5">{record.phone}</div>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: 'Txns',
-      dataIndex: 'totalTransactions',
-      key: 'totalTransactions',
-      sorter: (a, b) => a.totalTransactions - b.totalTransactions,
-      align: 'right',
-      width: 80,
-    },
-    {
-      title: 'Dispensed',
-      key: 'totalLiters',
-      sorter: (a, b) => a.totalLiters + a.totalKwh - (b.totalLiters + b.totalKwh),
-      align: 'right',
-      width: 130,
-      render: (_: unknown, record: AttendantReport) => (
-        <div className="leading-tight">
-          <div>{record.totalLiters.toLocaleString()} L</div>
-          {record.totalKwh > 0 && (
-            <div className="text-xs text-text-secondary font-semibold">
-              {record.totalKwh.toLocaleString()} kWh
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: 'Revenue',
-      dataIndex: 'totalRevenue',
-      key: 'totalRevenue',
-      sorter: (a, b) => a.totalRevenue - b.totalRevenue,
-      align: 'right',
-      width: 130,
-      render: (v: number) => <Text strong>{formatRWF(v)}</Text>,
-    },
-    {
-      title: 'Status',
-      key: 'status',
-      width: 80,
-      render: (_: unknown, record: AttendantReport) => (
-        <Tag color={record.isActive !== false ? 'green' : 'red'}>
-          {record.isActive !== false ? 'Active' : 'Inactive'}
-        </Tag>
-      ),
-    },
-    {
-      title: '',
-      key: 'actions',
-      width: 80,
-      render: (_: unknown, record: AttendantReport) => (
-        <Button
-          type="link"
-          onClick={() => {
-            setSelectedAttendant(record);
-            setDrawerOpen(true);
-          }}
-        >
-          Details
-        </Button>
-      ),
-    },
-  ];
-
-  const exportColumns = [
-    { header: 'Attendant', key: 'attendantName' },
-    { header: 'Transactions', key: 'totalTransactions' },
-    { header: 'Liters', key: 'totalLiters' },
-    { header: 'kWh', key: 'totalKwh' },
-    { header: 'Revenue (RWF)', key: 'totalRevenue' },
-    { header: 'Cash (RWF)', key: 'cashAmount' },
-    { header: 'Card (RWF)', key: 'cardAmount' },
-    { header: 'MoMo (RWF)', key: 'momoAmount' },
-  ];
-
-  const comparedAttendants = reports.filter((r) => compareIds.includes(r.attendantId));
-
-  const chartData = comparedAttendants.map((a) => ({
-    name: a.attendantName,
-    Revenue: a.totalRevenue,
-    Liters: a.totalLiters,
-    Transactions: a.totalTransactions,
-  }));
+  if (!stationId || !currentStation) {
+    return <PageHeader title="Attendants" description="Choose a station in the sidebar to see its attendants." />;
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <Title level={3} className="mb-0!">Attendant Reports</Title>
-          <Text type="secondary">Performance breakdown by attendant</Text>
-        </div>
-        <Space wrap>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddModalOpen(true)}>
-            Add Attendant
-          </Button>
-          <RangePicker
-            value={dateRange}
-            onChange={(dates) => {
-              if (dates) setDateRange(dates as [Dayjs, Dayjs]);
-            }}
-          />
-          <ExportButton data={reports} columns={exportColumns} filename="attendant-reports" />
-        </Space>
-      </div>
+    <>
+      <PageHeader
+        title="Attendants"
+        description={`${currentStation.name} · ${all.length} ${all.length === 1 ? 'attendant' : 'attendants'} · they sign in on the app with a phone number and PIN`}
+        actions={
+          <>
+            <ExportButton
+              filename={`${currentStation.name}-attendants`}
+              data={all.map((r) => ({
+                name: r.name,
+                phone: formatRwandaPhone(r.phone),
+                status: r.status.replace('_', ' '),
+                shift: shiftLabel(r),
+                sales: r.salesToday,
+                revenue: r.revenueToday,
+                variance: varianceLabel(r.varianceWeek),
+              }))}
+              columns={[
+                { header: 'Attendant', key: 'name' },
+                { header: 'Phone', key: 'phone' },
+                { header: 'Status', key: 'status' },
+                { header: 'Current or last shift', key: 'shift' },
+                { header: 'Sales today', key: 'sales' },
+                { header: 'Revenue today (RWF)', key: 'revenue' },
+                { header: '7-day variance', key: 'variance' },
+              ]}
+            />
+            {canManage ? (
+              <Button kind="primary" icon={UserPlus} onClick={() => setAdding(true)}>
+                Add attendant
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
-      <Modal
-        title="Add Attendant"
-        open={addModalOpen}
-        onCancel={() => { setAddModalOpen(false); form.resetFields(); }}
-        footer={null}
-        destroyOnHidden
-      >
-        <Form form={form} layout="vertical" onFinish={handleAddAttendant}>
-          <Form.Item name="name" label="Full Name" rules={[{ required: true }]}>
-            <Input placeholder="e.g. Jean Paul" />
-          </Form.Item>
-          <Form.Item name="phone" label="Phone number" rules={[{ required: true }]}>
-            <Input placeholder="e.g. +250 788 123 456" />
-          </Form.Item>
-          <Form.Item name="pin" label="PIN (4 to 6 digits)" rules={[{ required: true, min: 4, max: 6, message: 'Enter 4 to 6 digits' }]}>
-            <Input.Password placeholder="1234" maxLength={6} />
-          </Form.Item>
-          <div className="flex justify-end gap-2">
-            <Button onClick={() => setAddModalOpen(false)}>Cancel</Button>
-            <Button type="primary" htmlType="submit" loading={submitting}>Add Attendant</Button>
-          </div>
-        </Form>
-      </Modal>
-
-      {compareIds.length === 2 && (
-        <Card className="rounded-xl!">
-          <div className="flex items-center justify-between mb-4">
-            <Space>
-              <BarChartOutlined />
-              <Text strong>
-                Comparing: {comparedAttendants.map((a) => a.attendantName).join(' vs ')}
-              </Text>
-            </Space>
-            <Button size="small" onClick={() => setCompareIds([])}>
-              Clear Comparison
-            </Button>
-          </div>
-          <ComparisonChart data={chartData} labels={['Revenue', 'Liters', 'Transactions']} />
-        </Card>
-      )}
-
-      {compareIds.length === 1 && (
-        <Tag color="orange" className="text-sm! px-3! py-1!">
-          Select one more attendant to compare
-        </Tag>
-      )}
-
-      <Card className="rounded-xl! overflow-hidden">
-        <Table
-          columns={columns}
-          dataSource={reports}
-          rowKey="attendantId"
-          loading={loading}
-          pagination={{ pageSize: 15, showTotal: (t) => `${t} attendants` }}
-          size="middle"
-          tableLayout="fixed"
-          scroll={{ x: 800 }}
+      {notice ? <Banner tone="success" title={notice} /> : null}
+      {search ? (
+        <Banner
+          tone="info"
+          title={`Showing attendants matching “${params.get('search')}”`}
+          action={{ label: 'Show all', onClick: () => router.replace('/attendants') }}
         />
-      </Card>
+      ) : null}
 
-      <Drawer
-        title={selectedAttendant?.attendantName || 'Attendant Details'}
-        open={drawerOpen}
-        onClose={() => { setDrawerOpen(false); pinResetForm.resetFields(); }}
-        width={480}
-      >
-        {selectedAttendant && (
-          <div className="space-y-6">
-            {/* Profile Info */}
-            <Card size="small" className="rounded-lg!">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <UserOutlined className="text-text-muted" />
-                  <Text className="w-24 text-text-secondary">Name</Text>
-                  <Text strong>{selectedAttendant.attendantName}</Text>
-                </div>
-                <div className="flex items-center gap-2">
-                  <PhoneOutlined className="text-text-muted" />
-                  <Text className="w-24 text-text-secondary">Phone</Text>
-                  <Text strong>{selectedAttendant.phone || 'Not set'}</Text>
-                </div>
-                <div className="flex items-center gap-2">
-                  <SafetyOutlined className="text-text-muted" />
-                  <Text className="w-24 text-text-secondary">Status</Text>
-                  <Tag color={selectedAttendant.isActive !== false ? 'green' : 'red'}>
-                    {selectedAttendant.isActive !== false ? 'Active' : 'Inactive'}
-                  </Tag>
-                </div>
-                {selectedAttendant.createdAt && (
-                  <div className="flex items-center gap-2">
-                    <CalendarOutlined className="text-text-muted" />
-                    <Text className="w-24 text-text-secondary">Joined</Text>
-                    <Text>{dayjs(selectedAttendant.createdAt).format('MMM D, YYYY')}</Text>
-                  </div>
-                )}
-              </div>
-            </Card>
-
-            {/* Performance Stats */}
-            <Row gutter={[16, 16]}>
-              <Col span={12}>
-                <Statistic title="Total Revenue" value={selectedAttendant.totalRevenue} prefix="RWF" />
-              </Col>
-              <Col span={12}>
-                <Statistic title="Fuel Dispensed" value={selectedAttendant.totalLiters} suffix="L" precision={1} />
-              </Col>
-              {selectedAttendant.totalKwh > 0 && (
-                <Col span={12}>
-                  <Statistic
-                    title="EV Charging"
-                    value={selectedAttendant.totalKwh}
-                    suffix="kWh"
-                    precision={1}
-                  />
-                </Col>
-              )}
-              <Col span={12}>
-                <Statistic title="Transactions" value={selectedAttendant.totalTransactions} />
-              </Col>
-              <Col span={12}>
-                <Statistic
-                  title="Avg per Transaction"
-                  value={
-                    selectedAttendant.totalTransactions > 0
-                      ? Math.round(selectedAttendant.totalRevenue / selectedAttendant.totalTransactions)
-                      : 0
-                  }
-                  prefix="RWF"
-                />
-              </Col>
-            </Row>
-
-            {/* Payment Breakdown */}
-            <Card title="Payment Breakdown" size="small" className="rounded-lg!">
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <Text>Cash</Text>
-                  <Text strong>{formatRWF(selectedAttendant.cashAmount)}</Text>
-                </div>
-                <div className="flex justify-between">
-                  <Text>Card</Text>
-                  <Text strong>{formatRWF(selectedAttendant.cardAmount)}</Text>
-                </div>
-                <div className="flex justify-between">
-                  <Text>Mobile Money</Text>
-                  <Text strong>{formatRWF(selectedAttendant.momoAmount)}</Text>
-                </div>
-              </div>
-            </Card>
-
-            {/* Reset PIN */}
-            <Card
-              title={<span><LockOutlined className="mr-2" />Reset PIN</span>}
-              size="small"
-              className="rounded-lg!"
-            >
-              <Form form={pinResetForm} layout="vertical" onFinish={handleResetPin}>
-                <Form.Item
-                  name="newPin"
-                  label="New PIN (4 to 6 digits)"
-                  rules={[
-                    { required: true, message: 'Enter a new PIN' },
-                    { min: 4, max: 6, message: 'PIN must be 4 to 6 digits' },
-                    { pattern: /^\d+$/, message: 'PIN must be numbers only' },
-                  ]}
-                >
-                  <Input.Password placeholder="e.g. 1234" maxLength={6} />
-                </Form.Item>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  loading={pinResetLoading}
-                  danger
-                  block
-                >
-                  Reset PIN
-                </Button>
-              </Form>
-            </Card>
+      <Panel title="Team" meta={roster.data ? `${onShift} on shift now` : undefined} padded={false}>
+        {roster.error && !roster.data ? (
+          <div className="p-5">
+            <PanelError message="Attendants could not be loaded." onRetry={roster.reload} />
           </div>
+        ) : !roster.data ? (
+          <div className="p-5">
+            <PanelSkeleton rows={6} />
+          </div>
+        ) : rows.length === 0 ? (
+          <p className="m-0 px-5 py-10 text-center text-14 text-text-secondary">
+            {all.length
+              ? 'Nobody matches that search.'
+              : 'No attendants yet. Add the people who will record sales on the app.'}
+          </p>
+        ) : (
+          <RosterTable rows={rows} onOpen={(r) => setOpenId(r.id)} />
         )}
-      </Drawer>
-    </div>
+      </Panel>
+      <p className="m-0 text-12 text-text-muted">
+        Attendants only use the mobile app. They cannot open this dashboard, and a locked PIN can only be reset by a
+        manager.
+      </p>
+
+      <AddAttendantDrawer
+        open={adding}
+        station={{ id: currentStation.id, name: currentStation.name, companyId: currentStation.companyId }}
+        onClose={() => setAdding(false)}
+        onDone={(name) => {
+          setAdding(false);
+          changed(`${name} is added. Give them their PIN in person.`);
+        }}
+      />
+      <AttendantDrawer
+        row={open}
+        stationId={stationId}
+        canManage={canManage}
+        onClose={() => setOpenId(null)}
+        onChanged={changed}
+      />
+    </>
   );
 }
