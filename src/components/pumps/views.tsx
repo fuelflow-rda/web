@@ -64,10 +64,15 @@ export const sinceLabel = (iso: string, now = Date.now()) => {
     timeZone: 'Africa/Kigali',
   }).format(new Date(iso));
 };
-const lastSale = (iso: string | null, now: number) => {
+/** The card's "Last sale": a time today, "Yesterday", or the day alone, so it fits its column. */
+export const lastSale = (iso: string | null, now: number) => {
   if (!iso) return 'Never';
   const d = sinceLabel(iso, now);
-  return d.startsWith('yesterday') ? 'Yesterday' : d;
+  if (d.startsWith('yesterday')) return 'Yesterday';
+  if (/^\d{2}:\d{2}$/.test(d)) return d;
+  return new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Africa/Kigali' }).format(
+    new Date(iso),
+  );
 };
 
 /** The card's line under the name: product and price, plus connector and power for a charger. */

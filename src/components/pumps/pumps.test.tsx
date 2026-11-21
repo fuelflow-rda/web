@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MaintenanceBanners, PointCard, pointMeta, sinceLabel } from './views';
+import { MaintenanceBanners, PointCard, lastSale, pointMeta, sinceLabel } from './views';
 import type { Point } from './data';
 
 const point = (over: Partial<Point> = {}): Point => ({
@@ -35,6 +35,14 @@ describe('pump cards', () => {
     const now = Date.parse('2026-11-21T09:00:00Z');
     expect(sinceLabel('2026-11-21T07:20:00Z', now)).toBe('09:20');
     expect(sinceLabel('2026-11-20T12:20:00Z', now)).toBe('yesterday at 14:20');
+  });
+
+  it('gives the last sale as a time, "Yesterday", or the day alone', () => {
+    const now = Date.parse('2026-11-21T09:00:00Z');
+    expect(lastSale('2026-11-21T07:20:00Z', now)).toBe('09:20');
+    expect(lastSale('2026-11-20T12:20:00Z', now)).toBe('Yesterday');
+    expect(lastSale('2026-11-19T13:00:00Z', now)).toBe('Thu 19 Nov');
+    expect(lastSale(null, now)).toBe('Never');
   });
 
   it('shows the day so far and the meter', () => {
