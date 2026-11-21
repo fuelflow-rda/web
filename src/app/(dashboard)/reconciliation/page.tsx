@@ -364,7 +364,7 @@ export default function ReconciliationPage() {
                   title="Expected Revenue"
                   value={report.expectedRevenue}
                   prefix="RWF"
-                  valueStyle={{ color: 'var(--ink-secondary)' }}
+                  styles={{ content: { color: 'var(--ink-secondary)' } }}
                 />
               </Card>
             </Col>
@@ -374,7 +374,7 @@ export default function ReconciliationPage() {
                   title="Recorded Revenue"
                   value={report.recordedRevenue}
                   prefix="RWF"
-                  valueStyle={{ color: 'var(--accent)' }}
+                  styles={{ content: { color: 'var(--accent)' } }}
                 />
               </Card>
             </Col>
@@ -385,9 +385,9 @@ export default function ReconciliationPage() {
                     title="Difference"
                     value={report.difference}
                     prefix="RWF"
-                    valueStyle={{
+                    styles={{ content: {
                       color: report.status === 'BALANCED' ? 'var(--accent)' : 'var(--warn)',
-                    }}
+                    } }}
                   />
                   {report.status === 'BALANCED' ? (
                     <Tag icon={<CheckCircleOutlined />} color="success" className="text-base! px-4! py-1!">

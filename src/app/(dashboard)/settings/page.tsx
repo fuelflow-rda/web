@@ -149,7 +149,7 @@ export default function SettingsPage() {
       </Row>
 
       <Card title="Notification Preferences" className="rounded-xl!">
-        <Space direction="vertical" className="w-full" size="middle">
+        <Space orientation="vertical" className="w-full" size="middle">
           <div className="flex items-center justify-between">
             <div>
               <Text strong>Email Notifications</Text>

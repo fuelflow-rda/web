@@ -352,8 +352,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               trigger="click"
               placement="bottomRight"
               arrow={false}
-              overlayStyle={{ width: 380 }}
-              styles={{ body: { padding: 0 } }}
+              styles={{ root: { width: 380 }, container: { padding: 0 } }}
               content={
                 <div>
                   <div className="flex items-center justify-between px-4 py-3 border-b border-line-subtle">

@@ -228,7 +228,7 @@ export default function AdminPumpsPage() {
       dataIndex: 'productType',
       key: 'productType',
       render: (type: string, record: Pump) => (
-        <Space direction="vertical" size={2}>
+        <Space orientation="vertical" size={2}>
           <Tag color={productTagColor(type)} className="font-medium!">
             {productLabel(type)}
           </Tag>

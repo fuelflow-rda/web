@@ -261,7 +261,7 @@ export default function FuelPricesPage() {
                       <Statistic
                         value={price}
                         prefix="RWF"
-                        valueStyle={{ color, fontSize: 30, fontWeight: 800 }}
+                        styles={{ content: { color, fontSize: 30, fontWeight: 800 } }}
                       />
                     ) : (
                       <Text type="secondary" className="block text-2xl! font-bold! mt-2!">

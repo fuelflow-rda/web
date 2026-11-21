@@ -134,11 +134,11 @@ function StatTile({
         title={<span className="text-xs uppercase tracking-wide">{title}</span>}
         value={value as string | number}
         prefix={icon}
-        valueStyle={{
+        styles={{ content: {
           fontWeight: 700,
           fontSize: 21,
           ...(accent ? { color: 'var(--accent)' } : {}),
-        }}
+        } }}
       />
       {hint && (
         <Text type="secondary" className="text-xs! block mt-1">
@@ -368,7 +368,7 @@ function SuperAdminOverview() {
       dataIndex: 'company_name',
       key: 'company_name',
       render: (name: string, r) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text strong>{name}</Text>
           <Text type="secondary" className="text-xs">
             {r.country || '—'} · {num(r.stations)}{' '}
@@ -385,7 +385,7 @@ function SuperAdminOverview() {
       sorter: (a, b) => num(a.revenue) - num(b.revenue),
       defaultSortOrder: 'descend',
       render: (v: number, r) => (
-        <Space direction="vertical" size={0} className="items-end!">
+        <Space orientation="vertical" size={0} className="items-end!">
           <Text strong>{formatRWF(num(v))}</Text>
           <Text type="secondary" className="text-xs">
             {num(r.transactions).toLocaleString()} tx · {num(r.liters).toLocaleString()} L
@@ -428,7 +428,7 @@ function SuperAdminOverview() {
       dataIndex: 'companyName',
       key: 'companyName',
       render: (n: string | undefined, r) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text>{n || '—'}</Text>
           <Text type="secondary" className="text-xs">
             {r.email}
@@ -725,7 +725,7 @@ function SuperAdminOverview() {
         </Col>
         <Col xs={24} xl={10}>
           <Card title="Platform mix" className="rounded-xl! h-full">
-            <Space direction="vertical" size={16} className="w-full">
+            <Space orientation="vertical" size={16} className="w-full">
               <div>
                 <Text type="secondary" className="text-xs! uppercase tracking-wide">
                   Companies with sales · {windowLabel}
@@ -942,7 +942,7 @@ export default function AdminDashboardPage() {
               value={totalRevenue}
               prefix={<DollarOutlined />}
               suffix="RWF"
-              valueStyle={{ color: 'var(--accent)', fontWeight: 700 }}
+              styles={{ content: { color: 'var(--accent)', fontWeight: 700 } }}
             />
           </Card>
         </Col>
@@ -952,7 +952,7 @@ export default function AdminDashboardPage() {
               title="Total Transactions"
               value={totalTransactions}
               prefix={<ShoppingCartOutlined />}
-              valueStyle={{ fontWeight: 700 }}
+              styles={{ content: { fontWeight: 700 } }}
             />
           </Card>
         </Col>
@@ -962,7 +962,7 @@ export default function AdminDashboardPage() {
               title="Active Stations"
               value={stations.length}
               prefix={<BankOutlined />}
-              valueStyle={{ fontWeight: 700 }}
+              styles={{ content: { fontWeight: 700 } }}
             />
           </Card>
         </Col>
@@ -984,14 +984,14 @@ export default function AdminDashboardPage() {
                     title="Revenue"
                     value={station.todayRevenue}
                     prefix="RWF"
-                    valueStyle={{ fontSize: 18, fontWeight: 600 }}
+                    styles={{ content: { fontSize: 18, fontWeight: 600 } }}
                   />
                 </Col>
                 <Col span={12}>
                   <Statistic
                     title="Transactions"
                     value={station.todayTransactions}
-                    valueStyle={{ fontSize: 18, fontWeight: 600 }}
+                    styles={{ content: { fontSize: 18, fontWeight: 600 } }}
                   />
                 </Col>
               </Row>
