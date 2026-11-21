@@ -20,7 +20,7 @@ export interface PanelProps {
 export function Panel({ title, meta, action, children, padded = true, className }: PanelProps) {
   const titleId = `panel-${useId()}`;
   return (
-    <section aria-labelledby={titleId} className={cx('overflow-hidden rounded-card border border-border bg-surface', className)}>
+    <section aria-labelledby={titleId} className={cx('min-w-0 overflow-hidden rounded-card border border-border bg-surface', className)}>
       <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-3.5">
         <div className="flex min-w-0 flex-col gap-0.5">
           <h2 id={titleId} className="m-0 text-15 font-semibold text-text">
@@ -29,7 +29,7 @@ export function Panel({ title, meta, action, children, padded = true, className 
           {meta ? <p className="m-0 text-12 text-text-muted">{meta}</p> : null}
         </div>
         {action ? (
-          <Link href={action.href} className={cx('inline-flex shrink-0 items-center gap-1 rounded-badge text-13 font-medium text-link', focusRing)}>
+          <Link href={action.href} className={cx('inline-flex shrink-0 items-center gap-1 rounded-badge text-13 font-medium text-link no-underline hover:underline', focusRing)}>
             {action.label}
             <ArrowRight size={14} aria-hidden />
           </Link>

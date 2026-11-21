@@ -53,7 +53,7 @@ export function KpiTile({ label, value, prefix, suffix, icon: Icon, delta, href,
   );
   const box = cx('flex flex-col gap-3.5 rounded-card border border-border bg-surface p-5', className);
   return href ? (
-    <Link href={href} className={cx(box, 'transition-colors hover:border-border-strong', focusRing)}>
+    <Link href={href} className={cx(box, 'text-text no-underline transition-colors hover:border-border-strong', focusRing)}>
       {body}
     </Link>
   ) : (

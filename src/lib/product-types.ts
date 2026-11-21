@@ -149,3 +149,43 @@ export function formatQuantity(
 export function formatUnitPrice(price: number | undefined | null, unit: ProductUnit | string): string {
   return `RWF ${Number(price ?? 0).toLocaleString()}/${unitLabel(unit)}`;
 }
+
+/** The design's three-letter codes, for tags in tables: GAS, DSL, EV DC, EV AC. */
+const PRODUCT_CODES: Record<ProductType, string> = {
+  GASOLINE: 'GAS',
+  DIESEL: 'DSL',
+  EV_AC: 'EV AC',
+  EV_DC_FAST: 'EV DC',
+  EV_DC_ULTRA: 'EV UL',
+};
+
+/** The design's product names, for legends and lists: "EV · DC fast". */
+const PRODUCT_NAMES: Record<ProductType, string> = {
+  GASOLINE: 'Gasoline',
+  DIESEL: 'Diesel',
+  EV_AC: 'EV · AC',
+  EV_DC_FAST: 'EV · DC fast',
+  EV_DC_ULTRA: 'EV · DC ultra',
+};
+
+export function productCode(type: string | undefined | null): string {
+  return PRODUCT_CODES[normalizeProductType(type)];
+}
+
+export function productName(type: string | undefined | null): string {
+  return PRODUCT_NAMES[normalizeProductType(type)];
+}
+
+/**
+ * "Pump 2" or "Charger 4". The number is the station's own: pumps and chargers
+ * share one numbering, so a charger keeps the number attendants pick it by.
+ */
+export function pointLabel(number: number | string, type: string | undefined | null): string {
+  return `${isEvProductType(type) ? 'Charger' : 'Pump'} ${number}`;
+}
+
+/** "512.0 L", "48.0 kWh": one decimal, as meters read. */
+export function formatMeter(quantity: number | undefined | null, unit: ProductUnit | string | undefined | null): string {
+  const v = Number(quantity ?? 0);
+  return `${v.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ${unitLabel(unit)}`;
+}

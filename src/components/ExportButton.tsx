@@ -1,12 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Button, Dropdown } from 'antd';
-import {
-  DownloadOutlined,
-  FileExcelOutlined,
-  FilePdfOutlined,
-} from '@ant-design/icons';
+import { Dropdown } from 'antd';
+import { Download, FileSpreadsheet, FileText } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 interface ExportColumn {
   header: string;
@@ -97,26 +94,21 @@ export default function ExportButton({ data, columns, filename }: ExportButtonPr
   const items = [
     {
       key: 'excel',
-      icon: <FileExcelOutlined className="text-primary!" />,
-      label: <span className="font-medium">Export to Excel</span>,
+      icon: <FileSpreadsheet size={16} aria-hidden />,
+      label: 'Excel spreadsheet',
       onClick: exportToExcel,
     },
     {
       key: 'pdf',
-      icon: <FilePdfOutlined className="text-danger!" />,
-      label: <span className="font-medium">Export to PDF</span>,
+      icon: <FileText size={16} aria-hidden />,
+      label: 'PDF',
       onClick: exportToPdf,
     },
   ];
 
   return (
     <Dropdown menu={{ items }} trigger={['click']}>
-      <Button
-        icon={<DownloadOutlined />}
-        className="rounded-xl! font-semibold! border-border! hover:border-primary! hover:text-primary!"
-      >
-        Export
-      </Button>
+      <Button icon={Download}>Export</Button>
     </Dropdown>
   );
 }
