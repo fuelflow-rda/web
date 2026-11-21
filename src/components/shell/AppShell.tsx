@@ -82,10 +82,12 @@ export function AppShell({
     };
   }, [user.role, user.companyId]);
 
-  // Days at this station with a discrepancy nobody has signed off.
+  // Days at this station with a discrepancy nobody has signed off. The reports
+  // API serves company admins and managers only, so the platform admin gets no count.
   const stationId = currentStation?.id;
+  const reviews = area === 'company' && user.role !== 'SUPERADMIN';
   useEffect(() => {
-    if (area !== 'company' || !stationId) return;
+    if (!reviews || !stationId) return;
     let live = true;
     api
       .get(`/reconciliation/${stationId}`)
@@ -100,7 +102,7 @@ export function AppShell({
     return () => {
       live = false;
     };
-  }, [area, stationId, pathname]);
+  }, [reviews, stationId, pathname]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
