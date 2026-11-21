@@ -33,9 +33,6 @@
       "spacing": 1,
       "type": 3
     },
-    "src/app/(dashboard)/reconciliation/page.tsx": {
-      "type": 5
-    },
     "src/app/(dashboard)/settings/page.tsx": {
       "type": 1
     },
