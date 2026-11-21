@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
-import { CompaniesTable, duration, shortAgo } from './PlatformOverview';
+import { CompaniesTable, duration, shortAgo, stationWords } from './PlatformOverview';
 import { lastActive } from './format';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => '/admin' }));
@@ -13,6 +13,12 @@ describe('admin wording', () => {
     expect(shortAgo('2026-11-21T09:58:00Z', now)).toBe('2 min');
     expect(shortAgo('2026-11-21T07:00:00Z', now)).toBe('3 h');
     expect(duration('2026-11-21T06:48:00Z', now)).toBe('3 h 12 min');
+  });
+
+  it('names a station as a station, once', () => {
+    expect(stationWords('Rubavu')).toBe('Rubavu station');
+    expect(stationWords('Remera Station ')).toBe('Remera Station');
+    expect(stationWords('Stationery Road')).toBe('Stationery Road station');
   });
 
   it('says when someone was last active, and Now for anyone on shift', () => {

@@ -4,7 +4,18 @@ import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Modal } from 'antd';
-import { Banknote, Building2, MapPin, ScrollText, Users } from 'lucide-react';
+import {
+  Banknote,
+  Building2,
+  CalendarX2,
+  MailX,
+  MapPin,
+  ScrollText,
+  UserPlus,
+  Users,
+  WifiOff,
+  type LucideIcon,
+} from 'lucide-react';
 import { Banner, Button, KpiTile, PageHeader, Panel, StatusChip, TextField, type StatusTone } from '@/components/ui';
 import { focusRing } from '@/components/ui/focus';
 import { initialsOf } from '@/components/ui/Avatar';
@@ -127,7 +138,7 @@ function SyncHealth({ h, now }: { h: PlatformHealth; now: number }) {
           ? `All stations ran at ${clock(r.lastGeneratedAt)}`
           : 'No station sold anything',
       value: `${r.reports} of ${r.stationsWithSales}`,
-      tone: missing ? 'text-danger' : undefined,
+      tone: missing ? 'text-danger' : r.reports > 0 ? 'text-success' : undefined,
     },
     {
       label: 'Failed sign-ins',
@@ -138,7 +149,7 @@ function SyncHealth({ h, now }: { h: PlatformHealth; now: number }) {
       label: 'API errors',
       detail: h.api.p95Ms === null ? 'No requests yet' : `p95 response ${h.api.p95Ms} ms`,
       value: h.api.errorRate === null ? '—' : `${(h.api.errorRate * 100).toFixed(2)}%`,
-      tone: (h.api.errorRate ?? 0) > 0.01 ? 'text-danger' : undefined,
+      tone: h.api.errorRate === null ? undefined : h.api.errorRate > 0.01 ? 'text-danger' : 'text-success',
     },
   ];
   return (
@@ -167,6 +178,9 @@ function SyncHealth({ h, now }: { h: PlatformHealth; now: number }) {
     </Panel>
   );
 }
+
+/** "Rubavu station", as the design names a station in a sentence; a name that already says so is left alone. */
+export const stationWords = (name: string) => (/\bstation$/i.test(name.trim()) ? name.trim() : `${name.trim()} station`);
 
 function NeedsAttention({
   items,
@@ -198,16 +212,20 @@ function NeedsAttention({
             let title = '';
             let detail = '';
             let action: { label: string; run: () => void } | null = null;
+            let icon: { Icon: LucideIcon; tone: string } = { Icon: MailX, tone: 'text-warning' };
             if (a.kind === 'no_admin') {
+              icon = { Icon: UserPlus, tone: 'text-warning' };
               title = `${a.company.name} has no administrator`;
               detail = `Created ${day(a.since)}`;
               action = { label: 'Invite', run: () => router.push(`/admin/companies/${a.company.id}?invite=1`) };
             } else if (a.kind === 'devices_not_synced') {
-              title = `${a.company.name}${a.station?.name ? ` · ${a.station.name}` : ''}`;
+              icon = { Icon: WifiOff, tone: 'text-danger' };
+              title = `${a.company.name}${a.station?.name ? ` · ${stationWords(a.station.name)}` : ''}`;
               detail = `${a.devices} ${a.devices === 1 ? 'phone has' : 'phones have'} not synced for ${duration(a.since, now)}, holding ${a.sales} ${a.sales === 1 ? 'sale' : 'sales'}`;
               action = { label: 'View phones', run: () => router.push('/admin/sync-health') };
             } else if (a.kind === 'reconciliation_missing') {
-              title = `${a.company?.name ? `${a.company.name} · ` : ''}${a.station.name}`;
+              icon = { Icon: CalendarX2, tone: 'text-danger' };
+              title = `${a.company?.name ? `${a.company.name} · ` : ''}${stationWords(a.station.name ?? 'A station')}`;
               detail = `Last night's reconciliation did not run`;
               action = a.company
                 ? { label: 'Open', run: () => router.push(`/admin/companies/${a.company!.id}`) }
@@ -234,9 +252,12 @@ function NeedsAttention({
                 key={`${a.kind}-${i}`}
                 className="flex items-start justify-between gap-3 border-b border-border py-3 first:pt-0 last:border-b-0 last:pb-0"
               >
-                <span className="flex min-w-0 flex-col gap-0.5">
-                  <span className="text-14 font-semibold text-text">{title}</span>
-                  <span className="text-12 text-text-muted">{detail}</span>
+                <span className="flex min-w-0 items-start gap-3">
+                  <icon.Icon size={18} aria-hidden className={cx('mt-px shrink-0', icon.tone)} />
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span className="text-14 font-semibold text-text">{title}</span>
+                    <span className="text-12 text-text-muted">{detail}</span>
+                  </span>
                 </span>
                 {action ? (
                   <button
