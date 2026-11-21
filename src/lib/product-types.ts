@@ -176,6 +176,23 @@ export function productName(type: string | undefined | null): string {
   return PRODUCT_NAMES[normalizeProductType(type)];
 }
 
+const PRODUCT_WORDS: Record<ProductType, string> = {
+  GASOLINE: 'gasoline',
+  DIESEL: 'diesel',
+  EV_AC: 'EV AC',
+  EV_DC_FAST: 'EV DC',
+  EV_DC_ULTRA: 'EV DC ultra',
+};
+
+/** What a company sells, as a sentence lists it: "Gasoline, diesel, EV AC, EV DC". */
+export function productList(types: readonly string[]): string {
+  const known = new Set(types.map(normalizeProductType));
+  const text = PRODUCT_TYPES.filter((t) => known.has(t))
+    .map((t) => PRODUCT_WORDS[t])
+    .join(', ');
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 /**
  * "Pump 2" or "Charger 4". The number is the station's own: pumps and chargers
  * share one numbering, so a charger keeps the number attendants pick it by.

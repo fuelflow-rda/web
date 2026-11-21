@@ -8,8 +8,8 @@ export interface PanelProps {
   title: string;
   /** A short line under the title: "Times in Africa/Kigali". */
   meta?: ReactNode;
-  /** At most one: a link such as "View all". */
-  action?: { label: string; href: string };
+  /** At most one: a link such as "View all", or a text button such as "Invite". Either ends in an arrow. */
+  action?: { label: string; href: string } | { label: string; onClick: () => void };
   /** A control in the header, such as Export, instead of or beside the link. */
   extra?: ReactNode;
   children: ReactNode;
@@ -17,6 +17,11 @@ export interface PanelProps {
   padded?: boolean;
   className?: string;
 }
+
+const actionLook = cx(
+  'inline-flex shrink-0 items-center gap-1 rounded-badge text-13 font-medium text-link hover:underline',
+  focusRing,
+);
 
 /** Holds a chart, list or table under a title, with one optional action. */
 export function Panel({ title, meta, action, extra, children, padded = true, className }: PanelProps) {
@@ -31,11 +36,16 @@ export function Panel({ title, meta, action, extra, children, padded = true, cla
           {meta ? <p className="m-0 text-12 text-text-muted">{meta}</p> : null}
         </div>
         {extra}
-        {action ? (
-          <Link href={action.href} className={cx('inline-flex shrink-0 items-center gap-1 rounded-badge text-13 font-medium text-link no-underline hover:underline', focusRing)}>
+        {action && 'href' in action ? (
+          <Link href={action.href} className={cx(actionLook, 'no-underline')}>
             {action.label}
             <ArrowRight size={14} aria-hidden />
           </Link>
+        ) : action ? (
+          <button type="button" onClick={action.onClick} className={cx(actionLook, 'cursor-pointer border-0 bg-transparent p-0')}>
+            {action.label}
+            <ArrowRight size={14} aria-hidden />
+          </button>
         ) : null}
       </header>
       <div className={padded ? 'p-5' : undefined}>{children}</div>

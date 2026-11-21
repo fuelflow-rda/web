@@ -170,6 +170,18 @@ describe('NavItem, Panel, PageHeader and KpiTile', () => {
     expect(screen.getByRole('link', { name: 'View all' }).getAttribute('href')).toBe('/transactions');
   });
 
+  it("a panel's action can be a text button instead of a link", async () => {
+    const onClick = vi.fn();
+    render(
+      <Panel title="Administrators" action={{ label: 'Invite', onClick }}>
+        content
+      </Panel>,
+    );
+    expect(screen.queryByRole('link')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Invite' }));
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
   it('the page header title is the h1', () => {
     render(<PageHeader title="Overview" description="Kigali Central" />);
     expect(screen.getByRole('heading', { level: 1, name: 'Overview' })).toBeTruthy();

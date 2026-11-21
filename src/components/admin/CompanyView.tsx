@@ -11,7 +11,7 @@ import { PanelError, PanelSkeleton, num } from '@/components/overview/panels';
 import { usePolled } from '@/components/overview/data';
 import { useShellCrumb } from '@/components/shell/AppShell';
 import { cx } from '@/lib/cx';
-import { productName } from '@/lib/product-types';
+import { productList } from '@/lib/product-types';
 import {
   deleteCompany,
   getCompanyOverview,
@@ -315,113 +315,110 @@ export function CompanyView({
         </Banner>
       ) : null}
 
-      <section aria-label="Key figures" className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <KpiTile
-          label="Revenue today"
-          icon={Banknote}
-          prefix="RWF"
-          value={num(o.kpis.revenueToday)}
-          delta={{
-            text: `Across ${o.stations.length} ${o.stations.length === 1 ? 'station' : 'stations'}`,
-            direction: 'flat',
-          }}
-        />
-        <KpiTile
-          label="On shift now"
-          icon={Users}
-          value={num(o.kpis.onShiftNow)}
-          delta={{ text: `of ${o.kpis.attendants} attendants`, direction: 'flat' }}
-        />
-        <KpiTile
-          label="Open discrepancies"
-          icon={TriangleAlert}
-          value={num(o.kpis.openDiscrepancies)}
-          delta={{
-            text: o.kpis.oldestOpenDiscrepancy
-              ? `Oldest from ${weekday(o.kpis.oldestOpenDiscrepancy)}`
-              : 'All reviewed',
-            direction: 'flat',
-          }}
-        />
-      </section>
-
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <Panel title="Stations" padded={false}>
-          {o.stations.length === 0 ? (
-            <p className="m-0 p-5 text-14 text-text-secondary">
-              No stations yet. Add the first one to start recording sales.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-170 border-collapse">
-                <thead className="bg-surface-muted">
-                  <tr>
-                    <th scope="col" className={head}>
-                      Station
-                    </th>
-                    <th scope="col" className={head}>
-                      Manager
-                    </th>
-                    <th scope="col" className={cx(head, 'text-right')}>
-                      Pumps
-                    </th>
-                    <th scope="col" className={cx(head, 'text-right')}>
-                      Revenue today
-                    </th>
-                    <th scope="col" className={head}>
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {o.stations.map((s) => (
-                    <tr key={s.id}>
-                      <th scope="row" className={cx(cell, 'text-left font-normal')}>
-                        <span className="flex flex-col gap-0.5">
-                          <span className="text-14 font-semibold text-text">{s.name}</span>
-                          <span className="text-12 text-text-muted">{s.location ?? '—'}</span>
-                        </span>
-                      </th>
-                      <td className={cx(cell, 'text-14 text-text')}>
-                        {s.managers.map((m) => m.name).join(', ') || (
-                          <span className="text-text-muted">No manager</span>
-                        )}
-                      </td>
-                      <td
-                        className={cx(cell, 'text-right font-mono text-13 text-text')}
-                        title={`${s.pumps} pumps and ${s.chargers} chargers`}
-                      >
-                        {s.pumps} + {s.chargers}
-                      </td>
-                      <td className={cx(cell, 'text-right font-mono text-13 font-semibold text-text')}>
-                        {num(s.revenueToday)}
-                      </td>
-                      <td className={cell}>
-                        <StatusChip tone={STATION[s.status]}>
-                          {s.status === 'review'
-                            ? `${s.toReview} to review`
-                            : s.status === 'live'
-                              ? 'Live'
-                              : 'No sales today'}
-                        </StatusChip>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Panel>
+        <div className="flex min-w-0 flex-col gap-4">
+          <section aria-label="Key figures" className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <KpiTile
+              label="Revenue today"
+              icon={Banknote}
+              prefix="RWF"
+              value={num(o.kpis.revenueToday)}
+              delta={{
+                text: `Across ${o.stations.length} ${o.stations.length === 1 ? 'station' : 'stations'}`,
+                direction: 'flat',
+              }}
+            />
+            <KpiTile
+              label="On shift now"
+              icon={Users}
+              value={num(o.kpis.onShiftNow)}
+              delta={{ text: `of ${o.kpis.attendants} attendants`, direction: 'flat' }}
+            />
+            <KpiTile
+              label="Open discrepancies"
+              icon={TriangleAlert}
+              value={num(o.kpis.openDiscrepancies)}
+              delta={{
+                text: o.kpis.oldestOpenDiscrepancy
+                  ? `Oldest from ${weekday(o.kpis.oldestOpenDiscrepancy)}`
+                  : 'All reviewed',
+                direction: 'flat',
+              }}
+            />
+          </section>
+            <Panel title="Stations" padded={false}>
+              {o.stations.length === 0 ? (
+                <p className="m-0 p-5 text-14 text-text-secondary">
+                  No stations yet. Add the first one to start recording sales.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-170 border-collapse">
+                    <thead className="bg-surface-muted">
+                      <tr>
+                        <th scope="col" className={head}>
+                          Station
+                        </th>
+                        <th scope="col" className={head}>
+                          Manager
+                        </th>
+                        <th scope="col" className={cx(head, 'text-right')}>
+                          Pumps
+                        </th>
+                        <th scope="col" className={cx(head, 'text-right')}>
+                          Revenue today
+                        </th>
+                        <th scope="col" className={head}>
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {o.stations.map((s) => (
+                        <tr key={s.id}>
+                          <th scope="row" className={cx(cell, 'text-left font-normal')}>
+                            <span className="flex flex-col gap-0.5">
+                              <span className="text-14 font-semibold text-text">{s.name}</span>
+                              <span className="text-12 text-text-muted">{s.location ?? '—'}</span>
+                            </span>
+                          </th>
+                          <td className={cx(cell, 'text-14 text-text')}>
+                            {s.managers.map((m) => m.name).join(', ') || (
+                              <span className="text-text-muted">No manager</span>
+                            )}
+                          </td>
+                          <td
+                            className={cx(cell, 'text-right font-mono text-13 text-text')}
+                            title={`${s.pumps} pumps and ${s.chargers} chargers`}
+                          >
+                            {s.pumps} + {s.chargers}
+                          </td>
+                          <td className={cx(cell, 'text-right font-mono text-13 font-semibold text-text')}>
+                            {num(s.revenueToday)}
+                          </td>
+                          <td className={cell}>
+                            <StatusChip tone={STATION[s.status]}>
+                              {s.status === 'review'
+                                ? `${s.toReview} to review`
+                                : s.status === 'live'
+                                  ? 'Live'
+                                  : 'No sales today'}
+                            </StatusChip>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Panel>
+        </div>
 
         <div className="flex flex-col gap-4">
           <Panel
             title="Administrators"
             meta="Can see every station in this company"
-            extra={
-              <Button size="md" icon={MailPlus} onClick={() => setInviting(true)}>
-                Invite
-              </Button>
-            }
+            action={{ label: 'Invite', onClick: () => setInviting(true) }}
           >
             {admins.error && !admins.data ? (
               <PanelError message="Administrators could not be loaded." onRetry={admins.reload} />
@@ -447,30 +444,37 @@ export function CompanyView({
                       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <span className="truncate text-14 font-semibold text-text">{u.name || u.email}</span>
                         <span className="truncate text-12 text-text-muted">
-                          {invited && u.invited_at ? `Invited ${day(u.invited_at)}` : u.email}
+                          {invited ? (
+                            <>
+                              {u.invited_at ? `Invited ${day(u.invited_at)} · ` : null}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void resendInvite(u.id)
+                                    .then((r) =>
+                                      done(
+                                        r.sent
+                                          ? `A new invitation went to ${u.email}.`
+                                          : 'The invitation was renewed but could not be emailed.',
+                                      ),
+                                    )
+                                    .catch((err: Error) => setNotice(err.message))
+                                }
+                                className={cx(
+                                  'cursor-pointer border-0 bg-transparent p-0 text-12 font-medium text-link hover:underline',
+                                  focusRing,
+                                )}
+                              >
+                                Resend
+                              </button>
+                            </>
+                          ) : (
+                            u.email
+                          )}
                         </span>
                       </span>
                       {invited ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void resendInvite(u.id)
-                              .then((r) =>
-                                done(
-                                  r.sent
-                                    ? `A new invitation went to ${u.email}.`
-                                    : 'The invitation was renewed but could not be emailed.',
-                                ),
-                              )
-                              .catch((err: Error) => setNotice(err.message))
-                          }
-                          className={cx(
-                            'shrink-0 cursor-pointer border-0 bg-transparent p-0 text-13 font-semibold text-link hover:underline',
-                            focusRing,
-                          )}
-                        >
-                          Resend
-                        </button>
+                        <StatusChip tone="info">Invite sent</StatusChip>
                       ) : (
                         <StatusChip tone={u.account_status === 'deactivated' ? 'neutral' : 'success'}>
                           {u.account_status === 'deactivated' ? 'Deactivated' : 'Active'}
@@ -485,25 +489,21 @@ export function CompanyView({
 
           <Panel
             title="Company details"
-            extra={
-              <Button size="md" kind="ghost" icon={Pencil} onClick={() => setEditing(true)}>
-                Edit
-              </Button>
-            }
+            action={{ label: 'Edit', onClick: () => setEditing(true) }}
           >
-            <dl className="m-0 flex flex-col gap-3">
+            <dl className="m-0 grid grid-cols-[7.25rem_minmax(0,1fr)] gap-x-4 gap-y-3">
               {(
                 [
                   ['Legal name', o.company.legalName],
                   ['Tax ID (TIN)', tin(o.company.taxId)],
                   ['Billing contact', o.company.billingEmail],
-                  ['Products', o.products.map(productName).join(', ') || null],
+                  ['Products', productList(o.products) || null],
                   ['Data region', o.company.dataRegion],
                 ] as const
               ).map(([k, v]) => (
-                <div key={k} className="flex flex-col gap-0.5">
-                  <dt className="text-12 text-text-muted">{k}</dt>
-                  <dd className={cx('m-0 text-14', v ? 'text-text' : 'text-text-muted')}>{v ?? 'Not set'}</dd>
+                <div key={k} className="contents">
+                  <dt className="text-13 text-text-muted">{k}</dt>
+                  <dd className={cx('m-0 text-14 break-words', v ? 'text-text' : 'text-text-muted')}>{v ?? 'Not set'}</dd>
                 </div>
               ))}
             </dl>
