@@ -1,9 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Modal, Form, Input, Button, Alert } from 'antd';
-import { MailOutlined } from '@ant-design/icons';
+import { useState, type FormEvent } from 'react';
+import { Modal } from 'antd';
+import { Mail } from 'lucide-react';
 import api from '@/lib/api';
+import { Banner, Button, TextField } from '@/components/ui';
+
+const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 /**
  * Password recovery for the management portal.
@@ -17,105 +20,78 @@ import api from '@/lib/api';
  * shows the same confirmation either way. Do not add "no account found" feedback here:
  * that would turn the form into a way to discover which emails are registered.
  */
-export function ForgotPasswordModal({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
+export function ForgotPasswordModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [email, setEmail] = useState('');
+  const [fieldError, setFieldError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [sent, setSent] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
-  const [emailForm] = Form.useForm();
 
   const close = () => {
     onClose();
     // Reset after the closing animation so the content doesn't visibly change.
     setTimeout(() => {
-      setSent(null);
+      setSent(false);
       setError('');
-      emailForm.resetFields();
+      setFieldError('');
+      setEmail('');
     }, 250);
   };
 
-  const handleSubmit = async (values: { email: string }) => {
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    const value = email.trim();
+    const problem = !value ? 'Enter your email.' : !EMAIL.test(value) ? 'Enter an email such as name@company.rw.' : '';
+    setFieldError(problem);
+    if (problem) return;
     setSubmitting(true);
     setError('');
     try {
-      await api.post('/auth/password/forgot', { email: values.email });
-      setSent(
-        'If that email is registered, a reset link is on its way. Check your inbox, including spam.',
-      );
+      await api.post('/auth/password/forgot', { email: value });
+      setSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+      setError(err instanceof Error ? err.message : 'Something went wrong. Try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <Modal
-      open={open}
-      onCancel={close}
-      title="Reset your password"
-      footer={
-        sent
-          ? [
-              <Button key="close" type="primary" onClick={close}>
-                Done
-              </Button>,
-            ]
-          : null
-      }
-      destroyOnHidden
-    >
+    <Modal open={open} onCancel={close} title="Reset your password" footer={null} destroyOnHidden>
       {sent ? (
-        <Alert type="success" showIcon message={sent} className="rounded-xl!" />
+        <div className="flex flex-col gap-5">
+          <Banner tone="success" title="Check your inbox">
+            If that email is registered, a link to choose a new password is on its way. It works once and expires
+            shortly. Look in spam if it does not arrive.
+          </Banner>
+          <Button kind="primary" onClick={close} block>
+            Done
+          </Button>
+        </div>
       ) : (
-        <>
-          {error && (
-            <Alert type="error" showIcon message={error} className="mb-4! rounded-xl!" />
-          )}
-
-          <p className="text-text-secondary mb-4">
-            Enter the email you sign in with and we&apos;ll send you a link to choose a
-            new password. The link can be used once and expires shortly.
+        <form onSubmit={submit} noValidate className="flex flex-col gap-5">
+          {error ? <Banner tone="danger" title={error} /> : null}
+          <p className="m-0 text-14 text-text-secondary">
+            Enter the email you sign in with and we will send you a link to choose a new password.
           </p>
-
-          <Form form={emailForm} layout="vertical" requiredMark={false} onFinish={handleSubmit}>
-            <Form.Item
-              name="email"
-              label={<span className="text-sm font-semibold text-text-secondary">Email</span>}
-              rules={[
-                { required: true, message: 'Please enter your email' },
-                { type: 'email', message: 'Please enter a valid email' },
-              ]}
-            >
-              <Input
-                prefix={<MailOutlined className="text-text-muted" />}
-                placeholder="you@company.com"
-                className="h-11! rounded-xl!"
-                autoComplete="email"
-              />
-            </Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={submitting}
-              block
-              className="h-11! rounded-xl! font-bold!"
-            >
-              Send reset link
-            </Button>
-          </Form>
-
+          <TextField
+            label="Email"
+            type="email"
+            autoComplete="email"
+            leadingIcon={Mail}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            error={fieldError}
+            placeholder="name@company.rw"
+          />
+          <Button kind="primary" htmlType="submit" loading={submitting} block>
+            Send reset link
+          </Button>
           {/* Without this an attendant who lands here has no idea where to go instead. */}
-          <p className="text-text-muted text-xs mt-4 mb-0 leading-relaxed">
-            Attendants sign in on the mobile app with a phone number and PIN. Ask your
-            station manager to set you a new PIN.
+          <p className="m-0 text-12 text-text-muted">
+            Attendants sign in on the app with a phone number and PIN. Ask your station manager to set a new PIN.
           </p>
-        </>
+        </form>
       )}
     </Modal>
   );

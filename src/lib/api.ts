@@ -1,4 +1,5 @@
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import { clearStoredSession, readStoredToken } from './stored-session';
 
 // Trailing slashes are stripped: the value is set by hand in the Vercel
 // dashboard, and a stray "/" would otherwise produce "host//api/..." below,
@@ -77,7 +78,7 @@ api.defaults.adapter = async (config) => {
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('relai_token');
+      const token = readStoredToken();
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -94,8 +95,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !isLoginRequest) {
       if (typeof window !== 'undefined') {
         clearApiCache();
-        localStorage.removeItem('relai_token');
-        localStorage.removeItem('relai_user');
+        clearStoredSession();
         window.location.href = '/login';
       }
     }

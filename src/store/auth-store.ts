@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import api, { clearApiCache } from '@/lib/api';
+import { clearStoredSession, readStoredToken, readStoredUser, storeSession } from '@/lib/stored-session';
 
 export interface AuthUser {
   id: string;
@@ -17,7 +18,8 @@ interface AuthState {
   loading: boolean;
   initialized: boolean;
 
-  login: (email: string, password: string) => Promise<AuthUser>;
+  /** `remember` keeps the session after the browser closes ("Keep me signed in"). */
+  login: (email: string, password: string, remember?: boolean) => Promise<AuthUser>;
   logout: () => void;
   initialize: () => void;
 
@@ -25,16 +27,13 @@ interface AuthState {
   isManager: () => boolean;
 }
 
-const TOKEN_KEY = 'relai_token';
-const USER_KEY = 'relai_user';
-
 function readStoredSession(): Pick<AuthState, 'user' | 'token'> {
   if (typeof window === 'undefined') {
     return { user: null, token: null };
   }
 
-  const token = localStorage.getItem(TOKEN_KEY);
-  const userStr = localStorage.getItem(USER_KEY);
+  const token = readStoredToken();
+  const userStr = readStoredUser();
 
   if (!token || !userStr) {
     return { user: null, token: null };
@@ -44,8 +43,7 @@ function readStoredSession(): Pick<AuthState, 'user' | 'token'> {
     const user = JSON.parse(userStr) as AuthUser;
     return { user, token };
   } catch {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+    clearStoredSession();
     return { user: null, token: null };
   }
 }
@@ -56,7 +54,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   loading: false,
   initialized: false,
 
-  login: async (email: string, password: string) => {
+  login: async (email: string, password: string, remember = true) => {
     set({ loading: true });
     try {
       const response = await api.post('/auth/login', { email, password });
@@ -88,8 +86,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       clearApiCache();
-      localStorage.setItem(TOKEN_KEY, token);
-      localStorage.setItem(USER_KEY, JSON.stringify(user));
+      storeSession(token, JSON.stringify(user), remember);
       set({ user, token, loading: false, initialized: true });
       return user;
     } catch (error) {
@@ -100,8 +97,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: () => {
     clearApiCache();
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+    clearStoredSession();
     set({ user: null, token: null, initialized: true });
     window.location.href = '/login';
   },

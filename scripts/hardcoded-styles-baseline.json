@@ -49,20 +49,8 @@
       "colour": 3,
       "spacing": 2
     },
-    "src/app/login/page.tsx": {
-      "type": 12
-    },
-    "src/app/reset-password/page.tsx": {
-      "type": 6
-    },
     "src/components/ExportButton.tsx": {
       "type": 1
-    },
-    "src/components/ForecourtIllustration.tsx": {
-      "colour": 18
-    },
-    "src/components/ForgotPasswordModal.tsx": {
-      "type": 2
     },
     "src/components/NotificationDetailModal.tsx": {
       "type": 3

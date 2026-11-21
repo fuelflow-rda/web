@@ -1,16 +1,16 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Form, Input, Button, Typography, Alert, message } from 'antd';
-import { LockOutlined } from '@ant-design/icons';
 import api from '@/lib/api';
-import { BrandMark } from '@/components/BrandMark';
+import { AuthLayout } from '@/components/auth/AuthLayout';
+import { PasswordField } from '@/components/auth/PasswordField';
+import { Banner, Button } from '@/components/ui';
 
-const { Title, Text } = Typography;
+const MIN = 8;
 
 /**
- * Where the emailed recovery link lands.
+ * Where the emailed recovery link lands (the "Forgot password?" flow).
  *
  * Supabase redirects here with the session in the URL *fragment*
  * (`#access_token=...&type=recovery`). A fragment never leaves the browser — it is not
@@ -22,10 +22,12 @@ const { Title, Text } = Typography;
  */
 export default function ResetPasswordPage() {
   const router = useRouter();
-  const [form] = Form.useForm();
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [linkError, setLinkError] = useState('');
-  const [error, setError] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [errors, setErrors] = useState<{ password?: string; confirm?: string }>({});
+  const [failure, setFailure] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -34,151 +36,76 @@ export default function ResetPasswordPage() {
   // token and cleared the hash, and the second pass saw an empty hash and declared the
   // link invalid — a valid reset link rendered as a broken one.
   const parsedHash = useRef(false);
-
   useEffect(() => {
     if (parsedHash.current) return;
     parsedHash.current = true;
-
-    const hash = window.location.hash.startsWith('#')
-      ? window.location.hash.slice(1)
-      : window.location.hash;
-    const params = new URLSearchParams(hash);
-
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     const token = params.get('access_token');
     const errorDescription = params.get('error_description');
-
-    if (errorDescription) {
-      setLinkError(errorDescription.replace(/\+/g, ' '));
-    } else if (!token) {
-      setLinkError(
-        'This page needs a valid reset link. Request a new one from the sign-in page.',
-      );
-    } else {
-      setAccessToken(token);
-    }
-
-    if (window.location.hash) {
-      window.history.replaceState(null, '', window.location.pathname);
-    }
+    if (errorDescription) setLinkError(errorDescription.replace(/\+/g, ' '));
+    else if (!token) setLinkError('This page needs a valid reset link. Request a new one from the sign-in page.');
+    else setAccessToken(token);
+    if (window.location.hash) window.history.replaceState(null, '', window.location.pathname);
   }, []);
 
-  const handleSubmit = async (values: { password: string }) => {
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
     if (!accessToken) return;
+    const next = {
+      password: password.length < MIN ? `Use at least ${MIN} characters.` : undefined,
+      confirm: confirm !== password ? 'The two passwords are different.' : undefined,
+    };
+    setErrors(next);
+    setFailure('');
+    if (next.password || next.confirm) return;
     setSubmitting(true);
-    setError('');
     try {
-      await api.post('/auth/password/reset', {
-        access_token: accessToken,
-        new_password: values.password,
-      });
+      await api.post('/auth/password/reset', { access_token: accessToken, new_password: password });
       setDone(true);
-      message.success('Password updated');
       setTimeout(() => router.replace('/login'), 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not update your password');
+      setFailure(err instanceof Error ? err.message : 'Your password could not be updated.');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center px-6 py-12 bg-surface">
-      <div className="w-full max-w-[380px]">
-        <div className="flex items-center gap-3 mb-10">
-          <div className="w-10 h-10 bg-primary rounded-control flex items-center justify-center">
-            <BrandMark size={20} color="var(--on-primary)" />
-          </div>
-          <span className="text-text text-xl font-extrabold tracking-tight">Relai</span>
-        </div>
-
-        <div className="mb-8">
-          <Title level={2} className="mb-1.5! text-text! text-2xl! font-extrabold!">
-            Choose a new password
-          </Title>
-          <Text className="text-text-muted! text-sm!">
-            At least 8 characters.
-          </Text>
-        </div>
-
-        {done ? (
-          <Alert
-            type="success"
-            showIcon
-            message="Password updated"
-            description="Taking you to the sign-in page…"
-            className="rounded-xl!"
+    <AuthLayout title="Choose a new password" description={`At least ${MIN} characters.`}>
+      {done ? (
+        <Banner tone="success" title="Password updated">
+          Taking you to the sign-in page…
+        </Banner>
+      ) : linkError ? (
+        <>
+          <Banner tone="warning" title={linkError} />
+          <Button kind="primary" size="lg" block onClick={() => router.replace('/login')}>
+            Back to sign in
+          </Button>
+        </>
+      ) : (
+        <form onSubmit={submit} noValidate className="flex flex-col gap-6">
+          {failure ? <Banner tone="danger" title={failure} /> : null}
+          <PasswordField
+            label="New password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            error={errors.password}
+            autoFocus
           />
-        ) : linkError ? (
-          <>
-            <Alert type="error" showIcon message={linkError} className="rounded-xl! mb-5!" />
-            <Button
-              type="primary"
-              block
-              onClick={() => router.replace('/login')}
-              className="h-12! rounded-xl! font-bold!"
-            >
-              Back to sign in
-            </Button>
-          </>
-        ) : (
-          <Form form={form} onFinish={handleSubmit} layout="vertical" size="large" requiredMark={false}>
-            {error && (
-              <Alert type="error" showIcon message={error} className="mb-4! rounded-xl!" />
-            )}
-
-            <Form.Item
-              name="password"
-              label={<span className="text-sm font-semibold text-text-secondary">New password</span>}
-              rules={[
-                { required: true, message: 'Please enter a new password' },
-                { min: 8, message: 'Password must be at least 8 characters' },
-              ]}
-            >
-              <Input.Password
-                prefix={<LockOutlined className="text-text-muted" />}
-                placeholder="Enter a new password"
-                className="h-12! rounded-xl! bg-surface!"
-                autoComplete="new-password"
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="confirm"
-              dependencies={['password']}
-              label={<span className="text-sm font-semibold text-text-secondary">Confirm password</span>}
-              rules={[
-                { required: true, message: 'Please confirm your new password' },
-                ({ getFieldValue }) => ({
-                  validator: (_, value) =>
-                    !value || getFieldValue('password') === value
-                      ? Promise.resolve()
-                      : Promise.reject(new Error('The two passwords do not match')),
-                }),
-              ]}
-            >
-              <Input.Password
-                prefix={<LockOutlined className="text-text-muted" />}
-                placeholder="Re-enter the new password"
-                className="h-12! rounded-xl! bg-surface!"
-                autoComplete="new-password"
-              />
-            </Form.Item>
-
-            <Form.Item className="mb-0!">
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={submitting}
-                disabled={!accessToken}
-                block
-                className="h-12! rounded-xl! text-base! font-bold!"
-              >
-                Update password
-              </Button>
-            </Form.Item>
-          </Form>
-        )}
-      </div>
-    </div>
+          <PasswordField
+            label="Type it again"
+            autoComplete="new-password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            error={errors.confirm}
+          />
+          <Button kind="primary" size="lg" htmlType="submit" loading={submitting} disabled={!accessToken} block>
+            Update password
+          </Button>
+        </form>
+      )}
+    </AuthLayout>
   );
 }
