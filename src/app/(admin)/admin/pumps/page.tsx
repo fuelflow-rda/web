@@ -213,7 +213,7 @@ export default function AdminPumpsPage() {
       key: 'pump',
       render: (_: unknown, record: Pump) => (
         <Space>
-          <ToolOutlined className="text-accent" />
+          <ToolOutlined className="text-primary" />
           <Text strong>Pump #{record.pumpNumber}</Text>
         </Space>
       ),

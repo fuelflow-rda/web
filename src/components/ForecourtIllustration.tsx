@@ -15,7 +15,7 @@ import React from 'react';
  * ground shadow — is drawn from theme tokens so it follows light and dark. That
  * is what keeps the artwork sitting on the panel instead of on top of it.
  *
- * The greens are deliberately mid-range rather than the deep `--accent`: they
+ * The greens are deliberately mid-range rather than the deep `--primary`: they
  * have to hold up against a cream panel and a near-black one.
  */
 const PAINT = {
@@ -91,10 +91,10 @@ export function ForecourtIllustration({
       </defs>
 
       {/* ---- Stage: backdrop disc and scattered motes ---- */}
-      <circle cx="280" cy="206" r="184" fill="var(--accent)" opacity="0.09" />
-      <circle cx="280" cy="206" r="128" fill="var(--accent)" opacity="0.06" />
+      <circle cx="280" cy="206" r="184" fill="var(--primary)" opacity="0.09" />
+      <circle cx="280" cy="206" r="128" fill="var(--primary)" opacity="0.06" />
 
-      <g fill="var(--accent)" opacity="0.35">
+      <g fill="var(--primary)" opacity="0.35">
         <circle cx="104" cy="72" r="3.5" />
         <circle cx="176" cy="38" r="2.5" />
         <circle cx="366" cy="52" r="3" />
@@ -105,7 +105,7 @@ export function ForecourtIllustration({
         <circle cx="430" cy="30" r="2.5" />
       </g>
 
-      <g stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" opacity="0.3">
+      <g stroke="var(--primary)" strokeWidth="3" strokeLinecap="round" opacity="0.3">
         <path d="M128 96l24-15" />
         <path d="M470 118l20-13" />
         <path d="M78 178l17-11" />
@@ -126,12 +126,12 @@ export function ForecourtIllustration({
           height="48"
           rx="14"
           fill="var(--surface)"
-          stroke="var(--line)"
+          stroke="var(--border)"
         />
         {/* Fuel droplet */}
         <path d="M106 180c6 7 9 11 9 15a9 9 0 01-18 0c0-4 3-8 9-15z" fill={PAINT.green500} />
-        <rect x="122" y="183" width="28" height="5" rx="2.5" fill="var(--line-strong)" />
-        <rect x="122" y="193" width="18" height="5" rx="2.5" fill="var(--line)" />
+        <rect x="122" y="183" width="28" height="5" rx="2.5" fill="var(--border-strong)" />
+        <rect x="122" y="193" width="18" height="5" rx="2.5" fill="var(--border)" />
       </g>
 
       <g>
@@ -142,7 +142,7 @@ export function ForecourtIllustration({
           height="56"
           rx="14"
           fill="var(--surface)"
-          stroke="var(--line)"
+          stroke="var(--border)"
         />
         {/* Mini volume chart */}
         <rect x="412" y="178" width="10" height="14" rx="3" fill={PAINT.green300} />
@@ -153,7 +153,7 @@ export function ForecourtIllustration({
 
       {/* ---- Delivery truck, set back on the left ---- */}
       <g>
-        <ellipse cx="90" cy="324" rx="80" ry="8" fill="var(--ink)" opacity="0.07" />
+        <ellipse cx="90" cy="324" rx="80" ry="8" fill="var(--text)" opacity="0.07" />
         <rect x="22" y="244" width="96" height="62" rx="7" fill="url(#ff-truck)" />
         <rect x="22" y="278" width="96" height="9" fill={PAINT.green500} />
         <rect x="33" y="255" width="30" height="6" rx="3" fill={PAINT.creamShade} />
@@ -167,7 +167,7 @@ export function ForecourtIllustration({
 
       {/* ---- Car at the pump ---- */}
       <g>
-        <ellipse cx="434" cy="360" rx="110" ry="11" fill="var(--ink)" opacity="0.08" />
+        <ellipse cx="434" cy="360" rx="110" ry="11" fill="var(--text)" opacity="0.08" />
         <path
           d="M330 340v-20c0-7 5-11 12-12l62-6 26-21c4-4 9-6 14-6h36c7 0 13 3 17 8l19 23 14 5c6 2 8 7 8 13v16z"
           fill="url(#ff-car)"
@@ -206,7 +206,7 @@ export function ForecourtIllustration({
 
       {/* ---- Attendant ---- */}
       <g>
-        <ellipse cx="277" cy="380" rx="46" ry="8" fill="var(--ink)" opacity="0.1" />
+        <ellipse cx="277" cy="380" rx="46" ry="8" fill="var(--text)" opacity="0.1" />
 
         {/* Legs and boots */}
         <rect x="255" y="314" width="19" height="58" rx="9" fill={PAINT.green900} />

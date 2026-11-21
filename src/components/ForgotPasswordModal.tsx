@@ -78,7 +78,7 @@ export function ForgotPasswordModal({
             <Alert type="error" showIcon message={error} className="mb-4! rounded-xl!" />
           )}
 
-          <p className="text-ink-secondary mb-4">
+          <p className="text-text-secondary mb-4">
             Enter the email you sign in with and we&apos;ll send you a link to choose a
             new password. The link can be used once and expires shortly.
           </p>
@@ -86,14 +86,14 @@ export function ForgotPasswordModal({
           <Form form={emailForm} layout="vertical" requiredMark={false} onFinish={handleSubmit}>
             <Form.Item
               name="email"
-              label={<span className="text-sm font-semibold text-ink-secondary">Email</span>}
+              label={<span className="text-sm font-semibold text-text-secondary">Email</span>}
               rules={[
                 { required: true, message: 'Please enter your email' },
                 { type: 'email', message: 'Please enter a valid email' },
               ]}
             >
               <Input
-                prefix={<MailOutlined className="text-ink-disabled" />}
+                prefix={<MailOutlined className="text-text-muted" />}
                 placeholder="you@company.com"
                 className="h-11! rounded-xl!"
                 autoComplete="email"
@@ -111,7 +111,7 @@ export function ForgotPasswordModal({
           </Form>
 
           {/* Without this an attendant who lands here has no idea where to go instead. */}
-          <p className="text-ink-muted text-xs mt-4 mb-0 leading-relaxed">
+          <p className="text-text-muted text-xs mt-4 mb-0 leading-relaxed">
             Attendants sign in on the mobile app with a phone number and PIN. Ask your
             station manager to set you a new PIN.
           </p>

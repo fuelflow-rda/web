@@ -163,8 +163,8 @@ export default function NotificationsPage() {
             const config = notificationTypeVisuals[notification.type] || notificationTypeVisuals.INFO;
             return (
               <List.Item
-                className={`px-6! py-4! cursor-pointer hover:bg-surface-sunken transition-colors ${
-                  !notification.isRead ? 'bg-warn-tint' : ''
+                className={`px-6! py-4! cursor-pointer hover:bg-bg transition-colors ${
+                  !notification.isRead ? 'bg-warning-tint' : ''
                 }`}
                 onClick={() => {
                   setDetailNotification(notification);

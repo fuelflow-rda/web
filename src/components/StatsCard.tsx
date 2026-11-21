@@ -37,7 +37,7 @@ export default function StatsCard({
   trend,
 }: StatsCardProps) {
   return (
-    <div className="bg-surface rounded-card border border-line-subtle p-5 transition-colors duration-200 hover:border-line">
+    <div className="bg-surface rounded-card border border-border p-5 transition-colors duration-200 hover:border-border">
       <div className="flex items-start justify-between mb-4">
         <div
           className="w-11 h-11 rounded-control flex items-center justify-center text-lg"
@@ -48,7 +48,7 @@ export default function StatsCard({
         {trend !== undefined && (
           <div
             className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold ${
-              trend >= 0 ? 'text-accent bg-accent-tint' : 'text-danger bg-danger-tint'
+              trend >= 0 ? 'text-success bg-success-tint' : 'text-danger bg-danger-tint'
             }`}
           >
             {trend >= 0 ? (
@@ -61,10 +61,10 @@ export default function StatsCard({
         )}
       </div>
 
-      <p className="text-xs font-medium text-ink-muted uppercase tracking-wide mb-1">{title}</p>
+      <p className="text-xs font-medium text-text-muted uppercase tracking-wide mb-1">{title}</p>
       <div className="flex items-baseline gap-1.5">
-        {prefix && <span className="text-sm font-medium text-ink-muted">{prefix}</span>}
-        <span className="text-2xl font-extrabold text-ink tabular-nums">
+        {prefix && <span className="text-sm font-medium text-text-muted">{prefix}</span>}
+        <span className="text-2xl font-extrabold text-text tabular-nums">
           {maximumFractionDigits !== undefined
             ? value.toLocaleString(undefined, {
                 maximumFractionDigits: maximumFractionDigits,
@@ -72,7 +72,7 @@ export default function StatsCard({
               })
             : value.toLocaleString()}
         </span>
-        {suffix && <span className="text-sm font-medium text-ink-muted">{suffix}</span>}
+        {suffix && <span className="text-sm font-medium text-text-muted">{suffix}</span>}
       </div>
       {detail ? <div className="mt-2">{detail}</div> : null}
     </div>

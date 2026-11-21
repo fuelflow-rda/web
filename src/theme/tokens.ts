@@ -265,6 +265,7 @@ export const size = {
   "icon-md": 18,
   "icon-lg": 20,
   "icon-button": 40,
+  control: 38,
   avatar: 32,
   "touch-target": 44,
   "touch-target-app": 56,

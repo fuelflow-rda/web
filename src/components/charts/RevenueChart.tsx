@@ -34,7 +34,7 @@ export default function RevenueChart({ data, onPointClick }: RevenueChartProps) 
   if (!data || data.length === 0) {
     return (
       <div className="h-72 flex items-center justify-center">
-        <Empty description={<span className="text-ink-muted">No data available</span>} />
+        <Empty description={<span className="text-text-muted">No data available</span>} />
       </div>
     );
   }
@@ -76,16 +76,16 @@ export default function RevenueChart({ data, onPointClick }: RevenueChartProps) 
           </linearGradient>
         </defs>
         {/* recharts 3: with only named Y axes, the grid must name one or it draws no horizontal lines. */}
-        <CartesianGrid yAxisId="revenue" strokeDasharray="3 3" stroke={t['line-subtle']} vertical={false} />
+        <CartesianGrid yAxisId="revenue" strokeDasharray="3 3" stroke={t.border} vertical={false} />
         <XAxis
           dataKey="hour"
-          tick={{ fontSize: 11, fill: t['ink-muted'], fontWeight: 500 }}
-          axisLine={{ stroke: t.line }}
+          tick={{ fontSize: 11, fill: t['text-muted'], fontWeight: 500 }}
+          axisLine={{ stroke: t.border }}
           tickLine={false}
         />
         <YAxis
           yAxisId="revenue"
-          tick={{ fontSize: 11, fill: t['ink-muted'], fontWeight: 500 }}
+          tick={{ fontSize: 11, fill: t['text-muted'], fontWeight: 500 }}
           axisLine={false}
           tickLine={false}
           tickFormatter={formatRWF}
@@ -93,7 +93,7 @@ export default function RevenueChart({ data, onPointClick }: RevenueChartProps) 
         <YAxis
           yAxisId="liters"
           orientation="right"
-          tick={{ fontSize: 11, fill: t['ink-muted'], fontWeight: 500 }}
+          tick={{ fontSize: 11, fill: t['text-muted'], fontWeight: 500 }}
           axisLine={false}
           tickLine={false}
           tickFormatter={(v) => (hasKwh ? `${v}` : `${v}L`)}

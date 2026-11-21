@@ -53,17 +53,17 @@ const PRODUCT_COLORS: Record<ProductType, string> = {
   GASOLINE: 'var(--product-gasoline)',
   DIESEL: 'var(--product-diesel)',
   EV_AC: 'var(--product-ev-ac)',
-  EV_DC_FAST: 'var(--product-ev-dc-fast)',
-  EV_DC_ULTRA: 'var(--product-ev-dc-ultra)',
+  EV_DC_FAST: 'var(--product-ev-dc)',
+  EV_DC_ULTRA: 'var(--product-ev-ultra)',
 };
 
 /** Quiet backing for a product chip, in the same theme-aware form. */
 const PRODUCT_TINTS: Record<ProductType, string> = {
-  GASOLINE: 'var(--product-gasoline-tint)',
-  DIESEL: 'var(--product-diesel-tint)',
-  EV_AC: 'var(--product-ev-ac-tint)',
-  EV_DC_FAST: 'var(--product-ev-dc-fast-tint)',
-  EV_DC_ULTRA: 'var(--product-ev-dc-ultra-tint)',
+  GASOLINE: 'var(--surface-muted)',
+  DIESEL: 'var(--surface-muted)',
+  EV_AC: 'var(--surface-muted)',
+  EV_DC_FAST: 'var(--surface-muted)',
+  EV_DC_ULTRA: 'var(--surface-muted)',
 };
 
 /** Ant Design tag colors, which take names rather than hex values. */

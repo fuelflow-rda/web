@@ -39,7 +39,7 @@ export default function ProductMixBar({
   if (rows.length === 0) {
     return (
       <div className="h-40 flex items-center justify-center">
-        <Empty description={<span className="text-ink-muted">No sales in this period</span>} />
+        <Empty description={<span className="text-text-muted">No sales in this period</span>} />
       </div>
     );
   }
@@ -79,16 +79,16 @@ export default function ProductMixBar({
               style={{ background: productColor(row.productType) }}
               aria-hidden
             />
-            <span className="text-ink font-medium flex-1 min-w-0 truncate" title={row.label}>
+            <span className="text-text font-medium flex-1 min-w-0 truncate" title={row.label}>
               {productShortLabel(row.productType)}
             </span>
-            <span className="text-ink-muted tabular-nums text-xs shrink-0">
+            <span className="text-text-muted tabular-nums text-xs shrink-0">
               {formatQuantity(row.quantity, row.unit, 0)}
             </span>
-            <span className="text-ink font-semibold tabular-nums w-28 text-right shrink-0">
+            <span className="text-text font-semibold tabular-nums w-28 text-right shrink-0">
               {formatRWF(row.revenue)}
             </span>
-            <span className="text-ink-muted tabular-nums w-12 text-right text-xs shrink-0">
+            <span className="text-text-muted tabular-nums w-12 text-right text-xs shrink-0">
               {row.share}%
             </span>
             </>
@@ -98,7 +98,7 @@ export default function ProductMixBar({
             <Link
               key={row.productType}
               href={hrefFor(row)}
-              className={`${rowClass} hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-accent`}
+              className={`${rowClass} hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-focus`}
             >
               {content}
             </Link>

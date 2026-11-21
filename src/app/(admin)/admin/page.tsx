@@ -127,7 +127,7 @@ function StatTile({
 }) {
   const card = (
     <Card
-      className={`rounded-xl! h-full ${onClick ? 'hover:shadow-lg hover:border-accent transition-all' : ''}`}
+      className={`rounded-xl! h-full ${onClick ? 'hover:shadow-lg hover:border-border-strong transition-all' : ''}`}
       styles={{ body: { padding: 16 } }}
     >
       <Statistic
@@ -137,7 +137,7 @@ function StatTile({
         styles={{ content: {
           fontWeight: 700,
           fontSize: 21,
-          ...(accent ? { color: 'var(--accent)' } : {}),
+          ...(accent ? { color: 'var(--primary)' } : {}),
         } }}
       />
       {hint && (
@@ -185,17 +185,17 @@ function CountCell({
   last?: boolean;
 }) {
   const shared = `flex-1 min-w-[150px] text-left px-5 py-4 ${
-    last ? '' : 'md:border-r md:border-line-subtle'
+    last ? '' : 'md:border-r md:border-border'
   }`;
 
   const body = (
     <>
-      <div className="flex items-center gap-2 text-ink-muted text-xs uppercase tracking-wide mb-1">
+      <div className="flex items-center gap-2 text-text-muted text-xs uppercase tracking-wide mb-1">
         {icon}
         {label}
       </div>
-      <div className="text-ink text-2xl font-bold leading-none">{value.toLocaleString()}</div>
-      {hint && <div className="text-ink-muted text-xs mt-1.5">{hint}</div>}
+      <div className="text-text text-2xl font-bold leading-none">{value.toLocaleString()}</div>
+      {hint && <div className="text-text-muted text-xs mt-1.5">{hint}</div>}
     </>
   );
 
@@ -407,7 +407,7 @@ function SuperAdminOverview() {
       key: 'go',
       width: 32,
       align: 'right',
-      render: () => <RightOutlined className="text-ink-disabled text-xs" />,
+      render: () => <RightOutlined className="text-text-muted text-xs" />,
     },
   ];
 
@@ -418,7 +418,7 @@ function SuperAdminOverview() {
       key: 'name',
       render: (name: string) => (
         <Space>
-          <UserOutlined className="text-accent" />
+          <UserOutlined className="text-primary" />
           <Text strong>{name}</Text>
         </Space>
       ),
@@ -449,7 +449,7 @@ function SuperAdminOverview() {
       key: 'go',
       width: 32,
       align: 'right',
-      render: () => <RightOutlined className="text-ink-disabled text-xs" />,
+      render: () => <RightOutlined className="text-text-muted text-xs" />,
     },
   ];
 
@@ -567,7 +567,7 @@ function SuperAdminOverview() {
       </Row>
 
       <Card className="rounded-xl!" styles={{ body: { padding: 0 } }}>
-        <div className="flex flex-wrap divide-y md:divide-y-0 divide-line-subtle">
+        <div className="flex flex-wrap divide-y md:divide-y-0 divide-border">
           <CountCell
             label="Companies"
             value={num(totals?.companies) || companies.length}
@@ -664,7 +664,7 @@ function SuperAdminOverview() {
         {leads.length === 0 ? (
           <Text type="secondary">No demo requests yet.</Text>
         ) : (
-          <ul className="m-0 p-0 list-none divide-y divide-line-subtle">
+          <ul className="m-0 p-0 list-none divide-y divide-border">
             {leads.map((lead) => (
               <li
                 key={lead.id}
@@ -677,7 +677,7 @@ function SuperAdminOverview() {
                       {lead.createdAt ? dayjs(lead.createdAt).format('D MMM, HH:mm') : ''}
                     </Text>
                   </div>
-                  <pre className="m-0 mt-1 whitespace-pre-wrap font-sans text-sm text-ink-secondary">
+                  <pre className="m-0 mt-1 whitespace-pre-wrap font-sans text-sm text-text-secondary">
                     {lead.details}
                   </pre>
                 </div>
@@ -747,7 +747,7 @@ function SuperAdminOverview() {
                       : 0
                   }
                   showInfo={false}
-                  strokeColor="var(--accent)"
+                  strokeColor="var(--primary)"
                   size="small"
                 />
               </div>
@@ -771,7 +771,7 @@ function SuperAdminOverview() {
                       : 0
                   }
                   showInfo={false}
-                  strokeColor="var(--product-ev-dc-fast)"
+                  strokeColor="var(--product-ev-dc)"
                   size="small"
                 />
               </div>
@@ -942,7 +942,7 @@ export default function AdminDashboardPage() {
               value={totalRevenue}
               prefix={<DollarOutlined />}
               suffix="RWF"
-              styles={{ content: { color: 'var(--accent)', fontWeight: 700 } }}
+              styles={{ content: { color: 'var(--primary)', fontWeight: 700 } }}
             />
           </Card>
         </Col>

@@ -13,9 +13,9 @@ interface PumpCardProps {
 }
 
 const statusConfig: Record<string, { color: string; bg: string; dotColor: string; label: string }> = {
-  ACTIVE: { color: 'var(--accent)', bg: 'bg-accent-tint', dotColor: 'var(--accent)', label: 'Active' },
-  INACTIVE: { color: 'var(--ink-muted)', bg: 'bg-surface-muted', dotColor: 'var(--ink-disabled)', label: 'Inactive' },
-  MAINTENANCE: { color: 'var(--warn)', bg: 'bg-warn-tint', dotColor: 'var(--warn)', label: 'Maintenance' },
+  ACTIVE: { color: 'var(--success)', bg: 'bg-success-tint', dotColor: 'var(--success)', label: 'Active' },
+  INACTIVE: { color: 'var(--text-muted)', bg: 'bg-surface-muted', dotColor: 'var(--text-muted)', label: 'Inactive' },
+  MAINTENANCE: { color: 'var(--warning)', bg: 'bg-warning-tint', dotColor: 'var(--warning)', label: 'Maintenance' },
 };
 
 export default function PumpCard({ pump }: PumpCardProps) {
@@ -27,7 +27,7 @@ export default function PumpCard({ pump }: PumpCardProps) {
   const productName = productLabel(pump.productType);
 
   return (
-    <div className="group bg-surface rounded-card border border-line-subtle p-4 hover:border-line transition-colors duration-200 relative overflow-hidden">
+    <div className="group bg-surface rounded-card border border-border p-4 hover:border-border transition-colors duration-200 relative overflow-hidden">
       {/* Product is identified by a flat rule — the system adds no depth. */}
       <div
         className="absolute top-0 left-0 right-0 h-1"
@@ -63,18 +63,18 @@ export default function PumpCard({ pump }: PumpCardProps) {
             {productName}
           </Tag>
           {isEv && (
-            <div className="text-[10px] text-ink-muted mt-1">
+            <div className="text-[10px] text-text-muted mt-1">
               {connectorLabel(pump.connectorType)} · {pump.powerKw ?? 0} kW
             </div>
           )}
         </div>
       </div>
 
-      <div className="flex items-center gap-2 pt-3 border-t border-line-subtle">
+      <div className="flex items-center gap-2 pt-3 border-t border-border">
         <div className="w-6 h-6 rounded-full bg-surface-muted flex items-center justify-center">
-          <UserOutlined className="text-xs text-ink-muted" />
+          <UserOutlined className="text-xs text-text-muted" />
         </div>
-        <Text className="text-xs! text-ink-secondary!">
+        <Text className="text-xs! text-text-secondary!">
           {pump.currentAttendant?.name || 'No attendant assigned'}
         </Text>
       </div>

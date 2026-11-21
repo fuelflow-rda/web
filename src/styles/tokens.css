@@ -75,6 +75,7 @@
   --size-icon-md: 18px;
   --size-icon-lg: 20px;
   --size-icon-button: 40px;
+  --size-control: 38px;
   --size-avatar: 32px;
   --size-touch-target: 44px;
   --size-touch-target-app: 56px;
@@ -82,6 +83,11 @@
   --size-focus-offset: 2px;
   --size-sidebar-width: 256px;
   --size-topbar-height: 64px;
+
+  /* Rings: the design has no shadows. */
+  --shadow-focus: 0 0 0 var(--size-focus-width) var(--focus);
+  --shadow-focus-danger: 0 0 0 var(--size-focus-width) var(--danger);
+  --shadow-overlay: 0 0 0 1px var(--border);
 }
 
 :root[data-theme='dark'] {
@@ -131,4 +137,11 @@
   --chart-seq-7: #B3CFBE;
   --chart-seq-8: #D8E7DE;
   --chart-seq-9: #EEF4F0;
+}
+
+/* Below the sm breakpoint, controls grow to the touch target. */
+@media (max-width: 639.98px) {
+  :root {
+    --size-control: var(--size-touch-target);
+  }
 }

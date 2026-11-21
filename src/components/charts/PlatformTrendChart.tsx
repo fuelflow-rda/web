@@ -48,7 +48,7 @@ export default function PlatformTrendChart({
   if (!data || data.length === 0) {
     return (
       <div className="flex items-center justify-center" style={{ height }}>
-        <Empty description={<span className="text-ink-muted">No activity in this period</span>} />
+        <Empty description={<span className="text-text-muted">No activity in this period</span>} />
       </div>
     );
   }
@@ -63,19 +63,19 @@ export default function PlatformTrendChart({
           </linearGradient>
         </defs>
         {/* recharts 3: with only named Y axes, the grid must name one or it draws no horizontal lines. */}
-        <CartesianGrid yAxisId="revenue" strokeDasharray="3 3" stroke={t['line-subtle']} vertical={false} />
+        <CartesianGrid yAxisId="revenue" strokeDasharray="3 3" stroke={t.border} vertical={false} />
         <XAxis
           dataKey="day"
-          stroke={t['ink-muted']}
-          tick={{ fontSize: 12, fill: t['ink-muted'] }}
+          stroke={t['text-muted']}
+          tick={{ fontSize: 12, fill: t['text-muted'] }}
           tickLine={false}
-          axisLine={{ stroke: t['line-subtle'] }}
+          axisLine={{ stroke: t.border }}
           minTickGap={24}
         />
         <YAxis
           yAxisId="revenue"
-          stroke={t['ink-muted']}
-          tick={{ fontSize: 12, fill: t['ink-muted'] }}
+          stroke={t['text-muted']}
+          tick={{ fontSize: 12, fill: t['text-muted'] }}
           tickLine={false}
           axisLine={false}
           tickFormatter={compact}
@@ -83,18 +83,18 @@ export default function PlatformTrendChart({
         <YAxis
           yAxisId="tx"
           orientation="right"
-          stroke={t['ink-muted']}
-          tick={{ fontSize: 12, fill: t['ink-muted'] }}
+          stroke={t['text-muted']}
+          tick={{ fontSize: 12, fill: t['text-muted'] }}
           tickLine={false}
           axisLine={false}
           allowDecimals={false}
         />
         <Tooltip
           contentStyle={{
-            background: t['surface'],
-            border: `1px solid ${t['line']}`,
+            background: t.surface,
+            border: `1px solid ${t.border}`,
             borderRadius: 12,
-            color: t['ink'],
+            color: t.text,
           }}
           formatter={(value, name) => {
             const v = Number(value ?? 0);

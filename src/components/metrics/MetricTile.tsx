@@ -73,7 +73,7 @@ export default function MetricTile({
   delta,
   spark,
   detail,
-  accent = 'var(--ink-muted)',
+  accent = 'var(--text-muted)',
   riseIsGood = true,
   href,
   linkLabel,
@@ -85,19 +85,19 @@ export default function MetricTile({
 
   const tile = (
     <div
-      className={`bg-surface border border-line-subtle rounded-card p-4 flex flex-col justify-between h-full ${
-        href ? 'transition-colors group-hover:border-line-strong' : ''
+      className={`bg-surface border border-border rounded-card p-4 flex flex-col justify-between h-full ${
+        href ? 'transition-colors group-hover:border-border-strong' : ''
       }`}
     >
       <div>
         <div className="flex items-start justify-between gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
             {label}
           </span>
           {hasDelta && (
             <span
               className="text-[11px] font-semibold tabular-nums shrink-0"
-              style={{ color: flat ? 'var(--ink-muted)' : good ? 'var(--accent)' : 'var(--danger)' }}
+              style={{ color: flat ? 'var(--text-muted)' : good ? 'var(--success)' : 'var(--danger)' }}
               title="Compared with the previous period of equal length"
             >
               {rising ? '▲' : flat ? '—' : '▼'} {Math.abs(delta!).toFixed(1)}%
@@ -105,11 +105,11 @@ export default function MetricTile({
           )}
         </div>
 
-        <div className="text-[26px] leading-tight font-bold text-ink tabular-nums mt-1">
+        <div className="text-[26px] leading-tight font-bold text-text tabular-nums mt-1">
           {value}
         </div>
 
-        {detail && <div className="text-xs text-ink-muted mt-1 leading-relaxed">{detail}</div>}
+        {detail && <div className="text-xs text-text-muted mt-1 leading-relaxed">{detail}</div>}
       </div>
 
       {spark && spark.length > 1 && <Sparkline points={spark} color={accent} />}
@@ -122,7 +122,7 @@ export default function MetricTile({
   return (
     <Link
       href={href}
-      className="group block h-full rounded-card focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      className="group block h-full rounded-card focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
     >
       {tile}
     </Link>

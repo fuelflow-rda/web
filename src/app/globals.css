@@ -1,11 +1,9 @@
 /*
  * Design tokens. tokens.css and theme.css are generated from
- * design-tokens/tokens.json (run `pnpm run tokens`); legacy-tokens.css maps the
- * pre-redesign names onto them until no page uses those names. Nothing below
- * may use a raw hex.
+ * design-tokens/tokens.json (run `pnpm run tokens`). Nothing below may use a
+ * raw hex.
  */
 @import '../styles/tokens.css';
-@import '../styles/legacy-tokens.css';
 
 /*
  * Tailwind 4. Only the theme and utilities layers are imported: Preflight, the
@@ -57,8 +55,8 @@ input:-webkit-autofill:active,
 textarea:-webkit-autofill,
 select:-webkit-autofill {
   box-shadow: inset 0 0 0 1000px var(--surface) !important;
-  -webkit-text-fill-color: var(--ink);
-  caret-color: var(--ink);
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
   /* `.ant-input` transitions box-shadow, and Chrome applies autofill styling
      outside the recalc that would start that transition — so the shadow stays
      pinned at its `from` value (transparent) and the fill never paints. Has to
@@ -71,9 +69,9 @@ select:-webkit-autofill {
 input:-webkit-autofill:focus,
 textarea:-webkit-autofill:focus,
 select:-webkit-autofill:focus {
-  box-shadow: inset 0 0 0 1000px var(--surface), var(--focus-ring) !important;
-  -webkit-text-fill-color: var(--ink);
-  caret-color: var(--ink);
+  box-shadow: inset 0 0 0 1000px var(--surface), var(--shadow-focus) !important;
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
   transition: none !important;
 }
 
@@ -86,8 +84,8 @@ select:-webkit-autofill:focus {
 .ant-input-affix-wrapper > input.ant-input:-webkit-autofill:focus,
 .ant-input-affix-wrapper > input.ant-input:-webkit-autofill:active {
   box-shadow: inset 0 0 0 1000px var(--surface) !important;
-  -webkit-text-fill-color: var(--ink);
-  caret-color: var(--ink);
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
   transition: none !important;
   /* The inner input carries its own 8px radius, so the fill gets clipped to a
      curve and antialiases into the wrapper as a faint arc at each end. The
@@ -106,12 +104,12 @@ select:-webkit-autofill:focus {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--line-strong);
+  background: var(--border-strong);
   border-radius: 100px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--ink-disabled);
+  background: var(--text-muted);
 }
 
 /* ===== BUTTON LEVELS =====
@@ -120,7 +118,7 @@ select:-webkit-autofill:focus {
 
 .ant-btn {
   border-radius: var(--radius-control) !important;
-  height: var(--control-height) !important;
+  height: var(--size-control) !important;
   font-weight: 600 !important;
   box-shadow: none !important;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
@@ -128,96 +126,96 @@ select:-webkit-autofill:focus {
 
 .ant-btn:focus-visible {
   outline: none !important;
-  box-shadow: var(--focus-ring) !important;
+  box-shadow: var(--shadow-focus) !important;
 }
 
 /* Primary — filled accent */
 .ant-btn-primary:not(.ant-btn-dangerous) {
-  background: var(--accent) !important;
-  border-color: var(--accent) !important;
-  color: var(--accent-on) !important;
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: var(--on-primary) !important;
 }
 
 .ant-btn-primary:not(.ant-btn-dangerous):hover {
-  background: var(--accent-hover) !important;
-  border-color: var(--accent-hover) !important;
+  background: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
 }
 
 .ant-btn-primary:not(.ant-btn-dangerous):active {
-  background: var(--accent-pressed) !important;
-  border-color: var(--accent-pressed) !important;
+  background: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
 }
 
 /* Outlined — the default secondary */
 .ant-btn-default:not(.ant-btn-dangerous) {
   background: var(--surface) !important;
-  border-color: var(--line) !important;
-  color: var(--ink) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
 }
 
 .ant-btn-default:not(.ant-btn-dangerous):hover {
-  background: var(--surface-sunken) !important;
-  border-color: var(--line-strong) !important;
-  color: var(--ink) !important;
+  background: var(--bg) !important;
+  border-color: var(--border-strong) !important;
+  color: var(--text) !important;
 }
 
 /* Tinted — quieter than outlined, still clearly actionable. Opt in per button. */
 .ant-btn.btn-tinted,
 .ant-btn.btn-tinted.ant-btn-default {
-  background: var(--accent-tint) !important;
+  background: var(--surface-muted) !important;
   border-color: transparent !important;
-  color: var(--accent) !important;
+  color: var(--primary) !important;
 }
 
 .ant-btn.btn-tinted:hover,
 .ant-btn.btn-tinted.ant-btn-default:hover {
-  background: var(--accent-tint-hover) !important;
+  background: var(--surface-muted) !important;
   border-color: transparent !important;
-  color: var(--accent) !important;
+  color: var(--primary) !important;
 }
 
 /* Text / link */
 .ant-btn-text:not(.ant-btn-dangerous),
 .ant-btn-link:not(.ant-btn-dangerous) {
-  color: var(--accent) !important;
+  color: var(--primary) !important;
   background: transparent !important;
   border-color: transparent !important;
 }
 
 .ant-btn-text:not(.ant-btn-dangerous):hover,
 .ant-btn-link:not(.ant-btn-dangerous):hover {
-  background: var(--accent-tint) !important;
-  color: var(--accent-hover) !important;
+  background: var(--surface-muted) !important;
+  color: var(--primary-hover) !important;
 }
 
 /* Destructive — filled is reserved for irreversible physical actions */
 .ant-btn-primary.ant-btn-dangerous {
   background: var(--danger) !important;
   border-color: var(--danger) !important;
-  color: var(--danger-on) !important;
+  color: var(--on-primary) !important;
 }
 
 .ant-btn-primary.ant-btn-dangerous:hover {
-  background: var(--danger-hover) !important;
-  border-color: var(--danger-hover) !important;
+  background: var(--danger) !important;
+  border-color: var(--danger) !important;
 }
 
 .ant-btn-primary.ant-btn-dangerous:active {
-  background: var(--danger-pressed) !important;
-  border-color: var(--danger-pressed) !important;
+  background: var(--danger) !important;
+  border-color: var(--danger) !important;
 }
 
 /* Destructive quiet — the default for ordinary deletes */
 .ant-btn-default.ant-btn-dangerous {
   background: var(--surface) !important;
-  border-color: var(--danger-border) !important;
+  border-color: var(--danger) !important;
   color: var(--danger) !important;
 }
 
 .ant-btn-default.ant-btn-dangerous:hover {
   background: var(--danger-tint) !important;
-  border-color: var(--danger-border) !important;
-  color: var(--danger-hover) !important;
+  border-color: var(--danger) !important;
+  color: var(--danger) !important;
 }
 
 .ant-btn-text.ant-btn-dangerous,
@@ -230,24 +228,24 @@ select:-webkit-autofill:focus {
 .ant-btn-text.ant-btn-dangerous:hover,
 .ant-btn-link.ant-btn-dangerous:hover {
   background: var(--danger-tint) !important;
-  color: var(--danger-hover) !important;
+  color: var(--danger) !important;
 }
 
 .ant-btn-dangerous:focus-visible {
-  box-shadow: var(--focus-ring-danger) !important;
+  box-shadow: var(--shadow-focus-danger) !important;
 }
 
 /* Dialog footers: one filled action, and Cancel steps down to text. */
 .ant-modal-footer .ant-btn-default:not(.ant-btn-dangerous) {
   background: transparent !important;
   border-color: transparent !important;
-  color: var(--ink-secondary) !important;
+  color: var(--text-secondary) !important;
 }
 
 .ant-modal-footer .ant-btn-default:not(.ant-btn-dangerous):hover {
   background: var(--surface-muted) !important;
   border-color: transparent !important;
-  color: var(--ink) !important;
+  color: var(--text) !important;
 }
 
 /* Disabled beats every level above */
@@ -256,44 +254,44 @@ select:-webkit-autofill:focus {
 .ant-btn[disabled] {
   background: var(--surface-muted) !important;
   border-color: transparent !important;
-  color: var(--ink-disabled) !important;
+  color: var(--text-muted) !important;
 }
 
 /* ===== ANT DESIGN OVERRIDES ===== */
 
 .ant-switch-checked {
-  background-color: var(--accent) !important;
+  background-color: var(--primary) !important;
 }
 
 .ant-pagination-item-active {
-  border-color: var(--accent) !important;
+  border-color: var(--primary) !important;
 }
 
 .ant-pagination-item-active a {
-  color: var(--accent) !important;
+  color: var(--primary) !important;
 }
 
 .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
-  color: var(--accent) !important;
+  color: var(--primary) !important;
 }
 
 .ant-tabs-ink-bar {
-  background: var(--accent) !important;
+  background: var(--primary) !important;
 }
 
 .ant-menu-item-selected {
-  background-color: var(--accent-tint) !important;
-  color: var(--accent) !important;
+  background-color: var(--surface-muted) !important;
+  color: var(--primary) !important;
 }
 
 .ant-table-thead > tr > th {
-  background: var(--surface-sunken) !important;
+  background: var(--bg) !important;
   font-weight: 600 !important;
-  color: var(--ink-secondary) !important;
+  color: var(--text-secondary) !important;
   font-size: 12px !important;
   text-transform: uppercase !important;
   letter-spacing: 0.05em !important;
-  border-bottom: 1px solid var(--line) !important;
+  border-bottom: 1px solid var(--border) !important;
 }
 
 .ant-table-tbody > tr {
@@ -301,30 +299,30 @@ select:-webkit-autofill:focus {
 }
 
 .ant-table-tbody > tr:hover > td {
-  background: var(--surface-sunken) !important;
+  background: var(--bg) !important;
 }
 
 /* Hairline geometry: borders carry the structure, not shadow. */
 .ant-card {
   border-radius: var(--radius-card) !important;
-  border: 1px solid var(--line-subtle) !important;
+  border: 1px solid var(--border) !important;
   box-shadow: none !important;
   transition: border-color 0.2s ease !important;
 }
 
 .ant-card:hover {
-  border-color: var(--line) !important;
+  border-color: var(--border) !important;
 }
 
 .ant-card-head {
-  border-bottom: 1px solid var(--line-subtle) !important;
+  border-bottom: 1px solid var(--border) !important;
   padding: 16px 24px !important;
 }
 
 .ant-card-head-title {
   font-weight: 700 !important;
   font-size: 15px !important;
-  color: var(--ink) !important;
+  color: var(--text) !important;
 }
 
 .ant-statistic-content-value {
@@ -339,7 +337,7 @@ select:-webkit-autofill:focus {
 
 .ant-modal-header {
   padding: 20px 24px !important;
-  border-bottom: 1px solid var(--line-subtle) !important;
+  border-bottom: 1px solid var(--border) !important;
 }
 
 .ant-modal-title {
@@ -352,7 +350,7 @@ select:-webkit-autofill:focus {
 .ant-select,
 .ant-picker {
   border-radius: var(--radius-control) !important;
-  border-color: var(--line) !important;
+  border-color: var(--border) !important;
   transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
 }
 
@@ -361,13 +359,13 @@ select:-webkit-autofill:focus {
 .ant-input-affix-wrapper-focused,
 .ant-picker-focused,
 .ant-select-focused {
-  border-color: var(--accent) !important;
-  box-shadow: var(--focus-ring) !important;
+  border-color: var(--primary) !important;
+  box-shadow: var(--shadow-focus) !important;
 }
 
 .ant-drawer-header {
   padding: 20px 24px !important;
-  border-bottom: 1px solid var(--line-subtle) !important;
+  border-bottom: 1px solid var(--border) !important;
 }
 
 .ant-drawer-title {
@@ -385,25 +383,25 @@ select:-webkit-autofill:focus {
 .ant-tag-green,
 .ant-tag-success,
 .ant-tag-cyan {
-  background: var(--accent-tint) !important;
-  border-color: var(--accent-ring) !important;
-  color: var(--accent) !important;
+  background: var(--surface-muted) !important;
+  border-color: var(--focus) !important;
+  color: var(--primary) !important;
 }
 
 .ant-tag-red,
 .ant-tag-error,
 .ant-tag-volcano {
   background: var(--danger-tint) !important;
-  border-color: var(--danger-border) !important;
+  border-color: var(--danger) !important;
   color: var(--danger) !important;
 }
 
 .ant-tag-orange,
 .ant-tag-warning,
 .ant-tag-gold {
-  background: var(--warn-tint) !important;
-  border-color: var(--warn-border) !important;
-  color: var(--warn) !important;
+  background: var(--warning-tint) !important;
+  border-color: var(--warning) !important;
+  color: var(--warning) !important;
 }
 
 .ant-tag-blue,
@@ -412,8 +410,8 @@ select:-webkit-autofill:focus {
 .ant-tag-purple,
 .ant-tag-default {
   background: var(--surface-muted) !important;
-  border-color: var(--line) !important;
-  color: var(--ink-secondary) !important;
+  border-color: var(--border) !important;
+  color: var(--text-secondary) !important;
 }
 
 /* ===== SIDEBAR ===== */
@@ -453,11 +451,11 @@ select:-webkit-autofill:focus {
 /* The sidebar is dark in both themes, so its scrollbar must not borrow the
    light-theme page colours. */
 .sidebar-nav::-webkit-scrollbar-thumb {
-  background: var(--sidebar-border);
+  background: var(--sidebar-line);
 }
 
 .sidebar-nav::-webkit-scrollbar-thumb:hover {
-  background: var(--sidebar-ink-muted);
+  background: var(--sidebar-text-muted);
 }
 
 .sidebar-nav .ant-menu-root {
@@ -466,7 +464,7 @@ select:-webkit-autofill:focus {
 }
 
 .sidebar-nav .ant-menu-item {
-  color: var(--sidebar-ink-muted) !important;
+  color: var(--sidebar-text-muted) !important;
   margin: 2px 12px !important;
   border-radius: var(--radius-control) !important;
   height: 40px !important;
@@ -476,19 +474,19 @@ select:-webkit-autofill:focus {
 }
 
 .sidebar-nav .ant-menu-item:hover {
-  color: var(--sidebar-ink) !important;
-  background: var(--sidebar-hover) !important;
+  color: var(--sidebar-text) !important;
+  background: var(--sidebar-surface) !important;
 }
 
 .sidebar-nav .ant-menu-item-selected {
-  color: var(--accent-on) !important;
-  background: var(--accent) !important;
+  color: var(--on-primary) !important;
+  background: var(--primary) !important;
   font-weight: 600 !important;
 }
 
 .sidebar-nav .ant-menu-item-selected:hover {
-  background: var(--accent-hover) !important;
-  color: var(--accent-on) !important;
+  background: var(--primary-hover) !important;
+  color: var(--on-primary) !important;
 }
 
 .sidebar-nav .ant-menu-item-selected::after {
@@ -503,10 +501,10 @@ select:-webkit-autofill:focus {
 }
 
 .sidebar-station-select.ant-select {
-  background: var(--sidebar-hover) !important;
-  border: 1px solid var(--sidebar-border) !important;
+  background: var(--sidebar-surface) !important;
+  border: 1px solid var(--sidebar-line) !important;
   border-radius: var(--radius-control) !important;
-  color: var(--sidebar-ink) !important;
+  color: var(--sidebar-text) !important;
   min-height: 38px !important;
   padding-inline: 12px 28px !important;
   align-items: center !important;
@@ -514,44 +512,44 @@ select:-webkit-autofill:focus {
 
 .sidebar-station-select.ant-select .ant-select-content,
 .sidebar-station-select.ant-select .ant-select-placeholder {
-  color: var(--sidebar-ink) !important;
+  color: var(--sidebar-text) !important;
   line-height: 1.4 !important;
 }
 
 .sidebar-station-select.ant-select .ant-select-placeholder {
-  color: var(--sidebar-ink-muted) !important;
+  color: var(--sidebar-text-muted) !important;
 }
 
 .sidebar-station-select.ant-select:hover {
-  border-color: var(--line-strong) !important;
-  background: var(--sidebar-hover) !important;
+  border-color: var(--border-strong) !important;
+  background: var(--sidebar-surface) !important;
 }
 
 .sidebar-station-select.ant-select.ant-select-focused {
-  border-color: var(--accent) !important;
-  box-shadow: var(--focus-ring) !important;
-  background: var(--sidebar-hover) !important;
+  border-color: var(--primary) !important;
+  box-shadow: var(--shadow-focus) !important;
+  background: var(--sidebar-surface) !important;
 }
 
 .sidebar-station-select.ant-select .ant-select-suffix {
-  color: var(--sidebar-ink-muted) !important;
+  color: var(--sidebar-text-muted) !important;
 }
 
 .ant-select-dropdown.sidebar-station-select-dropdown {
   border-radius: 12px !important;
   overflow: hidden;
-  border: 1px solid var(--sidebar-border) !important;
+  border: 1px solid var(--sidebar-line) !important;
   background: var(--sidebar-surface) !important;
 }
 
 .ant-select-dropdown.sidebar-station-select-dropdown .ant-select-item {
-  color: var(--sidebar-ink) !important;
+  color: var(--sidebar-text) !important;
 }
 
 .ant-select-dropdown.sidebar-station-select-dropdown .ant-select-item-option-active,
 .ant-select-dropdown.sidebar-station-select-dropdown .ant-select-item-option-selected {
-  background: var(--accent) !important;
-  color: var(--accent-on) !important;
+  background: var(--primary) !important;
+  color: var(--on-primary) !important;
 }
 
 .ant-select-dropdown.sidebar-station-select-dropdown .ant-select-dropdown-list-holder,
@@ -575,7 +573,7 @@ select:-webkit-autofill:focus {
 }
 
 .transaction-feed::-webkit-scrollbar-thumb {
-  background: var(--line-subtle);
+  background: var(--border);
   border-radius: 100px;
 }
 
@@ -583,14 +581,14 @@ select:-webkit-autofill:focus {
 
 @utility surface-card {
   background: var(--surface);
-  border: 1px solid var(--line-subtle);
+  border: 1px solid var(--border);
   border-radius: var(--radius-card);
 }
 
 @utility focus-ring-accent {
   &:focus-visible {
     outline: none;
-    box-shadow: var(--focus-ring);
+    box-shadow: var(--shadow-focus);
   }
 }
 

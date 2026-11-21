@@ -279,7 +279,7 @@ function PumpsView() {
       render: (v: number) => (
         <Text
           strong
-          className={Math.abs(v) > 0 ? 'text-danger!' : 'text-accent!'}
+          className={Math.abs(v) > 0 ? 'text-danger!' : 'text-success!'}
         >
           {formatRWF(v)}
         </Text>

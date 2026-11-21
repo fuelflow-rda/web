@@ -28,7 +28,7 @@ export default function PumpPerformanceChart({ data }: PumpPerformanceChartProps
   if (!data || data.length === 0) {
     return (
       <div className="h-72 flex items-center justify-center">
-        <Empty description={<span className="text-ink-muted">No performance data</span>} />
+        <Empty description={<span className="text-text-muted">No performance data</span>} />
       </div>
     );
   }
@@ -55,16 +55,16 @@ export default function PumpPerformanceChart({ data }: PumpPerformanceChartProps
           </linearGradient>
         </defs>
         {/* recharts 3: with only named Y axes, the grid must name one or it draws no horizontal lines. */}
-        <CartesianGrid yAxisId="revenue" strokeDasharray="3 3" stroke={t['line-subtle']} vertical={false} />
+        <CartesianGrid yAxisId="revenue" strokeDasharray="3 3" stroke={t.border} vertical={false} />
         <XAxis
           dataKey="date"
-          tick={{ fontSize: 11, fill: t['ink-muted'], fontWeight: 500 }}
-          axisLine={{ stroke: t.line }}
+          tick={{ fontSize: 11, fill: t['text-muted'], fontWeight: 500 }}
+          axisLine={{ stroke: t.border }}
           tickLine={false}
         />
         <YAxis
           yAxisId="revenue"
-          tick={{ fontSize: 11, fill: t['ink-muted'], fontWeight: 500 }}
+          tick={{ fontSize: 11, fill: t['text-muted'], fontWeight: 500 }}
           axisLine={false}
           tickLine={false}
           tickFormatter={(v) => {
@@ -76,7 +76,7 @@ export default function PumpPerformanceChart({ data }: PumpPerformanceChartProps
         <YAxis
           yAxisId="quantity"
           orientation="right"
-          tick={{ fontSize: 11, fill: t['ink-muted'], fontWeight: 500 }}
+          tick={{ fontSize: 11, fill: t['text-muted'], fontWeight: 500 }}
           axisLine={false}
           tickLine={false}
           tickFormatter={(v) => `${v}${unit}`}

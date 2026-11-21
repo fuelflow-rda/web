@@ -173,10 +173,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!initialized || !user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-surface-sunken">
+      <div className="flex items-center justify-center min-h-screen bg-bg">
         <div className="text-center">
-          <div className="w-12 h-12 rounded-2xl bg-accent flex items-center justify-center mx-auto mb-4">
-            <BrandMark size={24} color="var(--accent-on)" />
+          <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
+            <BrandMark size={24} color="var(--on-primary)" />
           </div>
           <Spin size="large" />
         </div>
@@ -224,26 +224,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         width={272}
         collapsedWidth={80}
         collapsed={collapsed}
-        className="bg-sidebar!"
+        className="bg-sidebar-bg!"
         style={{
           position: 'fixed',
           left: 0,
           top: 0,
           bottom: 0,
           zIndex: 100,
-          borderRight: '1px solid var(--sidebar-border)',
+          borderRight: '1px solid var(--sidebar-line)',
         }}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center gap-3 px-6 h-16 border-b border-(--sidebar-border)">
-            <div className="flex items-center justify-center w-9 h-9 bg-accent rounded-control shrink-0">
-              <BrandMark size={18} color="var(--accent-on)" />
+          <div className="flex items-center gap-3 px-6 h-16 border-b border-(--sidebar-line)">
+            <div className="flex items-center justify-center w-9 h-9 bg-primary rounded-control shrink-0">
+              <BrandMark size={18} color="var(--on-primary)" />
             </div>
             {!collapsed && (
               <div className="flex items-center gap-2">
-                <Text className="text-(--sidebar-ink)! text-lg! font-extrabold! tracking-tight">Relai</Text>
-                <span className="px-1.5 py-0.5 text-[10px] font-bold text-accent bg-accent-tint rounded-md">PRO</span>
+                <Text className="text-(--sidebar-text)! text-lg! font-extrabold! tracking-tight">Relai</Text>
+                <span className="px-1.5 py-0.5 text-[10px] font-bold text-sidebar-indicator bg-sidebar-line rounded-md">PRO</span>
               </div>
             )}
           </div>
@@ -251,7 +251,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Station Selector in Sidebar */}
           {!collapsed && (
             <div className="px-4 pt-4 pb-2">
-              <span className="text-[10px] font-bold tracking-widest text-(--sidebar-ink-muted) uppercase block mb-2">
+              <span className="text-[10px] font-bold tracking-widest text-(--sidebar-text-muted) uppercase block mb-2">
                 Station
               </span>
               <div className="sidebar-station-select-wrapper">
@@ -262,7 +262,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   className="sidebar-station-select w-full"
                   classNames={{ popup: { root: 'sidebar-station-select-dropdown' } }}
                   options={stations.map((s) => ({ value: s.id, label: s.name }))}
-                  suffixIcon={<DownOutlined className="text-(--sidebar-ink-muted)! text-[10px]!" />}
+                  suffixIcon={<DownOutlined className="text-(--sidebar-text-muted)! text-[10px]!" />}
                   allowClear={false}
                   size="middle"
                 />
@@ -276,7 +276,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div key={group.label} className="mb-1">
                 {!collapsed && (
                   <div className="px-6 pt-4 pb-2">
-                    <span className="text-[10px] font-bold tracking-widest text-(--sidebar-ink-muted) uppercase">
+                    <span className="text-[10px] font-bold tracking-widest text-(--sidebar-text-muted) uppercase">
                       {group.label}
                     </span>
                   </div>
@@ -298,19 +298,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* User profile at bottom */}
           <div className="p-3">
             <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} trigger={['click']} placement="topRight">
-              <div className="flex items-center gap-3 cursor-pointer hover:bg-(--sidebar-hover) rounded-xl p-2.5 transition-all duration-200">
+              <div className="flex items-center gap-3 cursor-pointer hover:bg-(--sidebar-surface) rounded-xl p-2.5 transition-all duration-200">
                 <div className="relative shrink-0">
                   <Avatar
                     size={36}
-                    className="bg-accent!"
+                    className="bg-primary!"
                     icon={<UserOutlined />}
                   />
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-accent rounded-full border-2 border-sidebar" />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-focus rounded-full border-2 border-sidebar-bg" />
                 </div>
                 {!collapsed && (
                   <div className="min-w-0 flex-1">
-                    <Text className="text-(--sidebar-ink)! text-sm! font-semibold! block truncate">{user.name}</Text>
-                    <Text className="text-(--sidebar-ink-muted)! text-xs! block truncate">{roleLabel(user.role)}</Text>
+                    <Text className="text-(--sidebar-text)! text-sm! font-semibold! block truncate">{user.name}</Text>
+                    <Text className="text-(--sidebar-text-muted)! text-xs! block truncate">{roleLabel(user.role)}</Text>
                   </div>
                 )}
               </div>
@@ -322,7 +322,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Layout style={{ marginLeft: sidebarWidth, transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
         {/* Header */}
         <Header
-          className="px-6! flex items-center justify-between border-b border-line-subtle sticky top-0 z-50"
+          className="px-6! flex items-center justify-between border-b border-border sticky top-0 z-50"
           style={{
             height: 64,
             background: 'var(--surface)',
@@ -333,16 +333,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               type="text"
               icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
               onClick={() => setCollapsed(!collapsed)}
-              className="text-ink-muted! hover:text-ink-secondary! w-9! h-9! rounded-lg!"
+              className="text-text-muted! hover:text-text-secondary! w-9! h-9! rounded-lg!"
             />
             <div className="hidden sm:block">
-              <h1 className="text-base font-bold text-ink leading-tight">{currentPageTitle}</h1>
-              <p className="text-xs text-ink-muted leading-tight">{currentStation?.name || 'Select a station'}</p>
+              <h1 className="text-base font-bold text-text leading-tight">{currentPageTitle}</h1>
+              <p className="text-xs text-text-muted leading-tight">{currentStation?.name || 'Select a station'}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <ThemeToggle className="text-ink-muted! hover:text-ink-secondary! w-9! h-9! rounded-lg!" />
+            <ThemeToggle className="text-text-muted! hover:text-text-secondary! w-9! h-9! rounded-lg!" />
             <Popover
               open={notifOpen}
               onOpenChange={(open) => {
@@ -355,8 +355,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               styles={{ root: { width: 380 }, container: { padding: 0 } }}
               content={
                 <div>
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-line-subtle">
-                    <span className="font-bold text-ink">Notifications</span>
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                    <span className="font-bold text-text">Notifications</span>
                     {unreadCount > 0 && (
                       <Tag color="orange" className="mr-0!">{unreadCount} new</Tag>
                     )}
@@ -379,13 +379,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           const cfg = notificationTypeVisuals[n.type] || notificationTypeVisuals.INFO;
                           return (
                             <List.Item
-                              className={`px-4! py-3! cursor-pointer hover:bg-surface-sunken transition-colors ${!n.isRead ? 'bg-warn-tint' : ''}`}
+                              className={`px-4! py-3! cursor-pointer hover:bg-bg transition-colors ${!n.isRead ? 'bg-warning-tint' : ''}`}
                               onClick={() => {
                                 setNotifOpen(false);
                                 setNotifDetail(n);
                                 if (!n.isRead) void markAsRead(n.id);
                               }}
-                              style={{ borderBottom: '1px solid var(--line-subtle)' }}
+                              style={{ borderBottom: '1px solid var(--border)' }}
                             >
                               <div className="flex gap-3 w-full">
                                 <div
@@ -396,15 +396,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
-                                    <span className={`text-sm leading-tight ${!n.isRead ? 'font-semibold text-ink' : 'font-medium text-ink-secondary'}`}>
+                                    <span className={`text-sm leading-tight ${!n.isRead ? 'font-semibold text-text' : 'font-medium text-text-secondary'}`}>
                                       {n.title}
                                     </span>
                                     {!n.isRead && (
-                                      <div className="w-2 h-2 rounded-full bg-accent shrink-0" />
+                                      <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
                                     )}
                                   </div>
-                                  <p className="text-xs text-ink-muted mt-0.5 truncate">{n.message}</p>
-                                  <span className="text-[11px] text-ink-disabled mt-1 block">
+                                  <p className="text-xs text-text-muted mt-0.5 truncate">{n.message}</p>
+                                  <span className="text-[11px] text-text-muted mt-1 block">
                                     {dayjs(n.createdAt).fromNow()}
                                   </span>
                                 </div>
@@ -415,12 +415,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       />
                     )}
                   </div>
-                  <div className="border-t border-line-subtle px-4 py-2.5 text-center">
+                  <div className="border-t border-border px-4 py-2.5 text-center">
                     <Button
                       type="link"
                       size="small"
                       onClick={() => { setNotifOpen(false); router.push('/notifications'); }}
-                      className="text-accent! font-semibold!"
+                      className="text-link! font-semibold!"
                     >
                       View All Notifications
                     </Button>
@@ -432,28 +432,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Button
                   type="text"
                   icon={<BellOutlined className="text-lg" />}
-                  className="text-ink-muted! hover:text-ink-secondary! w-9! h-9! rounded-lg! hover:bg-surface-sunken!"
+                  className="text-text-muted! hover:text-text-secondary! w-9! h-9! rounded-lg! hover:bg-bg!"
                 />
               </Badge>
             </Popover>
             <div className="w-px h-6 bg-surface-muted mx-1" />
             <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} trigger={['click']}>
-              <div className="flex items-center gap-2.5 cursor-pointer hover:bg-surface-sunken rounded-xl px-2 py-1.5 transition-colors">
+              <div className="flex items-center gap-2.5 cursor-pointer hover:bg-bg rounded-xl px-2 py-1.5 transition-colors">
                 <Avatar
                   size={32}
-                  className="bg-accent!"
+                  className="bg-primary!"
                   icon={<UserOutlined />}
                 />
                 <div className="hidden lg:block">
-                  <span className="text-sm font-semibold text-ink block leading-tight">{user.name}</span>
-                  <span className="text-[11px] text-ink-muted block leading-tight">{roleLabel(user.role)}</span>
+                  <span className="text-sm font-semibold text-text block leading-tight">{user.name}</span>
+                  <span className="text-[11px] text-text-muted block leading-tight">{roleLabel(user.role)}</span>
                 </div>
               </div>
             </Dropdown>
           </div>
         </Header>
 
-        <Content className="p-6 min-h-[calc(100vh-64px)]" style={{ background: 'var(--surface-sunken)' }}>
+        <Content className="p-6 min-h-[calc(100vh-64px)]" style={{ background: 'var(--bg)' }}>
           <div className="page-content">
             {children}
           </div>

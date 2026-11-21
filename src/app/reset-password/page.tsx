@@ -85,17 +85,17 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen w-full flex items-center justify-center px-6 py-12 bg-surface">
       <div className="w-full max-w-[380px]">
         <div className="flex items-center gap-3 mb-10">
-          <div className="w-10 h-10 bg-accent rounded-control flex items-center justify-center">
-            <BrandMark size={20} color="var(--accent-on)" />
+          <div className="w-10 h-10 bg-primary rounded-control flex items-center justify-center">
+            <BrandMark size={20} color="var(--on-primary)" />
           </div>
-          <span className="text-ink text-xl font-extrabold tracking-tight">Relai</span>
+          <span className="text-text text-xl font-extrabold tracking-tight">Relai</span>
         </div>
 
         <div className="mb-8">
-          <Title level={2} className="mb-1.5! text-ink! text-2xl! font-extrabold!">
+          <Title level={2} className="mb-1.5! text-text! text-2xl! font-extrabold!">
             Choose a new password
           </Title>
-          <Text className="text-ink-muted! text-sm!">
+          <Text className="text-text-muted! text-sm!">
             At least 8 characters.
           </Text>
         </div>
@@ -128,14 +128,14 @@ export default function ResetPasswordPage() {
 
             <Form.Item
               name="password"
-              label={<span className="text-sm font-semibold text-ink-secondary">New password</span>}
+              label={<span className="text-sm font-semibold text-text-secondary">New password</span>}
               rules={[
                 { required: true, message: 'Please enter a new password' },
                 { min: 8, message: 'Password must be at least 8 characters' },
               ]}
             >
               <Input.Password
-                prefix={<LockOutlined className="text-ink-disabled" />}
+                prefix={<LockOutlined className="text-text-muted" />}
                 placeholder="Enter a new password"
                 className="h-12! rounded-xl! bg-surface!"
                 autoComplete="new-password"
@@ -145,7 +145,7 @@ export default function ResetPasswordPage() {
             <Form.Item
               name="confirm"
               dependencies={['password']}
-              label={<span className="text-sm font-semibold text-ink-secondary">Confirm password</span>}
+              label={<span className="text-sm font-semibold text-text-secondary">Confirm password</span>}
               rules={[
                 { required: true, message: 'Please confirm your new password' },
                 ({ getFieldValue }) => ({
@@ -157,7 +157,7 @@ export default function ResetPasswordPage() {
               ]}
             >
               <Input.Password
-                prefix={<LockOutlined className="text-ink-disabled" />}
+                prefix={<LockOutlined className="text-text-muted" />}
                 placeholder="Re-enter the new password"
                 className="h-12! rounded-xl! bg-surface!"
                 autoComplete="new-password"

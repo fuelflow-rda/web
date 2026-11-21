@@ -28,7 +28,7 @@ export default function ComparisonChart({ data, labels }: ComparisonChartProps) 
   if (!data || data.length === 0) {
     return (
       <div className="h-72 flex items-center justify-center">
-        <Empty description={<span className="text-ink-muted">No data to compare</span>} />
+        <Empty description={<span className="text-text-muted">No data to compare</span>} />
       </div>
     );
   }
@@ -36,15 +36,15 @@ export default function ComparisonChart({ data, labels }: ComparisonChartProps) 
   return (
     <ResponsiveContainer width="100%" height={320}>
       <BarChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke={t['line-subtle']} vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke={t.border} vertical={false} />
         <XAxis
           dataKey="name"
-          tick={{ fontSize: 11, fill: t['ink-muted'], fontWeight: 500 }}
-          axisLine={{ stroke: t.line }}
+          tick={{ fontSize: 11, fill: t['text-muted'], fontWeight: 500 }}
+          axisLine={{ stroke: t.border }}
           tickLine={false}
         />
         <YAxis
-          tick={{ fontSize: 11, fill: t['ink-muted'], fontWeight: 500 }}
+          tick={{ fontSize: 11, fill: t['text-muted'], fontWeight: 500 }}
           axisLine={false}
           tickLine={false}
           tickFormatter={(v) => {

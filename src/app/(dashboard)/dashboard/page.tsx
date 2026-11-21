@@ -168,7 +168,7 @@ export default function DashboardPage() {
       key: 'rank',
       width: 44,
       render: (_: unknown, __: unknown, index: number) => (
-        <span className="text-ink-muted tabular-nums text-xs">{index + 1}</span>
+        <span className="text-text-muted tabular-nums text-xs">{index + 1}</span>
       ),
     },
     {
@@ -176,11 +176,11 @@ export default function DashboardPage() {
       dataIndex: 'name',
       key: 'name',
       render: (name: string, r) => (
-        <span className="font-medium text-ink">
+        <span className="font-medium text-text">
           {r.attendantId ? (
             <Link
               href={attendantsHref({ attendant: r.attendantId, ...range })}
-              className="text-ink hover:text-accent hover:underline"
+              className="text-text hover:text-link hover:underline"
               onClick={(e) => e.stopPropagation()}
             >
               {name}
@@ -212,7 +212,7 @@ export default function DashboardPage() {
       align: 'right',
       width: 120,
       sorter: (a, b) => a.avgTicket - b.avgTicket,
-      render: (v: number) => <span className="tabular-nums text-ink-muted">{formatRWF(v)}</span>,
+      render: (v: number) => <span className="tabular-nums text-text-muted">{formatRWF(v)}</span>,
     },
     {
       title: 'Revenue',
@@ -229,7 +229,7 @@ export default function DashboardPage() {
   if (!currentStation) {
     return (
       <div className="flex items-center justify-center h-96">
-        <Empty description={<span className="text-ink-muted">Select a station to see its dashboard</span>} />
+        <Empty description={<span className="text-text-muted">Select a station to see its dashboard</span>} />
       </div>
     );
   }
@@ -251,9 +251,9 @@ export default function DashboardPage() {
             <Title level={3} className="mb-0!">
               {currentStation.name}
             </Title>
-            <span className="flex items-center gap-1.5 px-2.5 py-1 bg-accent-tint rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-              <span className="text-xs font-semibold text-accent">Live</span>
+            <span className="flex items-center gap-1.5 px-2.5 py-1 bg-success-tint rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-success" />
+              <span className="text-xs font-semibold text-success">Live</span>
             </span>
           </div>
           <Text type="secondary" className="text-sm!">
@@ -281,7 +281,7 @@ export default function DashboardPage() {
             value={`RWF ${compactRWF(data?.totals.revenue ?? 0)}`}
             delta={data?.deltas.revenue}
             spark={revenueSpark}
-            accent="var(--accent)"
+            accent="var(--primary)"
             detail={`${(data?.totals.transactions ?? 0).toLocaleString()} sales · avg ${formatRWF(data?.totals.avgTicket ?? 0)}`}
           />
         </Col>
@@ -305,7 +305,7 @@ export default function DashboardPage() {
             value={`${Math.round(data?.totals.kwh ?? 0).toLocaleString()} kWh`}
             delta={data?.deltas.kwh}
             spark={kwhSpark}
-            accent="var(--product-ev-dc-fast)"
+            accent="var(--product-ev-dc)"
             detail={
               evPumps.length > 0
                 ? `${evPumps.length} charge point${evPumps.length === 1 ? '' : 's'}`
@@ -379,7 +379,7 @@ export default function DashboardPage() {
         <Col xs={24} xl={8}>
           <Card title="How customers paid" className="rounded-card! h-full" size="small">
             {(data?.payments ?? []).length === 0 ? (
-              <Empty description={<span className="text-ink-muted">No payments in this period</span>} />
+              <Empty description={<span className="text-text-muted">No payments in this period</span>} />
             ) : (
               <div className="space-y-5">
                 {(data?.payments ?? []).map((p) => {
@@ -387,16 +387,16 @@ export default function DashboardPage() {
                   const content = (
                     <>
                       <div className="flex items-baseline justify-between mb-1.5">
-                        <span className="text-sm font-medium text-ink">{p.method}</span>
-                        <span className="text-xs text-ink-muted tabular-nums">{share.toFixed(1)}%</span>
+                        <span className="text-sm font-medium text-text">{p.method}</span>
+                        <span className="text-xs text-text-muted tabular-nums">{share.toFixed(1)}%</span>
                       </div>
                       <div className="h-2 rounded-full bg-surface-muted overflow-hidden">
                         <div
                           className="h-full rounded-full"
-                          style={{ width: `${share}%`, background: 'var(--accent)' }}
+                          style={{ width: `${share}%`, background: 'var(--primary)' }}
                         />
                       </div>
-                      <div className="text-sm font-semibold tabular-nums text-ink mt-1.5">
+                      <div className="text-sm font-semibold tabular-nums text-text mt-1.5">
                         {formatRWF(p.amount)}
                       </div>
                     </>
@@ -405,7 +405,7 @@ export default function DashboardPage() {
                     <Link
                       key={p.method}
                       href={transactionsHref({ ...range, payment: p.method })}
-                      className="block -mx-2 px-2 py-1.5 rounded-lg hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-accent"
+                      className="block -mx-2 px-2 py-1.5 rounded-lg hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-focus"
                     >
                       {content}
                     </Link>
@@ -454,7 +454,7 @@ export default function DashboardPage() {
           >
             <div className="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
               {(data?.pumps ?? []).length === 0 && (
-                <Empty description={<span className="text-ink-muted">No pumps configured</span>} />
+                <Empty description={<span className="text-text-muted">No pumps configured</span>} />
               )}
               {(data?.pumps ?? []).map((pump) => {
                 const isEv = isEvProductType(pump.productType);
@@ -462,7 +462,7 @@ export default function DashboardPage() {
                   <Link
                     key={pump.pumpId}
                     href={pumpsHref(pump.pumpId)}
-                    className="flex items-center gap-3 py-2 -mx-2 px-2 rounded-lg border-b border-line-subtle last:border-0 hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-accent"
+                    className="flex items-center gap-3 py-2 -mx-2 px-2 rounded-lg border-b border-border last:border-0 hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-focus"
                   >
                     <span
                       className="w-1 h-9 rounded-full shrink-0"
@@ -470,14 +470,14 @@ export default function DashboardPage() {
                       aria-hidden
                     />
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-ink truncate">
+                      <div className="text-sm font-medium text-text truncate">
                         {isEv ? 'Charger' : 'Pump'} #{pump.pumpNumber}
-                        <span className="text-ink-muted font-normal">
+                        <span className="text-text-muted font-normal">
                           {' · '}
                           {productLabel(pump.productType)}
                         </span>
                       </div>
-                      <div className="text-xs text-ink-muted tabular-nums">
+                      <div className="text-xs text-text-muted tabular-nums">
                         {pump.transactions.toLocaleString()} sales ·{' '}
                         {formatQuantity(pump.quantity, pump.unit, 0)}
                         {isEv && pump.powerKw ? ` · ${pump.powerKw} kW` : ''}
@@ -496,7 +496,7 @@ export default function DashboardPage() {
                       </div>
                     )}
 
-                    <span className="text-sm font-semibold tabular-nums text-ink w-24 text-right shrink-0">
+                    <span className="text-sm font-semibold tabular-nums text-text w-24 text-right shrink-0">
                       {formatRWF(pump.revenue)}
                     </span>
                   </Link>

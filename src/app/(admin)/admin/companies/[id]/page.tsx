@@ -44,10 +44,10 @@ type Person = {
 
 function StatTile({ label, value, hint }: { label: string; value: number; hint?: string }) {
   return (
-    <div className="bg-surface rounded-card border border-line-subtle p-5">
-      <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</div>
-      <div className="mt-2 text-3xl font-extrabold tracking-tight text-ink">{value}</div>
-      {hint && <div className="mt-1 text-xs text-ink-muted">{hint}</div>}
+    <div className="bg-surface rounded-card border border-border p-5">
+      <div className="text-xs font-semibold uppercase tracking-wider text-text-muted">{label}</div>
+      <div className="mt-2 text-3xl font-extrabold tracking-tight text-text">{value}</div>
+      {hint && <div className="mt-1 text-xs text-text-muted">{hint}</div>}
     </div>
   );
 }
@@ -155,7 +155,7 @@ export default function AdminCompanyDetailPage() {
               <p>Copy this temporary password now. It will not be shown again.</p>
               <Input readOnly value={data.temporary_password} className="font-mono" />
               {values.send_invite_email && !data.emailSent && (
-                <p className="text-warn text-sm">
+                <p className="text-warning text-sm">
                   Email was not sent. Configure RESEND_API_KEY and MAIL_FROM on the API, or share
                   the password manually.
                 </p>
@@ -195,7 +195,7 @@ export default function AdminCompanyDetailPage() {
   if (notFound || !company) {
     return (
       <div className="space-y-4">
-        <Link href="/admin/companies" className="inline-flex items-center gap-2 text-accent">
+        <Link href="/admin/companies" className="inline-flex items-center gap-2 text-link">
           <ArrowLeftOutlined /> Companies
         </Link>
         <Card className="rounded-xl!">
@@ -275,7 +275,7 @@ export default function AdminCompanyDetailPage() {
       <div>
         <Link
           href="/admin/companies"
-          className="inline-flex items-center gap-2 text-sm text-ink-secondary hover:text-accent"
+          className="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-link"
         >
           <ArrowLeftOutlined /> Companies
         </Link>
@@ -323,7 +323,7 @@ export default function AdminCompanyDetailPage() {
         className="rounded-xl!"
         title="Administrators"
         extra={
-          <Link href={`/admin/users?company_id=${company.id}&role=ADMIN`} className="text-accent">
+          <Link href={`/admin/users?company_id=${company.id}&role=ADMIN`} className="text-link">
             Edit or reset passwords in Users
           </Link>
         }
@@ -355,7 +355,7 @@ export default function AdminCompanyDetailPage() {
         className="rounded-xl!"
         title="Stations"
         extra={
-          <Link href={`/admin/stations?company_id=${company.id}`} className="text-accent">
+          <Link href={`/admin/stations?company_id=${company.id}`} className="text-link">
             Manage in Stations
           </Link>
         }

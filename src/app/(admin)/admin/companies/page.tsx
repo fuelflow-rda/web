@@ -119,7 +119,7 @@ export default function AdminCompaniesPage() {
       align: 'right',
       render: (n: number) =>
         n === 0 ? (
-          <Text className="text-warn! font-medium">None yet</Text>
+          <Text className="text-warning! font-medium">None yet</Text>
         ) : (
           n
         ),
@@ -135,7 +135,7 @@ export default function AdminCompaniesPage() {
       key: 'open',
       width: 56,
       align: 'right',
-      render: () => <RightOutlined className="text-ink-muted" aria-hidden="true" />,
+      render: () => <RightOutlined className="text-text-muted" aria-hidden="true" />,
     },
   ];
 

@@ -135,7 +135,7 @@ export default function ReconciliationPage() {
         record.variance == null ? (
           <Text type="secondary">—</Text>
         ) : (
-          <Text strong className={record.variance !== 0 ? 'text-danger!' : 'text-accent!'}>
+          <Text strong className={record.variance !== 0 ? 'text-danger!' : 'text-success!'}>
             {record.variance > 0 ? '+' : ''}
             {formatQuantity(record.variance, record.unit)}
           </Text>
@@ -161,7 +161,7 @@ export default function ReconciliationPage() {
       key: 'difference',
       align: 'right',
       render: (v: number) => (
-        <Text strong className={v !== 0 ? 'text-danger!' : 'text-accent!'}>
+        <Text strong className={v !== 0 ? 'text-danger!' : 'text-success!'}>
           {formatRWF(v)}
         </Text>
       ),
@@ -186,7 +186,7 @@ export default function ReconciliationPage() {
       key: 'attendantName',
       render: (name: string) => (
         <Space>
-          <UserOutlined className="text-ink-muted" />
+          <UserOutlined className="text-text-muted" />
           <Text strong>{name}</Text>
         </Space>
       ),
@@ -205,7 +205,7 @@ export default function ReconciliationPage() {
         <div className="leading-tight">
           <div>{Number(record.liters).toLocaleString()} L</div>
           {record.kwh > 0 && (
-            <div className="text-xs text-accent font-semibold">
+            <div className="text-xs text-text-secondary font-semibold">
               {Number(record.kwh).toLocaleString()} kWh
             </div>
           )}
@@ -299,7 +299,7 @@ export default function ReconciliationPage() {
           <Text type="secondary">End of day revenue reconciliation · Select a date, then generate</Text>
         </div>
         <Space wrap align="center">
-          <span className="text-ink-secondary text-sm font-medium flex items-center gap-1.5">
+          <span className="text-text-secondary text-sm font-medium flex items-center gap-1.5">
             <CalendarOutlined />
             Report date
           </span>
@@ -350,9 +350,9 @@ export default function ReconciliationPage() {
         </div>
       ) : report ? (
         <>
-          <div className="flex items-center gap-2 pb-2 border-b border-line-subtle">
-            <CalendarOutlined className="text-ink-muted" />
-            <Text strong className="text-ink-secondary">
+          <div className="flex items-center gap-2 pb-2 border-b border-border">
+            <CalendarOutlined className="text-text-muted" />
+            <Text strong className="text-text-secondary">
               Report for {reportDateLabel}
             </Text>
           </div>
@@ -364,7 +364,7 @@ export default function ReconciliationPage() {
                   title="Expected Revenue"
                   value={report.expectedRevenue}
                   prefix="RWF"
-                  styles={{ content: { color: 'var(--ink-secondary)' } }}
+                  styles={{ content: { color: 'var(--text-secondary)' } }}
                 />
               </Card>
             </Col>
@@ -374,7 +374,7 @@ export default function ReconciliationPage() {
                   title="Recorded Revenue"
                   value={report.recordedRevenue}
                   prefix="RWF"
-                  styles={{ content: { color: 'var(--accent)' } }}
+                  styles={{ content: { color: 'var(--text)' } }}
                 />
               </Card>
             </Col>
@@ -386,7 +386,7 @@ export default function ReconciliationPage() {
                     value={report.difference}
                     prefix="RWF"
                     styles={{ content: {
-                      color: report.status === 'BALANCED' ? 'var(--accent)' : 'var(--warn)',
+                      color: report.status === 'BALANCED' ? 'var(--success)' : 'var(--warning)',
                     } }}
                   />
                   {report.status === 'BALANCED' ? (
@@ -430,7 +430,7 @@ export default function ReconciliationPage() {
               pagination={false}
               size="middle"
               rowClassName={(record) =>
-                record.status === 'DISCREPANCY' ? 'bg-warn-tint' : ''
+                record.status === 'DISCREPANCY' ? 'bg-warning-tint' : ''
               }
             />
           </Card>
@@ -447,7 +447,7 @@ export default function ReconciliationPage() {
         </>
       ) : (
         <Card className="rounded-xl! text-center py-12">
-          <FileTextOutlined className="text-5xl text-ink-disabled mb-4" />
+          <FileTextOutlined className="text-5xl text-text-muted mb-4" />
           <Title level={4} type="secondary">No Report Found</Title>
           <Text type="secondary">
             No reconciliation report for {selectedDate.format('MMMM D, YYYY')}.

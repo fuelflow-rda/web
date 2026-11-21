@@ -197,9 +197,9 @@ export default function FuelPricesPage() {
             {diff > 0 ? (
               <ArrowUpOutlined className="text-danger" />
             ) : (
-              <ArrowDownOutlined className="text-accent" />
+              <ArrowDownOutlined className="text-success" />
             )}
-            <Text className={diff > 0 ? 'text-danger!' : 'text-accent!'}>
+            <Text className={diff > 0 ? 'text-danger!' : 'text-success!'}>
               {formatRWF(Math.abs(diff))} ({pct}%)
             </Text>
           </Space>
@@ -246,7 +246,7 @@ export default function FuelPricesPage() {
             <Col key={product} xs={24} sm={12} lg={8}>
               <Card
                 className="rounded-xl! border-2! h-full"
-                style={{ borderColor: price > 0 ? color : 'var(--line)' }}
+                style={{ borderColor: price > 0 ? color : 'var(--border)' }}
                 styles={{ body: { padding: '20px' } }}
               >
                 <div className="flex items-start justify-between gap-3">

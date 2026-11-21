@@ -47,7 +47,7 @@ const salesLabel = (n: number) => `${formatNumber(n)} ${n === 1 ? 'sale' : 'sale
 function fill(intensity: number): string {
   return intensity === 0
     ? 'var(--surface-muted)'
-    : `color-mix(in srgb, var(--accent) ${Math.round(intensity * 100)}%, var(--surface-muted))`;
+    : `color-mix(in srgb, var(--primary) ${Math.round(intensity * 100)}%, var(--surface-muted))`;
 }
 
 function TipContent({ totals, when }: { totals: Totals; when: string }) {
@@ -124,7 +124,7 @@ export default function ActivityHeatmap({ data, metric = 'transactions', hrefFor
   if (!data.length || max === 0 || !busiest) {
     return (
       <div className="h-56 flex items-center justify-center">
-        <Empty description={<span className="text-ink-muted">No activity in this period</span>} />
+        <Empty description={<span className="text-text-muted">No activity in this period</span>} />
       </div>
     );
   }
@@ -162,7 +162,7 @@ export default function ActivityHeatmap({ data, metric = 'transactions', hrefFor
       // The table is the keyboard route into these links; the grid cells skip Tab.
       render: (_, r) =>
         hrefFor ? (
-          <Link href={hrefFor(r.dow, r.hour)} className="text-accent hover:underline">
+          <Link href={hrefFor(r.dow, r.hour)} className="text-link hover:underline">
             {DAYS[r.dow]} {hourRange(r.hour)}
           </Link>
         ) : (
@@ -195,9 +195,9 @@ export default function ActivityHeatmap({ data, metric = 'transactions', hrefFor
         <dl className="flex flex-wrap gap-x-8 gap-y-3 m-0">
           {summary.map((s) => (
             <div key={s.label}>
-              <dt className="text-[11px] text-ink-muted">{s.label}</dt>
-              <dd className="m-0 text-sm font-semibold text-ink">{s.value}</dd>
-              <dd className="m-0 text-xs text-ink-secondary">{s.detail}</dd>
+              <dt className="text-[11px] text-text-muted">{s.label}</dt>
+              <dd className="m-0 text-sm font-semibold text-text">{s.value}</dd>
+              <dd className="m-0 text-xs text-text-secondary">{s.detail}</dd>
             </div>
           ))}
         </dl>
@@ -229,15 +229,15 @@ export default function ActivityHeatmap({ data, metric = 'transactions', hrefFor
               {/* Hour ruler */}
               <div />
               {HOURS.map((h) => (
-                <div key={h} className="text-[10px] text-ink-muted tabular-nums pb-1">
+                <div key={h} className="text-[10px] text-text-muted tabular-nums pb-1">
                   {h % HOUR_LABEL_EVERY === 0 ? pad(h) : ''}
                 </div>
               ))}
-              <div className="text-[10px] text-ink-muted text-right pb-1">Total</div>
+              <div className="text-[10px] text-text-muted text-right pb-1">Total</div>
 
               {DAYS.map((dayName, dow) => (
                 <React.Fragment key={dow}>
-                  <div className="text-[11px] font-medium text-ink-muted">{dayName}</div>
+                  <div className="text-[11px] font-medium text-text-muted">{dayName}</div>
                   {HOURS.map((hour) => {
                     const cell = grid.get(`${dow}-${hour}`);
                     const totals = cell ?? { transactions: 0, revenue: 0 };
@@ -253,7 +253,7 @@ export default function ActivityHeatmap({ data, metric = 'transactions', hrefFor
                             href={hrefFor(dow, hour)}
                             tabIndex={-1}
                             aria-label={`${DAYS_LONG[dow]} ${hourRange(hour)} transactions`}
-                            className="block h-5 rounded-[3px] cursor-pointer hover:outline-solid hover:outline-2 hover:outline-ink"
+                            className="block h-5 rounded-[3px] cursor-pointer hover:outline-solid hover:outline-2 hover:outline-text"
                             style={{ background: fill(intensityOf(valueOf(totals))) }}
                           />
                         ) : (
@@ -267,7 +267,7 @@ export default function ActivityHeatmap({ data, metric = 'transactions', hrefFor
                   })}
                   <div
                     className={`text-[11px] text-right tabular-nums ${
-                      days[dow].transactions > 0 ? 'text-ink-secondary' : 'text-ink-disabled'
+                      days[dow].transactions > 0 ? 'text-text-secondary' : 'text-text-muted'
                     }`}
                   >
                     {days[dow].transactions > 0 ? salesLabel(days[dow].transactions) : '–'}
@@ -276,7 +276,7 @@ export default function ActivityHeatmap({ data, metric = 'transactions', hrefFor
               ))}
 
               {/* Hour totals across the week: when to staff, whatever the day. */}
-              <div className="text-[11px] font-medium text-ink-muted self-end">All</div>
+              <div className="text-[11px] font-medium text-text-muted self-end">All</div>
               {HOURS.map((hour) => {
                 const v = valueOf(hours[hour]);
                 return (
@@ -296,7 +296,7 @@ export default function ActivityHeatmap({ data, metric = 'transactions', hrefFor
                           className="w-full rounded-t-[3px] group-hover:opacity-80"
                           style={{
                             height: `${Math.max(8, (v / hourMax) * 100)}%`,
-                            background: 'var(--accent)',
+                            background: 'var(--primary)',
                           }}
                         />
                       </Link>
@@ -306,7 +306,7 @@ export default function ActivityHeatmap({ data, metric = 'transactions', hrefFor
                           className="w-full rounded-t-[3px]"
                           style={{
                             height: v > 0 ? `${Math.max(8, (v / hourMax) * 100)}%` : 1,
-                            background: v > 0 ? 'var(--accent)' : 'var(--line)',
+                            background: v > 0 ? 'var(--primary)' : 'var(--border)',
                           }}
                         />
                       </div>
@@ -320,7 +320,7 @@ export default function ActivityHeatmap({ data, metric = 'transactions', hrefFor
 
           {/* Legend */}
           <div className="flex items-center justify-end gap-2 mt-3 pr-1">
-            <span className="text-[10px] text-ink-muted">Fewer</span>
+            <span className="text-[10px] text-text-muted">Fewer</span>
             {[0, 1 / 3, 2 / 3, 1].map((step) => (
               <div
                 key={step}
@@ -328,8 +328,8 @@ export default function ActivityHeatmap({ data, metric = 'transactions', hrefFor
                 style={{ background: fill(MIN_FILL + (1 - MIN_FILL) * step) }}
               />
             ))}
-            <span className="text-[10px] text-ink-muted">More</span>
-            <span className="text-[10px] text-ink-muted tabular-nums">
+            <span className="text-[10px] text-text-muted">More</span>
+            <span className="text-[10px] text-text-muted tabular-nums">
               · 1–{formatNumber(max)} {unit} per hour
             </span>
           </div>

@@ -216,7 +216,7 @@ function AttendantsView() {
             <Text strong>{name}</Text>
           </Space>
           {record.phone && (
-            <div className="text-xs text-ink-muted mt-0.5 ml-5">{record.phone}</div>
+            <div className="text-xs text-text-muted mt-0.5 ml-5">{record.phone}</div>
           )}
         </div>
       ),
@@ -239,7 +239,7 @@ function AttendantsView() {
         <div className="leading-tight">
           <div>{record.totalLiters.toLocaleString()} L</div>
           {record.totalKwh > 0 && (
-            <div className="text-xs text-accent font-semibold">
+            <div className="text-xs text-text-secondary font-semibold">
               {record.totalKwh.toLocaleString()} kWh
             </div>
           )}
@@ -396,26 +396,26 @@ function AttendantsView() {
             <Card size="small" className="rounded-lg!">
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <UserOutlined className="text-ink-muted" />
-                  <Text className="w-24 text-ink-secondary">Name</Text>
+                  <UserOutlined className="text-text-muted" />
+                  <Text className="w-24 text-text-secondary">Name</Text>
                   <Text strong>{selectedAttendant.attendantName}</Text>
                 </div>
                 <div className="flex items-center gap-2">
-                  <PhoneOutlined className="text-ink-muted" />
-                  <Text className="w-24 text-ink-secondary">Phone</Text>
+                  <PhoneOutlined className="text-text-muted" />
+                  <Text className="w-24 text-text-secondary">Phone</Text>
                   <Text strong>{selectedAttendant.phone || 'Not set'}</Text>
                 </div>
                 <div className="flex items-center gap-2">
-                  <SafetyOutlined className="text-ink-muted" />
-                  <Text className="w-24 text-ink-secondary">Status</Text>
+                  <SafetyOutlined className="text-text-muted" />
+                  <Text className="w-24 text-text-secondary">Status</Text>
                   <Tag color={selectedAttendant.isActive !== false ? 'green' : 'red'}>
                     {selectedAttendant.isActive !== false ? 'Active' : 'Inactive'}
                   </Tag>
                 </div>
                 {selectedAttendant.createdAt && (
                   <div className="flex items-center gap-2">
-                    <CalendarOutlined className="text-ink-muted" />
-                    <Text className="w-24 text-ink-secondary">Joined</Text>
+                    <CalendarOutlined className="text-text-muted" />
+                    <Text className="w-24 text-text-secondary">Joined</Text>
                     <Text>{dayjs(selectedAttendant.createdAt).format('MMM D, YYYY')}</Text>
                   </div>
                 )}

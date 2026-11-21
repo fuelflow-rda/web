@@ -8,7 +8,7 @@ import React from 'react';
  * six copies of the same path, so rebranding meant finding all six.
  *
  * Draws in `currentColor`, so the caller sets the colour the usual way. Every current
- * use sits on an accent-filled tile and passes `var(--accent-on)`.
+ * use sits on a primary-filled tile and passes `var(--on-primary)`.
  *
  * The source of truth for the artwork is `public/brand/relai-mark.svg`; this mirrors
  * it so the app never pays a network request to draw its own logo.

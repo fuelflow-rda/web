@@ -14,10 +14,10 @@ interface TransactionFeedProps {
 }
 
 const paymentConfig: Record<string, { icon: string; color: string; bg: string }> = {
-  CASH: { icon: '💵', color: 'var(--accent)', bg: 'var(--accent-tint)' },
-  CARD: { icon: '💳', color: 'var(--ink-secondary)', bg: 'var(--surface-muted)' },
-  MOMO: { icon: '📱', color: 'var(--warn)', bg: 'var(--warn-tint)' },
-  CREDIT: { icon: '🏦', color: 'var(--product-ev-ac)', bg: 'var(--accent-tint)' },
+  CASH: { icon: '💵', color: 'var(--pay-cash)', bg: 'var(--surface-muted)' },
+  CARD: { icon: '💳', color: 'var(--text-secondary)', bg: 'var(--surface-muted)' },
+  MOMO: { icon: '📱', color: 'var(--warning)', bg: 'var(--warning-tint)' },
+  CREDIT: { icon: '🏦', color: 'var(--product-ev-ac)', bg: 'var(--surface-muted)' },
 };
 
 export default function TransactionFeed({ transactions }: TransactionFeedProps) {
@@ -26,7 +26,7 @@ export default function TransactionFeed({ transactions }: TransactionFeedProps) 
       <div className="py-16">
         <Empty
           description={
-            <span className="text-ink-muted text-sm">No transactions yet</span>
+            <span className="text-text-muted text-sm">No transactions yet</span>
           }
         />
       </div>
@@ -42,7 +42,7 @@ export default function TransactionFeed({ transactions }: TransactionFeedProps) 
         return (
           <div
             key={tx.id}
-            className="flex items-center justify-between px-5 py-3.5 border-b border-line-subtle hover:bg-surface-sunken transition-colors cursor-default"
+            className="flex items-center justify-between px-5 py-3.5 border-b border-border hover:bg-bg transition-colors cursor-default"
           >
             <div className="flex items-center gap-3 min-w-0">
               <div
@@ -59,18 +59,18 @@ export default function TransactionFeed({ transactions }: TransactionFeedProps) 
                   >
                     {productLabel(tx.productType)}
                   </span>
-                  <Text className="text-xs! text-ink-secondary! font-medium!">
+                  <Text className="text-xs! text-text-secondary! font-medium!">
                     {formatQuantity(tx.quantity, tx.unit, 1)}
                   </Text>
                 </div>
-                <Text className="text-[11px]! text-ink-muted! block truncate mt-0.5">
+                <Text className="text-[11px]! text-text-muted! block truncate mt-0.5">
                   {tx.vehiclePlate || 'No plate'} &middot; {tx.paymentMethod}
                 </Text>
               </div>
             </div>
             <div className="text-right shrink-0 ml-3">
-              <Text strong className="text-sm! block text-ink!">{formatRWF(tx.totalAmount)}</Text>
-              <Text className="text-[11px]! text-ink-muted!">
+              <Text strong className="text-sm! block text-text!">{formatRWF(tx.totalAmount)}</Text>
+              <Text className="text-[11px]! text-text-muted!">
                 {dayjs(tx.createdAt).format('HH:mm')}
               </Text>
             </div>

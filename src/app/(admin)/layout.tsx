@@ -100,10 +100,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (!initialized || !user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-surface-sunken">
+      <div className="flex items-center justify-center min-h-screen bg-bg">
         <div className="text-center">
-          <div className="w-12 h-12 rounded-2xl bg-accent flex items-center justify-center mx-auto mb-4">
-            <BrandMark size={24} color="var(--accent-on)" />
+          <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
+            <BrandMark size={24} color="var(--on-primary)" />
           </div>
           <Spin size="large" />
         </div>
@@ -157,25 +157,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         width={272}
         collapsedWidth={80}
         collapsed={collapsed}
-        className="bg-sidebar!"
+        className="bg-sidebar-bg!"
         style={{
           position: 'fixed',
           left: 0,
           top: 0,
           bottom: 0,
           zIndex: 100,
-          borderRight: '1px solid var(--sidebar-border)',
+          borderRight: '1px solid var(--sidebar-line)',
         }}
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center gap-3 px-6 h-16 border-b border-(--sidebar-border)">
-            <div className="flex items-center justify-center w-9 h-9 bg-accent rounded-control shrink-0">
-              <BrandMark size={18} color="var(--accent-on)" />
+          <div className="flex items-center gap-3 px-6 h-16 border-b border-(--sidebar-line)">
+            <div className="flex items-center justify-center w-9 h-9 bg-primary rounded-control shrink-0">
+              <BrandMark size={18} color="var(--on-primary)" />
             </div>
             {!collapsed && (
               <div className="flex items-center gap-2">
-                <Text className="text-(--sidebar-ink)! text-lg! font-extrabold! tracking-tight">Relai</Text>
-                <span className="px-1.5 py-0.5 text-[10px] font-bold text-sidebar-ink bg-sidebar-surface rounded-md">ADMIN</span>
+                <Text className="text-(--sidebar-text)! text-lg! font-extrabold! tracking-tight">Relai</Text>
+                <span className="px-1.5 py-0.5 text-[10px] font-bold text-sidebar-text bg-sidebar-surface rounded-md">ADMIN</span>
               </div>
             )}
           </div>
@@ -183,7 +183,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="flex-1 py-4 sidebar-nav overflow-y-auto">
             {!collapsed && (
               <div className="px-6 pb-3">
-                <span className="text-[10px] font-bold tracking-widest text-(--sidebar-ink-muted) uppercase">
+                <span className="text-[10px] font-bold tracking-widest text-(--sidebar-text-muted) uppercase">
                   Management
                 </span>
               </div>
@@ -208,25 +208,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   type="text"
                   icon={<ArrowLeftOutlined />}
                   onClick={openManagerViewModal}
-                  className="text-(--sidebar-ink-muted)! hover:text-(--sidebar-ink)! w-full! justify-start! rounded-lg! h-9! text-sm! hover:bg-(--sidebar-hover)!"
+                  className="text-(--sidebar-text-muted)! hover:text-(--sidebar-text)! w-full! justify-start! rounded-lg! h-9! text-sm! hover:bg-(--sidebar-surface)!"
                 >
                   {!collapsed && 'Manager View'}
                 </Button>
               )}
               <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} trigger={['click']} placement="topRight">
-                <div className="flex items-center gap-3 cursor-pointer rounded-lg p-2.5 transition-all duration-200 hover:bg-(--sidebar-hover)">
+                <div className="flex items-center gap-3 cursor-pointer rounded-lg p-2.5 transition-all duration-200 hover:bg-(--sidebar-surface)">
                   <div className="relative shrink-0">
                     <Avatar
                       size={40}
-                      className="bg-accent!"
+                      className="bg-primary!"
                       icon={<UserOutlined />}
                     />
-                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-accent rounded-full border-2 border-(--sidebar-bg)" />
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-focus rounded-full border-2 border-sidebar-bg" />
                   </div>
                   {!collapsed && (
                     <div className="min-w-0 flex-1">
-                      <Text className="text-(--sidebar-ink)! text-sm! font-semibold! block truncate">{user.name}</Text>
-                      <span className="inline-block mt-0.5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide rounded-sm bg-sidebar-surface text-sidebar-ink">
+                      <Text className="text-(--sidebar-text)! text-sm! font-semibold! block truncate">{user.name}</Text>
+                      <span className="inline-block mt-0.5 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide rounded-sm bg-sidebar-surface text-sidebar-text">
                         Admin
                       </span>
                     </div>
@@ -240,7 +240,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       <Layout style={{ marginLeft: sidebarWidth, transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
         <Header
-          className="px-6! flex items-center justify-between border-b border-line-subtle sticky top-0 z-50"
+          className="px-6! flex items-center justify-between border-b border-border sticky top-0 z-50"
           style={{
             height: 64,
             background: 'var(--surface)',
@@ -251,28 +251,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               type="text"
               icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
               onClick={() => setCollapsed(!collapsed)}
-              className="text-ink-muted! hover:text-ink-secondary! w-9! h-9! rounded-lg!"
+              className="text-text-muted! hover:text-text-secondary! w-9! h-9! rounded-lg!"
             />
             <div>
-              <h1 className="text-base font-bold text-ink leading-tight">{currentPageTitle}</h1>
-              <p className="text-xs text-ink-muted leading-tight">Admin Dashboard</p>
+              <h1 className="text-base font-bold text-text leading-tight">{currentPageTitle}</h1>
+              <p className="text-xs text-text-muted leading-tight">Admin Dashboard</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <ThemeToggle className="text-ink-muted! hover:text-ink-secondary! w-9! h-9! rounded-lg!" />
+            <ThemeToggle className="text-text-muted! hover:text-text-secondary! w-9! h-9! rounded-lg!" />
             <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} trigger={['click']}>
-            <div className="flex items-center gap-2.5 cursor-pointer hover:bg-surface-sunken rounded-xl px-2 py-1.5 transition-colors">
+            <div className="flex items-center gap-2.5 cursor-pointer hover:bg-bg rounded-xl px-2 py-1.5 transition-colors">
               <Avatar
                 size={32}
-                className="bg-accent!"
+                className="bg-primary!"
                 icon={<UserOutlined />}
               />
-              <span className="text-sm font-semibold text-ink">{user.name}</span>
+              <span className="text-sm font-semibold text-text">{user.name}</span>
             </div>
             </Dropdown>
           </div>
         </Header>
-        <Content className="p-6 min-h-[calc(100vh-64px)]" style={{ background: 'var(--surface-sunken)' }}>
+        <Content className="p-6 min-h-[calc(100vh-64px)]" style={{ background: 'var(--bg)' }}>
           <div className="page-content">
             {children}
           </div>
@@ -289,7 +289,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         okButtonProps={{ disabled: !selectedStationId }}
         destroyOnHidden
       >
-        <p className="text-ink-secondary mb-3">Choose a station to view as manager. The dashboard will show data for that station.</p>
+        <p className="text-text-secondary mb-3">Choose a station to view as manager. The dashboard will show data for that station.</p>
         <Select
           placeholder="Select a station"
           value={selectedStationId}
@@ -299,7 +299,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           allowClear
         />
         {stations.length === 0 && (
-          <p className="text-warn text-sm mt-2">No stations available. Add stations in Admin → Stations first.</p>
+          <p className="text-warning text-sm mt-2">No stations available. Add stations in Admin → Stations first.</p>
         )}
       </Modal>
     </Layout>

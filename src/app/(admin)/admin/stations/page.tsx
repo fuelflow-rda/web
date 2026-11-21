@@ -198,7 +198,7 @@ export default function AdminStationsPage() {
       key: 'name',
       render: (_: unknown, record: Station) => (
         <Space>
-          <BankOutlined className="text-accent" />
+          <BankOutlined className="text-primary" />
           <div>
             <Text strong>{record.name}</Text>
             <br />

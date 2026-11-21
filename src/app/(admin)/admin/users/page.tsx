@@ -409,7 +409,7 @@ function AdminUsersPageInner() {
         <span className="inline-flex items-center gap-2 text-sm">
           <span
             aria-hidden="true"
-            className={`w-2 h-2 rounded-full ${active ? 'bg-accent' : 'bg-ink-disabled'}`}
+            className={`w-2 h-2 rounded-full ${active ? 'bg-success' : 'bg-text-muted'}`}
           />
           {active ? 'Active' : 'Inactive'}
         </span>
