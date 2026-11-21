@@ -54,7 +54,8 @@ export default function PumpPerformanceChart({ data }: PumpPerformanceChartProps
             <stop offset="100%" stopColor={t['chart-2']} stopOpacity={0.5} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke={t['line-subtle']} vertical={false} />
+        {/* recharts 3: with only named Y axes, the grid must name one or it draws no horizontal lines. */}
+        <CartesianGrid yAxisId="revenue" strokeDasharray="3 3" stroke={t['line-subtle']} vertical={false} />
         <XAxis
           dataKey="date"
           tick={{ fontSize: 11, fill: t['ink-muted'], fontWeight: 500 }}
@@ -88,10 +89,11 @@ export default function PumpPerformanceChart({ data }: PumpPerformanceChartProps
             boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)',
             padding: '12px 16px',
           }}
-          formatter={(value: number, name: string) => {
-            if (name.includes('Revenue') || name === 'Discrepancy')
-              return [`RWF ${value.toLocaleString()}`, name];
-            return [`${value.toLocaleString()} ${unit}`, name];
+          formatter={(value, name) => {
+            const v = Number(value ?? 0);
+            const n = String(name ?? '');
+            if (n.includes('Revenue') || n === 'Discrepancy') return [`RWF ${v.toLocaleString()}`, n];
+            return [`${v.toLocaleString()} ${unit}`, n];
           }}
           labelStyle={{ fontWeight: 700, marginBottom: 4 }}
         />

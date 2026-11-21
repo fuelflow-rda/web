@@ -52,7 +52,10 @@ export default function RevenueChart({ data, onPointClick }: RevenueChartProps) 
         onClick={
           onPointClick
             ? (state) => {
-                if (typeof state?.activeTooltipIndex === 'number') onPointClick(state.activeTooltipIndex);
+                // recharts 3 reports the index as a string; 2.x sent a number.
+                const raw = state?.activeTooltipIndex;
+                const index = raw === null || raw === undefined || raw === '' ? NaN : Number(raw);
+                if (Number.isInteger(index)) onPointClick(index);
               }
             : undefined
         }
@@ -72,7 +75,8 @@ export default function RevenueChart({ data, onPointClick }: RevenueChartProps) 
             <stop offset="100%" stopColor={t['chart-3']} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke={t['line-subtle']} vertical={false} />
+        {/* recharts 3: with only named Y axes, the grid must name one or it draws no horizontal lines. */}
+        <CartesianGrid yAxisId="revenue" strokeDasharray="3 3" stroke={t['line-subtle']} vertical={false} />
         <XAxis
           dataKey="hour"
           tick={{ fontSize: 11, fill: t['ink-muted'], fontWeight: 500 }}
@@ -102,10 +106,12 @@ export default function RevenueChart({ data, onPointClick }: RevenueChartProps) 
             boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)',
             padding: '12px 16px',
           }}
-          formatter={(value: number, name: string) => {
-            if (name === 'Revenue') return [`RWF ${value.toLocaleString()}`, name];
-            if (name === 'kWh') return [`${value.toLocaleString()} kWh`, name];
-            return [`${value.toLocaleString()} L`, name];
+          formatter={(value, name) => {
+            const v = Number(value ?? 0);
+            const n = String(name ?? '');
+            if (n === 'Revenue') return [`RWF ${v.toLocaleString()}`, n];
+            if (n === 'kWh') return [`${v.toLocaleString()} kWh`, n];
+            return [`${v.toLocaleString()} L`, n];
           }}
           labelStyle={{ fontWeight: 700, marginBottom: 4 }}
         />

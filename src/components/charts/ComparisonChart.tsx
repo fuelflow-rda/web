@@ -61,7 +61,7 @@ export default function ComparisonChart({ data, labels }: ComparisonChartProps) 
             boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)',
             padding: '12px 16px',
           }}
-          formatter={(value: number, name: string) => [value.toLocaleString(), name]}
+          formatter={(value, name) => [Number(value ?? 0).toLocaleString(), String(name ?? '')]}
           labelStyle={{ fontWeight: 700, marginBottom: 4 }}
         />
         <Legend wrapperStyle={{ fontSize: 12, fontWeight: 600 }} />

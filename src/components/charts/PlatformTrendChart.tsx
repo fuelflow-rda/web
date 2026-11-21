@@ -62,7 +62,8 @@ export default function PlatformTrendChart({
             <stop offset="100%" stopColor={revenueColor} stopOpacity={0.02} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke={t['line-subtle']} vertical={false} />
+        {/* recharts 3: with only named Y axes, the grid must name one or it draws no horizontal lines. */}
+        <CartesianGrid yAxisId="revenue" strokeDasharray="3 3" stroke={t['line-subtle']} vertical={false} />
         <XAxis
           dataKey="day"
           stroke={t['ink-muted']}
@@ -95,11 +96,11 @@ export default function PlatformTrendChart({
             borderRadius: 12,
             color: t['ink'],
           }}
-          formatter={(value: number, name: string) =>
-            name === 'Revenue'
-              ? [`RWF ${value.toLocaleString('en-US')}`, name]
-              : [value.toLocaleString('en-US'), name]
-          }
+          formatter={(value, name) => {
+            const v = Number(value ?? 0);
+            const n = String(name ?? '');
+            return n === 'Revenue' ? [`RWF ${v.toLocaleString('en-US')}`, n] : [v.toLocaleString('en-US'), n];
+          }}
         />
         <Legend wrapperStyle={{ fontSize: 12 }} />
         <Area
