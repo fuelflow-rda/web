@@ -112,306 +112,91 @@ select:-webkit-autofill:focus {
   background: var(--text-muted);
 }
 
-/* ===== BUTTON LEVELS =====
-   Primary (filled) is rationed to one per screen; everything else steps down to
-   tinted, outlined or text. No shadows — focus is communicated with a ring. */
+/* ===== ANT DESIGN =====
+   Colours, sizes, radii, borders and focus come from the antd theme, which is
+   built from the tokens (src/theme/antd-theme.ts). Only what the theme cannot
+   express is set here. antd's styles sit in `@layer antd`, so these unlayered
+   rules win without !important. */
 
-.ant-btn {
-  border-radius: var(--radius-control) !important;
-  height: var(--size-control) !important;
-  font-weight: 600 !important;
-  box-shadow: none !important;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
+/* Dialog and drawer footers: one filled action; Cancel is a ghost button. */
+.ant-modal-footer .ant-btn-default:not(.ant-btn-dangerous),
+.ant-drawer-footer .ant-btn-default:not(.ant-btn-dangerous) {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-secondary);
 }
 
-.ant-btn:focus-visible {
-  outline: none !important;
-  box-shadow: var(--shadow-focus) !important;
+.ant-modal-footer .ant-btn-default:not(.ant-btn-dangerous):hover,
+.ant-drawer-footer .ant-btn-default:not(.ant-btn-dangerous):hover {
+  background: var(--surface-muted);
+  color: var(--text);
 }
 
-/* Primary — filled accent */
-.ant-btn-primary:not(.ant-btn-dangerous) {
-  background: var(--primary) !important;
-  border-color: var(--primary) !important;
-  color: var(--on-primary) !important;
-}
-
-.ant-btn-primary:not(.ant-btn-dangerous):hover {
-  background: var(--primary-hover) !important;
-  border-color: var(--primary-hover) !important;
-}
-
-.ant-btn-primary:not(.ant-btn-dangerous):active {
-  background: var(--primary-hover) !important;
-  border-color: var(--primary-hover) !important;
-}
-
-/* Outlined — the default secondary */
-.ant-btn-default:not(.ant-btn-dangerous) {
-  background: var(--surface) !important;
-  border-color: var(--border) !important;
-  color: var(--text) !important;
-}
-
-.ant-btn-default:not(.ant-btn-dangerous):hover {
-  background: var(--bg) !important;
-  border-color: var(--border-strong) !important;
-  color: var(--text) !important;
-}
-
-/* Tinted — quieter than outlined, still clearly actionable. Opt in per button. */
-.ant-btn.btn-tinted,
-.ant-btn.btn-tinted.ant-btn-default {
-  background: var(--surface-muted) !important;
-  border-color: transparent !important;
-  color: var(--primary) !important;
-}
-
-.ant-btn.btn-tinted:hover,
-.ant-btn.btn-tinted.ant-btn-default:hover {
-  background: var(--surface-muted) !important;
-  border-color: transparent !important;
-  color: var(--primary) !important;
-}
-
-/* Text / link */
-.ant-btn-text:not(.ant-btn-dangerous),
-.ant-btn-link:not(.ant-btn-dangerous) {
-  color: var(--primary) !important;
-  background: transparent !important;
-  border-color: transparent !important;
-}
-
-.ant-btn-text:not(.ant-btn-dangerous):hover,
-.ant-btn-link:not(.ant-btn-dangerous):hover {
-  background: var(--surface-muted) !important;
-  color: var(--primary-hover) !important;
-}
-
-/* Destructive — filled is reserved for irreversible physical actions */
-.ant-btn-primary.ant-btn-dangerous {
-  background: var(--danger) !important;
-  border-color: var(--danger) !important;
-  color: var(--on-primary) !important;
-}
-
-.ant-btn-primary.ant-btn-dangerous:hover {
-  background: var(--danger) !important;
-  border-color: var(--danger) !important;
-}
-
-.ant-btn-primary.ant-btn-dangerous:active {
-  background: var(--danger) !important;
-  border-color: var(--danger) !important;
-}
-
-/* Destructive quiet — the default for ordinary deletes */
-.ant-btn-default.ant-btn-dangerous {
-  background: var(--surface) !important;
-  border-color: var(--danger) !important;
-  color: var(--danger) !important;
-}
-
-.ant-btn-default.ant-btn-dangerous:hover {
-  background: var(--danger-tint) !important;
-  border-color: var(--danger) !important;
-  color: var(--danger) !important;
-}
-
-.ant-btn-text.ant-btn-dangerous,
-.ant-btn-link.ant-btn-dangerous {
-  color: var(--danger) !important;
-  background: transparent !important;
-  border-color: transparent !important;
-}
-
-.ant-btn-text.ant-btn-dangerous:hover,
-.ant-btn-link.ant-btn-dangerous:hover {
-  background: var(--danger-tint) !important;
-  color: var(--danger) !important;
-}
-
-.ant-btn-dangerous:focus-visible {
-  box-shadow: var(--shadow-focus-danger) !important;
-}
-
-/* Dialog footers: one filled action, and Cancel steps down to text. */
-.ant-modal-footer .ant-btn-default:not(.ant-btn-dangerous) {
-  background: transparent !important;
-  border-color: transparent !important;
-  color: var(--text-secondary) !important;
-}
-
-.ant-modal-footer .ant-btn-default:not(.ant-btn-dangerous):hover {
-  background: var(--surface-muted) !important;
-  border-color: transparent !important;
-  color: var(--text) !important;
-}
-
-/* Disabled beats every level above */
-.ant-btn:disabled,
-.ant-btn.ant-btn-disabled,
-.ant-btn[disabled] {
-  background: var(--surface-muted) !important;
-  border-color: transparent !important;
-  color: var(--text-muted) !important;
-}
-
-/* ===== ANT DESIGN OVERRIDES ===== */
-
-.ant-switch-checked {
-  background-color: var(--primary) !important;
-}
-
-.ant-pagination-item-active {
-  border-color: var(--primary) !important;
-}
-
-.ant-pagination-item-active a {
-  color: var(--primary) !important;
-}
-
-.ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
-  color: var(--primary) !important;
-}
-
-.ant-tabs-ink-bar {
-  background: var(--primary) !important;
-}
-
-.ant-menu-item-selected {
-  background-color: var(--surface-muted) !important;
-  color: var(--primary) !important;
-}
-
+/* Table header: the overline style (Geist Mono 11, caps, +8%). */
 .ant-table-thead > tr > th {
-  background: var(--bg) !important;
-  font-weight: 600 !important;
-  color: var(--text-secondary) !important;
-  font-size: 12px !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
-  border-bottom: 1px solid var(--border) !important;
+  font-family: var(--font-mono);
+  font-size: var(--text-11);
+  font-weight: 500;
+  letter-spacing: var(--tracking-p80);
+  text-transform: uppercase;
 }
 
-.ant-table-tbody > tr {
-  transition: background-color 0.15s ease !important;
-}
-
-.ant-table-tbody > tr:hover > td {
-  background: var(--bg) !important;
-}
-
-/* Hairline geometry: borders carry the structure, not shadow. */
-.ant-card {
-  border-radius: var(--radius-card) !important;
-  border: 1px solid var(--border) !important;
-  box-shadow: none !important;
-  transition: border-color 0.2s ease !important;
-}
-
-.ant-card:hover {
-  border-color: var(--border) !important;
-}
-
-.ant-card-head {
-  border-bottom: 1px solid var(--border) !important;
-  padding: 16px 24px !important;
-}
-
-.ant-card-head-title {
-  font-weight: 700 !important;
-  font-size: 15px !important;
-  color: var(--text) !important;
-}
-
-.ant-statistic-content-value {
-  font-weight: 700 !important;
-}
-
-/* antd 6 renamed the dialog box from .ant-modal-content to .ant-modal-container. */
-.ant-modal-container {
-  border-radius: 16px !important;
-  overflow: hidden !important;
-}
-
+/* Drawer and dialog heads, as the design's drawer: 24 by 28 padding, H2 title. */
+.ant-drawer-header,
 .ant-modal-header {
-  padding: 20px 24px !important;
-  border-bottom: 1px solid var(--border) !important;
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--border);
 }
 
+.ant-drawer-title,
 .ant-modal-title {
-  font-weight: 700 !important;
-  font-size: 18px !important;
+  font-size: var(--text-22);
+  line-height: 30px;
+  font-weight: 600;
+  letter-spacing: var(--tracking-n10);
 }
 
-.ant-input,
-.ant-input-affix-wrapper,
-.ant-select,
-.ant-picker {
-  border-radius: var(--radius-control) !important;
-  border-color: var(--border) !important;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
-}
-
-.ant-input:focus,
-.ant-input-affix-wrapper:focus,
-.ant-input-affix-wrapper-focused,
-.ant-picker-focused,
-.ant-select-focused {
-  border-color: var(--primary) !important;
-  box-shadow: var(--shadow-focus) !important;
-}
-
-.ant-drawer-header {
-  padding: 20px 24px !important;
-  border-bottom: 1px solid var(--border) !important;
-}
-
-.ant-drawer-title {
-  font-weight: 700 !important;
-  font-size: 18px !important;
-}
-
-/* Tags — preset names are remapped onto the palette so call sites stay declarative. */
+/* Tags: antd's preset colour names map onto the design's status chips (tint
+   background, status text, 6px corners, no border), so call sites stay
+   declarative. */
 .ant-tag {
-  border-radius: 6px !important;
-  font-weight: 600 !important;
-  border: 1px solid transparent !important;
+  border-color: transparent;
+  font-size: var(--text-12);
+  font-weight: 500;
 }
 
 .ant-tag-green,
 .ant-tag-success,
 .ant-tag-cyan {
-  background: var(--surface-muted) !important;
-  border-color: var(--focus) !important;
-  color: var(--primary) !important;
+  background: var(--success-tint);
+  color: var(--success);
 }
 
 .ant-tag-red,
 .ant-tag-error,
 .ant-tag-volcano {
-  background: var(--danger-tint) !important;
-  border-color: var(--danger) !important;
-  color: var(--danger) !important;
+  background: var(--danger-tint);
+  color: var(--danger);
 }
 
 .ant-tag-orange,
 .ant-tag-warning,
 .ant-tag-gold {
-  background: var(--warning-tint) !important;
-  border-color: var(--warning) !important;
-  color: var(--warning) !important;
+  background: var(--warning-tint);
+  color: var(--warning);
 }
 
 .ant-tag-blue,
 .ant-tag-processing,
-.ant-tag-geekblue,
+.ant-tag-geekblue {
+  background: var(--info-tint);
+  color: var(--info);
+}
+
 .ant-tag-purple,
 .ant-tag-default {
-  background: var(--surface-muted) !important;
-  border-color: var(--border) !important;
-  color: var(--text-secondary) !important;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
 }
 
 /* ===== SIDEBAR ===== */

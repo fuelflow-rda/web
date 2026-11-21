@@ -85,9 +85,32 @@ export function buildAntdTheme(mode: ThemeMode): ThemeConfig {
       InputNumber: { activeBorderColor: c.focus, hoverBorderColor: c['border-strong'], activeShadow: focusRing, errorActiveShadow: errorRing },
       Select: { activeBorderColor: c.focus, hoverBorderColor: c['border-strong'], activeOutlineColor: c.focus, optionSelectedBg: c['surface-muted'] },
       DatePicker: { activeBorderColor: c.focus, hoverBorderColor: c['border-strong'], activeShadow: focusRing, errorActiveShadow: errorRing },
-      Card: { borderRadiusLG: radius.card },
+      // Card is the design's Panel: 20px sides, a 47px head (14px above and below a
+      // 15px semibold title), 20px body. The design has one panel size, so the
+      // small card (size="small") gets the same values.
+      Card: {
+        borderRadiusLG: radius.card,
+        headerFontSize: 15,
+        headerFontSizeSM: 15,
+        headerHeight: 47,
+        headerHeightSM: 47,
+        headerPadding: 20,
+        headerPaddingSM: 20,
+        bodyPadding: 20,
+        bodyPaddingSM: 20,
+      },
       Modal: { borderRadiusLG: radius.card, contentBg: c.surface, headerBg: c.surface },
-      Table: { headerBg: c['surface-muted'], headerColor: c['text-muted'], borderColor: c.border, rowHoverBg: c['surface-muted'] },
+      // Rows are 46px: 11px above and below a 14px cell, 20px at the sides.
+      Table: {
+        headerBg: c['surface-muted'],
+        headerColor: c['text-muted'],
+        headerSplitColor: 'transparent',
+        borderColor: c.border,
+        rowHoverBg: c['surface-muted'],
+        cellPaddingBlock: 11,
+        cellPaddingInline: 20,
+        headerBorderRadius: 0,
+      },
       Tag: { borderRadiusSM: radius.chip },
       Segmented: { trackBg: c['surface-muted'], itemSelectedBg: c.surface, itemColor: c['text-secondary'], itemSelectedColor: c.text },
       Tabs: { inkBarColor: c.text, itemColor: c['text-secondary'], itemSelectedColor: c.text, itemHoverColor: c.text },
