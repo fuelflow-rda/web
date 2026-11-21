@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { Input, Select } from 'antd';
-import { CircleCheck, Flag } from 'lucide-react';
+import { Check, CircleCheck, Flag } from 'lucide-react';
 import { Button, Panel, StatusChip, Tag, type StatusTone } from '@/components/ui';
 import { PanelError, PanelSkeleton, clock, num, rwf } from '@/components/overview/panels';
 import { cx } from '@/lib/cx';
@@ -379,7 +379,7 @@ export function ShiftPanel({
                         cellBase,
                         right,
                         'font-mono text-13 font-semibold',
-                        off ? 'text-danger' : 'text-text',
+                        off ? 'text-danger' : s.volumeDifference === null ? 'text-text' : 'text-success',
                       )}
                     >
                       {s.volumeDifference === null ? '—' : signed(s.volumeDifference, data.unit)}
@@ -512,12 +512,20 @@ export function ResolvePanel({
                   }))}
                 />
               ) : null}
-              <div className="mt-2 flex flex-wrap gap-2.5">
-                <Button kind="primary" htmlType="submit" loading={busy === 'explained'} disabled={busy !== null}>
+              <div className="mt-2 flex flex-col gap-2.5">
+                <Button
+                  kind="primary"
+                  htmlType="submit"
+                  icon={Check}
+                  block
+                  loading={busy === 'explained'}
+                  disabled={busy !== null}
+                >
                   Mark as explained
                 </Button>
                 <Button
                   icon={Flag}
+                  block
                   onClick={() => submit('flagged')}
                   loading={busy === 'flagged'}
                   disabled={busy !== null || !chosen}

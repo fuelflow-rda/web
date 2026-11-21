@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { App, DatePicker, Tabs } from 'antd';
 import dayjs from 'dayjs';
-import { CalendarDays, CheckCheck, Fuel, Gauge, Receipt, RefreshCw, TriangleAlert } from 'lucide-react';
+import { CalendarDays, CheckCheck, ChevronDown, Fuel, Gauge, Receipt, RefreshCw, TriangleAlert } from 'lucide-react';
 import ExportButton from '@/components/ExportButton';
 import { Banner, Button, KpiTile, PageHeader, Panel } from '@/components/ui';
 import { focusRing } from '@/components/ui/focus';
@@ -210,7 +210,8 @@ function ReconciliationView() {
               disabledDate={(d) => d.isAfter(dayjs(), 'day')}
               format="ddd D MMM YYYY"
               allowClear={false}
-              suffix={<CalendarDays size={16} aria-hidden />}
+              prefix={<CalendarDays size={16} aria-hidden className="text-text-muted" />}
+              suffix={<ChevronDown size={16} aria-hidden />}
               className="w-52.5"
             />
             <ExportButton
@@ -325,6 +326,7 @@ function ReconciliationView() {
           </section>
 
           <Tabs
+            className="[&_.ant-tabs-nav]:mb-6! [&_.ant-tabs-tab-active]:font-semibold"
             items={[
               {
                 key: 'pump',
