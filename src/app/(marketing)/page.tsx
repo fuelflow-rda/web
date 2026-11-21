@@ -95,7 +95,7 @@ export default function LandingPage() {
             <h1 id="hero-heading" className="m-0 font-display text-48 leading-none font-normal tracking-n10 sm:text-56 lg:text-80">
               Every litre and every kilowatt hour, accounted for.
             </h1>
-            <p className="m-0 text-18 leading-[1.55] text-text-secondary lg:text-20">
+            <p className="m-0 max-w-135 text-18 leading-[1.55] text-text-secondary lg:text-20">
               Relai gives multi-station operators live sales, shift control and automatic daily reconciliation, with an
               attendant app that keeps working when the signal drops.
             </p>
@@ -239,7 +239,7 @@ export default function LandingPage() {
             <div className="flex flex-col gap-6">
               <Overline tone="accent">Contact</Overline>
               <Display id="contact-heading">Ready to see every station in one place?</Display>
-              <p className="m-0 text-17 leading-[1.6] text-text-secondary">
+              <p className="m-0 max-w-110 text-17 leading-[1.6] text-text-secondary">
                 Tell us how many stations you run. We will walk you through the dashboard and the attendant app with your
                 own pumps and prices.
               </p>

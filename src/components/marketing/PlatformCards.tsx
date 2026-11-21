@@ -9,7 +9,7 @@ import { cx } from '@/lib/cx';
  */
 export function PlatformCards() {
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid gap-6 lg:grid-cols-2 lg:gap-y-13.5">
       <Card
         icon={Smartphone}
         title="Attendant app for Android and iOS"
@@ -104,7 +104,7 @@ function Card({ icon: Icon, title, text, picture, children }: { icon: LucideIcon
         <h3 className="m-0 text-22 font-semibold tracking-n10 lg:text-24">{title}</h3>
         <p className="m-0 text-16 leading-[1.55] text-text-secondary">{text}</p>
       </div>
-      <div role="img" aria-label={picture} className="mt-auto flex flex-col gap-3 rounded-12 border border-border bg-surface-muted p-4 lg:p-5">
+      <div role="img" aria-label={picture} className="mt-auto flex flex-col gap-3 rounded-12 border border-border bg-bg p-4 lg:p-5">
         <div aria-hidden className="flex flex-col gap-3">
           {children}
         </div>

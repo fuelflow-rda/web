@@ -14,9 +14,9 @@ export function HeroVisual() {
     <div
       role="img"
       aria-label="The Relai dashboard showing today's revenue, fuel dispensed and a reconciliation, beside the attendant app on a phone listing recent sales"
-      // The design's frame: 560 by 640, the window 600 wide from the left, the phone
+      // The design's frame: 560 by 672 (the phone's full height), the window 600 wide from the left, the phone
       // overlapping it at 420. Between 1280 and 1440 wide it is scaled down to stay on screen.
-      className="relative h-160 w-140 origin-top-left max-[1439px]:scale-[0.88]"
+      className="relative h-168 w-140 origin-top-left max-[1439px]:scale-[0.88]"
     >
       <div aria-hidden data-theme="light" className="absolute top-14 left-0 h-130 w-150 overflow-hidden rounded-16 border border-border bg-bg text-text">
         <div className="flex items-center gap-2 border-b border-border bg-surface px-5 py-3">
