@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Input, InputNumber, Modal, Select } from 'antd';
+import { App, Input, InputNumber, Modal, Select } from 'antd';
 import { Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import api from '@/lib/api';
 import { Banner, Button, PageHeader, Panel, StatusChip, Tag } from '@/components/ui';
@@ -40,6 +40,7 @@ interface StationRef {
  * the live view; this one is for setting them up.
  */
 export default function AdminPumpsPage() {
+  const { modal } = App.useApp();
   const [stations, setStations] = useState<StationRef[] | null>(null);
   const [station, setStation] = useState<string | undefined>();
   const [q, setQ] = useState('');
@@ -106,7 +107,7 @@ export default function AdminPumpsPage() {
   );
 
   const remove = (p: PointRow) =>
-    Modal.confirm({
+    modal.confirm({
       title: `Delete ${pointLabel(p.pump_number, p.product_type)} at ${stationName.get(p.station_id)?.name ?? 'this station'}?`,
       content:
         'Only a pump with no sales or readings can be deleted. One with history can be taken out of service instead.',

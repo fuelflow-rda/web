@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Drawer, Modal } from 'antd';
+import { App, Drawer } from 'antd';
 import { MailPlus, MapPinPlus, Pencil, Trash2 } from 'lucide-react';
 import { Banner, Button, KpiTile, PageHeader, Panel, StatusChip, TextField, type StatusTone } from '@/components/ui';
 import { focusRing } from '@/components/ui/focus';
@@ -233,6 +233,7 @@ export function CompanyView({
   platform: boolean;
   startInviting?: boolean;
 }) {
+  const { modal } = App.useApp();
   const router = useRouter();
   const overview = usePolled(`company-${companyId}`, () => getCompanyOverview(companyId), 60_000);
   const admins = usePolled(
@@ -255,7 +256,7 @@ export function CompanyView({
   };
 
   const remove = () =>
-    Modal.confirm({
+    modal.confirm({
       title: `Delete ${o?.company.name}?`,
       content: 'This removes the company, its stations, people and records. It cannot be undone.',
       okText: 'Delete company',

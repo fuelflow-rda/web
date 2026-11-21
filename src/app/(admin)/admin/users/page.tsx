@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Drawer, Input, Modal, Select } from 'antd';
+import { App, Drawer, Input, Select } from 'antd';
 import { KeyRound, MailPlus, Search, Trash2, UserX } from 'lucide-react';
 import api from '@/lib/api';
 import ExportButton from '@/components/ExportButton';
@@ -471,6 +471,7 @@ function UserDrawer({
   onClose: () => void;
   onDone: (m: string) => void;
 }) {
+  const { modal } = App.useApp();
   const [busy, setBusy] = useState<string | null>(null);
   const [problem, setProblem] = useState('');
   const [pin, setPin] = useState('');
@@ -491,7 +492,7 @@ function UserDrawer({
     }
   };
   const remove = () =>
-    Modal.confirm({
+    modal.confirm({
       title: `Delete ${user.name ?? user.email}?`,
       content:
         'Their sign-in is removed. Sales and records they made stay, under their name. Deactivating is usually enough.',

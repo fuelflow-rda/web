@@ -4,7 +4,7 @@ import React, { useEffect } from 'react';
 // Must stay on the same version range as antd's own dependency (see package.json),
 // so this StyleProvider and antd share one cssinjs context.
 import { StyleProvider } from '@ant-design/cssinjs';
-import { ConfigProvider } from 'antd';
+import { App as AntApp, ConfigProvider } from 'antd';
 import { AuthBootstrap } from '@/components/AuthBootstrap';
 import { useThemeStore } from '@/store/theme-store';
 import { buildAntdTheme } from '@/theme/antd-theme';
@@ -30,8 +30,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <StyleProvider layer>
       <ConfigProvider theme={buildAntdTheme(mode)}>
-        <AuthBootstrap />
-        {children}
+        {/* Gives modal.confirm (App.useApp) the theme; the static Modal.confirm
+            renders outside this provider in antd's default colours. */}
+        <AntApp component={false}>
+          <AuthBootstrap />
+          {children}
+        </AntApp>
       </ConfigProvider>
     </StyleProvider>
   );

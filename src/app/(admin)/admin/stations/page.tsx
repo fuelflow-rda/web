@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Input, Modal, Select } from 'antd';
+import { App, Input, Modal, Select } from 'antd';
 import { MapPinPlus, Pencil, Search, Trash2 } from 'lucide-react';
 import api from '@/lib/api';
 import { Banner, Button, PageHeader, Panel, TextField } from '@/components/ui';
@@ -35,6 +35,7 @@ export default function StationsPage() {
 }
 
 function StationsView() {
+  const { modal } = App.useApp();
   const params = useSearchParams();
   const me = useAuthStore((s) => s.user);
   const platform = me?.role === 'SUPERADMIN';
@@ -97,7 +98,7 @@ function StationsView() {
   }, [query, company, sort, page, platform, nonce]);
 
   const remove = (s: StationRow) =>
-    Modal.confirm({
+    modal.confirm({
       title: `Delete ${s.name}?`,
       content: 'Its pumps, prices, shifts and sales go with it. This cannot be undone.',
       okText: 'Delete station',

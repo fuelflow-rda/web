@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { DatePicker, Modal, Tabs } from 'antd';
+import { App, DatePicker, Tabs } from 'antd';
 import dayjs from 'dayjs';
 import { CalendarDays, CheckCheck, RefreshCw } from 'lucide-react';
 import ExportButton from '@/components/ExportButton';
@@ -59,6 +59,7 @@ export default function ReconciliationPage() {
 }
 
 function ReconciliationView() {
+  const { modal } = App.useApp();
   const router = useRouter();
   const params = useSearchParams();
   const { currentStation } = useStationStore();
@@ -147,7 +148,7 @@ function ReconciliationView() {
   const confirmReview = () => {
     if (!report) return;
     if (report.unresolvedCount === 0) return void run('review');
-    Modal.confirm({
+    modal.confirm({
       title: 'Mark the day reviewed?',
       content: `${report.unresolvedCount} ${report.unresolvedCount === 1 ? 'line still has' : 'lines still have'} no decision. The audit log will say the day was signed off with ${report.unresolvedCount === 1 ? 'it' : 'them'} open.`,
       okText: 'Mark reviewed',
