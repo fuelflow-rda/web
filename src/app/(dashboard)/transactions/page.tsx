@@ -4,10 +4,10 @@ import { Suspense, useCallback, useEffect, useMemo, useState, type FormEvent } f
 import { useSearchParams } from 'next/navigation';
 import { DatePicker, Drawer, Input, Segmented, Select } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
-import { Flag, FlagOff, Search, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, Flag, FlagOff, Search, X } from 'lucide-react';
 import api from '@/lib/api';
 import ExportButton from '@/components/ExportButton';
-import { Banner, Button, PageHeader, StatusChip, Tag, type StatusTone } from '@/components/ui';
+import { Banner, Button, PageHeader, RowMenu, StatusChip, Tag, type StatusTone } from '@/components/ui';
 import { focusRing } from '@/components/ui/focus';
 import { PanelError, PanelSkeleton, clock, num, rwf } from '@/components/overview/panels';
 import { kigaliWindow, ymd } from '@/lib/kigali';
@@ -32,7 +32,10 @@ const SORTS: Record<Sort, { label: string; sortBy: string; sortOrder: 'asc' | 'd
   amount: { label: 'Largest amount', sortBy: 'total_amount', sortOrder: 'desc' },
   quantity: { label: 'Largest quantity', sortBy: 'quantity', sortOrder: 'desc' },
 };
-const PAGE = 20;
+/** Rows per page, as the design shows them. */
+const PAGE = 12;
+/** Columns of figures, set right-aligned so the digits line up. */
+const NUMERIC = new Set(['Quantity', 'Price', 'Amount']);
 
 const PAY: Record<string, string> = { CASH: 'Cash', MOMO: 'MoMo', CARD: 'Card' };
 const STATUS: Record<'pending' | 'locked' | 'voided', { label: string; tone: StatusTone; title: string }> = {
@@ -141,6 +144,19 @@ function TransactionsView() {
   const [pumps, setPumps] = useState<Array<{ id: string; pump_number: number; product_type: string }>>([]);
   const [attendants, setAttendants] = useState<Array<{ id: string; name: string }>>([]);
   const [open, setOpen] = useState<Sale | null>(null);
+  const [flagging, setFlagging] = useState(false);
+  const [menuProblem, setMenuProblem] = useState<string | null>(null);
+
+  /** "Remove flag" from a row's menu: no reason needed, so it acts at once. */
+  const unflag = async (sale: Sale) => {
+    setMenuProblem(null);
+    try {
+      await api.delete(`/transactions/${sale.id}/flag`);
+      setSales((list) => (list ?? []).map((x) => (x.id === sale.id ? { ...x, is_flagged: false, flag_reason: null } : x)));
+    } catch (err) {
+      setMenuProblem(err instanceof Error ? err.message : 'The flag could not be removed.');
+    }
+  };
 
   // Typing settles for a moment before it searches.
   useEffect(() => {
@@ -382,11 +398,9 @@ function TransactionsView() {
             }}
           />
         ) : null}
-        {filtered ? (
-          <Button kind="ghost" icon={X} onClick={clear} className="sm:ml-auto">
-            Clear filters
-          </Button>
-        ) : null}
+        <Button kind="ghost" icon={X} onClick={clear} disabled={!filtered} className="sm:ml-auto">
+          Clear filters
+        </Button>
       </div>
       {slot.dow !== undefined || slot.hour !== undefined ? (
         <Banner tone="info" title="Showing one slot from the Overview's activity chart">
@@ -400,6 +414,7 @@ function TransactionsView() {
         </Banner>
       ) : null}
 
+      {menuProblem ? <Banner tone="danger" title={menuProblem} /> : null}
       <dl
         aria-label="Summary"
         className="m-0 flex flex-wrap gap-x-10 gap-y-3 rounded-card bg-surface-muted px-5 py-3.5"
@@ -470,10 +485,13 @@ function TransactionsView() {
                     'Plate',
                     'Status',
                   ].map((h) => (
-                    <th key={h} scope="col" className={head}>
+                    <th key={h} scope="col" className={cx(head, NUMERIC.has(h) && 'text-right')}>
                       {h}
                     </th>
                   ))}
+                  <th scope="col" className={head}>
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -513,15 +531,15 @@ function TransactionsView() {
                           {productCode(s.product_type)}
                         </Tag>
                       </td>
-                      <td className={cx(cell, 'font-mono text-13 whitespace-nowrap text-text')}>
+                      <td className={cx(cell, 'text-right font-mono text-13 whitespace-nowrap text-text')}>
                         {formatMeter(s.quantity, s.unit)}
                       </td>
-                      <td className={cx(cell, 'font-mono text-13 text-text-secondary')}>{num(s.unit_price)}</td>
+                      <td className={cx(cell, 'text-right font-mono text-13 text-text-secondary')}>{num(s.unit_price)}</td>
                       <td
                         className={cx(
                           cell,
-                          'font-mono text-13 font-semibold',
-                          voided ? 'text-text-muted line-through' : 'text-text',
+                          'text-right font-mono text-13 font-semibold',
+                          voided ? 'text-text-muted' : 'text-text',
                         )}
                       >
                         {num(s.total_amount)}
@@ -536,6 +554,25 @@ function TransactionsView() {
                       <td className={cell} title={st.title}>
                         <StatusChip tone={st.tone}>{st.label}</StatusChip>
                       </td>
+                      <td className={cx(cell, 'w-12 text-right')}>
+                        <RowMenu
+                          label={`Actions for the sale at ${dateTime(s.timestamp)}`}
+                          items={[
+                            { key: 'open', label: 'View details', icon: Eye, onClick: () => setOpen(s) },
+                            s.is_flagged
+                              ? { key: 'unflag', label: 'Remove flag', icon: FlagOff, onClick: () => void unflag(s) }
+                              : {
+                                  key: 'flag',
+                                  label: 'Flag for review…',
+                                  icon: Flag,
+                                  onClick: () => {
+                                    setFlagging(true);
+                                    setOpen(s);
+                                  },
+                                },
+                          ]}
+                        />
+                      </td>
                     </tr>
                   );
                 })}
@@ -548,10 +585,15 @@ function TransactionsView() {
             {total === 0 ? 'No results' : `Showing ${num(first)} to ${num(last)} of ${num(total)}`}
           </p>
           <div className="flex gap-2">
-            <Button disabled={page <= 1 || loading} onClick={() => setPage((p) => p - 1)}>
+            <Button icon={ChevronLeft} disabled={page <= 1 || loading} onClick={() => setPage((p) => p - 1)}>
               Previous
             </Button>
-            <Button disabled={last >= total || loading} onClick={() => setPage((p) => p + 1)}>
+            <Button
+              icon={ChevronRight}
+              iconPlacement="end"
+              disabled={last >= total || loading}
+              onClick={() => setPage((p) => p + 1)}
+            >
               Next
             </Button>
           </div>
@@ -560,7 +602,11 @@ function TransactionsView() {
 
       <SaleDrawer
         sale={open}
-        onClose={() => setOpen(null)}
+        focusFlag={flagging}
+        onClose={() => {
+          setOpen(null);
+          setFlagging(false);
+        }}
         onChanged={(s) => {
           setOpen(s);
           setSales((list) => (list ?? []).map((x) => (x.id === s.id ? s : x)));
@@ -573,10 +619,13 @@ function TransactionsView() {
 /** Everything about one sale, and flagging it for a closer look. Not designed; built from the components. */
 function SaleDrawer({
   sale,
+  focusFlag = false,
   onClose,
   onChanged,
 }: {
   sale: Sale | null;
+  /** Opened from the row menu's "Flag for review": the cursor starts in the reason. */
+  focusFlag?: boolean;
   onClose: () => void;
   onChanged: (s: Sale) => void;
 }) {
@@ -677,6 +726,7 @@ function SaleDrawer({
             </label>
             <Input.TextArea
               id="flag-reason"
+              autoFocus={focusFlag}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="What looks wrong: the amount, the pump, the payment…"

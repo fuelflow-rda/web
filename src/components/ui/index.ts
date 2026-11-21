@@ -15,6 +15,7 @@ export { IconButton } from './IconButton';
 export { KpiTile, type KpiDelta } from './KpiTile';
 export { NavItem } from './NavItem';
 export { PageHeader } from './PageHeader';
+export { RowMenu, type RowMenuItem } from './RowMenu';
 export { Panel } from './Panel';
 export { StatusChip, type StatusTone } from './StatusChip';
 export { Tag } from './Tag';
