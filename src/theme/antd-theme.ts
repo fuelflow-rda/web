@@ -71,20 +71,73 @@ export function buildAntdTheme(mode: ThemeMode): ThemeConfig {
       boxShadowTertiary: hairline,
     },
     components: {
+      // Button md: 38px, 16px sides, 14px semibold label, 16px icon 8px from it.
+      // Button lg: 51px, 24px sides, 16px label, 10px corners. Ghost is the
+      // text button in text-secondary; hover states are not drawn in the design,
+      // so they step to the next quiet surface.
       Button: {
         primaryShadow: 'none',
         defaultShadow: 'none',
         dangerShadow: 'none',
         fontWeight: 600,
+        contentFontSize: 14,
+        contentFontSizeLG: 16,
         paddingInline: 16,
+        paddingInlineLG: 24,
+        controlHeightLG: 51,
+        borderRadiusLG: radius['control-lg'],
+        iconGap: 8,
         defaultBorderColor: c['border-strong'],
         defaultColor: c.text,
         defaultBg: c.surface,
+        defaultHoverBg: c['surface-muted'],
+        defaultHoverColor: c.text,
+        defaultHoverBorderColor: c['border-strong'],
+        defaultActiveBg: c['surface-muted'],
+        defaultActiveColor: c.text,
+        defaultActiveBorderColor: c['border-strong'],
+        textTextColor: c['text-secondary'],
+        textTextHoverColor: c.text,
+        textTextActiveColor: c.text,
+        textHoverBg: c['surface-muted'],
       },
-      Input: { activeBorderColor: c.focus, hoverBorderColor: c['border-strong'], activeShadow: focusRing, errorActiveShadow: errorRing },
-      InputNumber: { activeBorderColor: c.focus, hoverBorderColor: c['border-strong'], activeShadow: focusRing, errorActiveShadow: errorRing },
-      Select: { activeBorderColor: c.focus, hoverBorderColor: c['border-strong'], activeOutlineColor: c.focus, optionSelectedBg: c['surface-muted'] },
-      DatePicker: { activeBorderColor: c.focus, hoverBorderColor: c['border-strong'], activeShadow: focusRing, errorActiveShadow: errorRing },
+      // Fields are 41px: 11px above and below 15px text, 14px at the sides (antd
+      // counts the 1px border inside the padding).
+      Input: { inputFontSize: 15, paddingBlock: 8, paddingInline: 13, activeBorderColor: c.focus, hoverBorderColor: c['border-strong'], activeShadow: focusRing, errorActiveShadow: errorRing },
+      InputNumber: { inputFontSize: 15, paddingBlock: 8, paddingInline: 13, activeBorderColor: c.focus, hoverBorderColor: c['border-strong'], activeShadow: focusRing, errorActiveShadow: errorRing },
+      Select: { controlHeight: 41, fontSize: 15, activeBorderColor: c.focus, hoverBorderColor: c['border-strong'], activeOutlineColor: c.focus, optionSelectedBg: c['surface-muted'] },
+      DatePicker: { controlHeight: 41, fontSize: 15, activeBorderColor: c.focus, hoverBorderColor: c['border-strong'], activeShadow: focusRing, errorActiveShadow: errorRing },
+      // Checkbox: an 18px box with 4px corners.
+      Checkbox: { controlInteractiveSize: 18, borderRadiusSM: radius.badge },
+      // Toggle: a 36 by 20 track with a 16px thumb.
+      Switch: { trackHeight: 20, trackMinWidth: 36, handleSize: 16, trackPadding: 2 },
+      // Segmented: 3px track padding around 29px items, 13px labels.
+      Segmented: {
+        trackPadding: 3,
+        trackBg: c['surface-muted'],
+        itemSelectedBg: c.surface,
+        itemColor: c['text-secondary'],
+        itemSelectedColor: c.text,
+        itemHoverColor: c.text,
+        itemHoverBg: 'transparent',
+        itemActiveBg: 'transparent',
+        controlHeight: 29,
+        fontSize: 13,
+        borderRadius: radius.control,
+        borderRadiusSM: radius.chip,
+      },
+      // Tabs: 28px apart, 10px under the label, a 2px text-coloured underline.
+      Tabs: {
+        horizontalItemGutter: 28,
+        horizontalItemPadding: '0 0 10px',
+        horizontalMargin: '0',
+        titleFontSize: 14,
+        inkBarColor: c.text,
+        itemColor: c['text-secondary'],
+        itemSelectedColor: c.text,
+        itemHoverColor: c.text,
+        itemActiveColor: c.text,
+      },
       // Card is the design's Panel: 20px sides, a 47px head (14px above and below a
       // 15px semibold title), 20px body. The design has one panel size, so the
       // small card (size="small") gets the same values.
@@ -112,9 +165,6 @@ export function buildAntdTheme(mode: ThemeMode): ThemeConfig {
         headerBorderRadius: 0,
       },
       Tag: { borderRadiusSM: radius.chip },
-      Segmented: { trackBg: c['surface-muted'], itemSelectedBg: c.surface, itemColor: c['text-secondary'], itemSelectedColor: c.text },
-      Tabs: { inkBarColor: c.text, itemColor: c['text-secondary'], itemSelectedColor: c.text, itemHoverColor: c.text },
-      Checkbox: { borderRadiusSM: radius.badge },
     },
   };
 }
