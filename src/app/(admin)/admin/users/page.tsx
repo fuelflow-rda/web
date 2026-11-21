@@ -1,770 +1,611 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import {
-  Table,
-  Card,
-  Button,
-  Typography,
-  Tag,
-  Space,
-  Modal,
-  Form,
-  Input,
-  Select,
-  Switch,
-  message,
-  Popconfirm,
-  Tooltip,
-  Alert,
-} from 'antd';
-import type { TablePaginationConfig } from 'antd/es/table';
-import {
-  PlusOutlined,
-  EditOutlined,
-  StopOutlined,
-  CheckCircleOutlined,
-  EyeOutlined,
-  KeyOutlined,
-} from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
+import { Suspense, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Drawer, Input, Modal, Select } from 'antd';
+import { KeyRound, MailPlus, Search, Trash2, UserX } from 'lucide-react';
 import api from '@/lib/api';
+import ExportButton from '@/components/ExportButton';
+import { Banner, Button, PageHeader, StatusChip, TextField, type StatusTone } from '@/components/ui';
+import { focusRing } from '@/components/ui/focus';
+import { initialsOf } from '@/components/ui/Avatar';
+import { PanelError, PanelSkeleton, num } from '@/components/overview/panels';
+import { getUsers, resendInvite, type Paged, type UserRow } from '@/components/admin/data';
+import { lastActive } from '@/components/admin/format';
+import { cx } from '@/lib/cx';
+import { formatRwandaPhone } from '@/lib/phone';
 import { useAuthStore } from '@/store/auth-store';
 import { useStationStore } from '@/store/station-store';
-import type { User, Station } from '@/types';
-import { InitialsAvatar } from '@/components/InitialsAvatar';
 
-const { Title, Text } = Typography;
+const ROLE: Record<UserRow['role'], string> = {
+  superadmin: 'Platform admin',
+  company_admin: 'Company admin',
+  station_manager: 'Station manager',
+  attendant: 'Attendant',
+};
+const STATUS: Record<UserRow['account_status'], { label: string; tone: StatusTone }> = {
+  active: { label: 'Active', tone: 'success' },
+  on_shift: { label: 'On shift', tone: 'success' },
+  pin_locked: { label: 'PIN locked', tone: 'danger' },
+  not_synced: { label: 'Not synced', tone: 'warning' },
+  invited: { label: 'Invite sent', tone: 'info' },
+  deactivated: { label: 'Deactivated', tone: 'neutral' },
+};
+const PAGE = 20;
 
-/* Plain words, not codes: the role column is read far more often than filtered. */
-const roleLabels: Record<string, string> = {
-  ADMIN: 'Company admin',
-  MANAGER: 'Station manager',
-  ATTENDANT: 'Attendant',
+const shortName = (n?: string | null) => {
+  const p = (n ?? '').trim().split(/\s+/).filter(Boolean);
+  return p.length > 1 ? `${p[0]} ${p[p.length - 1][0]}.` : (p[0] ?? '');
 };
 
-const API_ROLE_TO_UI: Record<string, User['role']> = { company_admin: 'ADMIN', station_manager: 'MANAGER', attendant: 'ATTENDANT' };
-const UI_ROLE_TO_API: Record<string, string> = { ADMIN: 'company_admin', MANAGER: 'station_manager', ATTENDANT: 'attendant' };
-
-function roleFormSelectOptions(isSuperAdmin: boolean, editingUser: User | null) {
-  const all = [
-    { value: 'ADMIN', label: 'Admin' },
-    { value: 'MANAGER', label: 'Manager' },
-    { value: 'ATTENDANT', label: 'Attendant' },
-  ];
-  if (isSuperAdmin) return all;
-  const withoutCompanyAdmin = all.filter((o) => o.value !== 'ADMIN');
-  if (editingUser?.role === 'ADMIN') {
-    return [{ value: 'ADMIN' as const, label: 'Admin', disabled: true }, ...withoutCompanyAdmin];
-  }
-  return withoutCompanyAdmin;
-}
-
-function mapUserFromApi(raw: Record<string, unknown>): User {
-  const station = raw.stations as Record<string, unknown> | undefined;
-  const companies = raw.companies as { id?: string; name?: string } | null | undefined;
-  return {
-    id: raw.id as string,
-    email: (raw.email as string) ?? '',
-    name: (raw.name as string) ?? '',
-    phone: raw.phone as string | undefined,
-    role: API_ROLE_TO_UI[raw.role as string] ?? 'ATTENDANT',
-    stationId: raw.station_id as string | undefined,
-    station: station ? { id: station.id as string, name: station.name as string, companyId: station.company_id as string, location: (station.location as string) ?? '', isActive: true, createdAt: '', updatedAt: '' } as Station : undefined,
-    companyId: raw.company_id as string | undefined,
-    companyName: companies?.name,
-    isActive: raw.is_active !== false,
-    createdAt: (raw.created_at as string) ?? '',
-    updatedAt: (raw.updated_at as string) ?? '',
-  };
-}
-
-function mapStationFromApi(raw: Record<string, unknown>): Station {
-  return {
-    id: raw.id as string,
-    companyId: (raw.company_id as string) ?? '',
-    name: (raw.name as string) ?? '',
-    location: (raw.location as string) ?? '',
-    isActive: true,
-    createdAt: (raw.created_at as string) ?? '',
-    updatedAt: (raw.updated_at as string) ?? '',
-  };
-}
-
-function AdminUsersPageInner() {
-  const router = useRouter();
-  const authUser = useAuthStore((s) => s.user);
-  const setCurrentStationById = useStationStore((s) => s.setCurrentStationById);
-  const isSuperAdmin = authUser?.role === 'SUPERADMIN';
-  const [companies, setCompanies] = useState<{ id: string; name: string }[]>([]);
-  const searchParams = useSearchParams();
-  // Deep link target for "Admins" on the Companies page, so that button can land
-  // here already narrowed instead of dropping the superadmin into every user.
-  const [companyFilter, setCompanyFilter] = useState<string | undefined>(
-    () => searchParams.get('company_id') ?? undefined,
+export default function UsersPage() {
+  return (
+    <Suspense>
+      <UsersView />
+    </Suspense>
   );
-  const [users, setUsers] = useState<User[]>([]);
-  const [stations, setStations] = useState<Station[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [form] = Form.useForm();
-  const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string | undefined>(
-    () => searchParams.get('role') ?? undefined,
-  );
-  const [resetUser, setResetUser] = useState<User | null>(null);
-  const [resetForm] = Form.useForm();
-  const [issuedPassword, setIssuedPassword] = useState<string | null>(null);
-  const [stationFilter, setStationFilter] = useState<string | undefined>();
-  const [sortBy, setSortBy] = useState('created_at');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+}
+
+function UsersView() {
+  const params = useSearchParams();
+  const me = useAuthStore((s) => s.user);
+  const platform = me?.role === 'SUPERADMIN';
+  const { stations, fetchStations } = useStationStore();
+  const [q, setQ] = useState(params.get('search') ?? '');
+  const [query, setQuery] = useState(q);
+  const [role, setRole] = useState<string | undefined>();
+  const [company, setCompany] = useState<string | undefined>();
+  const [status, setStatus] = useState<string | undefined>();
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  const [total, setTotal] = useState(0);
-
-  const fetchStationsList = useCallback(async () => {
-    try {
-      const res = await api.get('/stations', {
-        params: { limit: 500, ...(isSuperAdmin && companyFilter ? { company_id: companyFilter } : {}) },
-      });
-      const raw = (res.data as { data?: unknown[] })?.data ?? (Array.isArray(res.data) ? res.data : []);
-      return raw.map((s: Record<string, unknown>) => mapStationFromApi(s));
-    } catch {
-      return [];
-    }
-  }, [isSuperAdmin, companyFilter]);
+  const [result, setResult] = useState<Paged<UserRow> | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const [nonce, setNonce] = useState(0);
+  const [companies, setCompanies] = useState<Array<{ id: string; name: string }>>([]);
+  const [inviting, setInviting] = useState(false);
+  const [open, setOpen] = useState<UserRow | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isSuperAdmin) return;
-    (async () => {
-      try {
-        const res = await api.get('/companies');
-        const raw = Array.isArray(res.data) ? res.data : [];
-        setCompanies(raw.map((c: Record<string, unknown>) => ({ id: c.id as string, name: (c.name as string) ?? '' })));
-      } catch {
-        setCompanies([]);
-      }
-    })();
-  }, [isSuperAdmin]);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [usersRes, stationsList] = await Promise.all([
-        api.get('/users', {
-          params: {
-            search: search || undefined,
-            role: roleFilter ? { ADMIN: 'company_admin', MANAGER: 'station_manager', ATTENDANT: 'attendant' }[roleFilter] : undefined,
-            station_id: stationFilter,
-            company_id: isSuperAdmin ? companyFilter : undefined,
-            sortBy,
-            sortOrder,
-            page,
-            limit: pageSize,
-          },
-        }),
-        fetchStationsList(),
-      ]);
-      setStations(stationsList);
-      const payload = usersRes.data as { data?: unknown[]; pagination?: { total: number } };
-      const rawUsers = payload?.data ?? (Array.isArray(usersRes.data) ? usersRes.data : []);
-      setTotal(payload?.pagination?.total ?? rawUsers.length);
-      setUsers(
-        rawUsers.map((u: Record<string, unknown>) => {
-          const mapped = mapUserFromApi(u);
-          if (mapped.stationId) {
-            const st = stationsList.find((s) => s.id === mapped.stationId);
-            if (st) mapped.station = st;
-          }
-          return mapped;
-        }),
-      );
-    } catch {
-      message.error('Failed to load users or stations');
-    } finally {
-      setLoading(false);
-    }
-  }, [search, roleFilter, stationFilter, companyFilter, sortBy, sortOrder, page, pageSize, fetchStationsList, isSuperAdmin]);
-
+    const t = window.setTimeout(() => setQuery(q.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [q]);
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    void fetchStations();
+    if (platform)
+      api
+        .get('/companies')
+        .then((r) =>
+          setCompanies(
+            ((r.data as Array<{ id: string; name: string }>) ?? []).map((c) => ({ id: c.id, name: c.name })),
+          ),
+        )
+        .catch(() => {});
+  }, [platform, fetchStations]);
 
-  const openCreate = () => {
-    setEditingUser(null);
-    form.resetFields();
-    if (isSuperAdmin && companyFilter) {
-      form.setFieldsValue({ companyId: companyFilter });
-    }
-    setModalOpen(true);
+  const filterKey = JSON.stringify([query, role, company, status]);
+  const [lastFilter, setLastFilter] = useState(filterKey);
+  if (filterKey !== lastFilter) {
+    setLastFilter(filterKey);
+    setPage(1);
+  }
+  const requestKey = JSON.stringify([filterKey, page, nonce]);
+  useEffect(() => {
+    let live = true;
+    const p: Record<string, unknown> = { page, limit: PAGE, sortBy: 'last_seen_at', sortOrder: 'desc' };
+    if (query) p.search = query;
+    if (role) p.role = role;
+    if (company) p.company_id = company;
+    if (status) p.status = status;
+    getUsers(p)
+      .then((r) => live && (setResult(r), setError(null)))
+      .catch((err: Error) => live && setError(err.message))
+      .finally(() => live && setLoadedKey(requestKey));
+    return () => {
+      live = false;
+    };
+  }, [requestKey, page, query, role, company, status]);
+  const loading = loadedKey !== requestKey;
+
+  const stationName = useMemo(() => new Map(stations.map((s) => [s.id, s.name])), [stations]);
+  const rows = result?.data ?? [];
+  const total = result?.pagination.total ?? 0;
+  const changed = (m: string) => {
+    setNotice(m);
+    setOpen(null);
+    setInviting(false);
+    setNonce((n) => n + 1);
   };
 
-  const openEdit = (user: User) => {
-    setEditingUser(user);
-    form.setFieldsValue({
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-      stationId: user.stationId,
-      isActive: user.isActive,
-      // Company is required whenever an admin is in the form. Leaving it unset
-      // made every edit fail validation on a field the update never sends.
-      companyId: user.companyId,
-    });
-    setModalOpen(true);
-  };
-
-  const handleSubmit = async (values: Record<string, unknown>) => {
-    setSubmitting(true);
-    try {
-      if (editingUser) {
-        await api.patch(`/users/${editingUser.id}`, {
-          name: values.name,
-          station_id: values.stationId,
-          phone: values.phone,
-          pin: values.pin,
-          is_active: values.isActive,
-          // Attendants have no email; sending one back would be rejected outright.
-          ...(editingUser.role === 'ATTENDANT' ? {} : { email: values.email }),
-        });
-        message.success('User updated');
-      } else {
-        const authUserNow = useAuthStore.getState().user;
-        const companyId =
-          (values.companyId as string) ??
-          authUserNow?.companyId ??
-          (values.stationId && stations.find((s) => s.id === values.stationId)?.companyId);
-        if (!companyId) {
-          message.error(
-            isSuperAdmin ? 'Select a company (or pick a station so we can infer it).' : 'Company is required. Ensure you are assigned to a company.',
-          );
-          setSubmitting(false);
-          return;
-        }
-        const body: Record<string, unknown> = {
-          name: values.name,
-          company_id: companyId,
-          station_id: ['MANAGER', 'ATTENDANT'].includes(values.role as string) ? values.stationId : undefined,
-          role: UI_ROLE_TO_API[values.role as string] ?? 'attendant',
-        };
-        if (values.role === 'ATTENDANT') {
-          body.phone = values.phone ?? '';
-          body.pin = String(values.pin ?? '').padEnd(4, '0').slice(0, 6);
-          if (!body.phone || !body.pin) {
-            message.error('Attendants require phone and PIN');
-            setSubmitting(false);
-            return;
-          }
-        } else {
-          body.email = values.email;
-          body.password = values.password;
-          if (values.phone) body.phone = values.phone;
-          if (!body.email || !body.password) {
-            message.error('Admins and managers require email and password');
-            setSubmitting(false);
-            return;
-          }
-        }
-        await api.post('/users', body);
-        message.success('User created');
-      }
-      setModalOpen(false);
-      form.resetFields();
-      fetchData();
-    } catch (err: unknown) {
-      const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message: string }).message) : 'Operation failed';
-      message.error(msg);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const previewManagerStation = (record: User) => {
-    const sid = record.stationId;
-    if (!sid) {
-      message.warning('This manager has no station assigned yet.');
-      return;
-    }
-    setCurrentStationById(sid);
-    message.info(`Opening manager view for ${record.station?.name ?? 'station'}…`);
-    router.push('/dashboard');
-  };
-
-  const openReset = (user: User) => {
-    setResetUser(user);
-    setIssuedPassword(null);
-    resetForm.resetFields();
-    resetForm.setFieldsValue({ sendEmail: false });
-  };
-
-  const handleReset = async (values: { password?: string; sendEmail?: boolean }) => {
-    if (!resetUser) return;
-    setSubmitting(true);
-    try {
-      const res = await api.post(`/users/${resetUser.id}/reset-password`, {
-        ...(values.password?.trim() ? { password: values.password.trim() } : {}),
-        send_email: !!values.sendEmail,
-      });
-      const data = res.data as { emailSent?: boolean; temporary_password?: string };
-      if (data.emailSent) {
-        message.success(`New password emailed to ${resetUser.email}`);
-        setResetUser(null);
-      } else if (data.temporary_password) {
-        // Held on screen rather than dropped into a toast: this is the only time
-        // the password is visible, and whoever ran the reset has to pass it on.
-        setIssuedPassword(data.temporary_password);
-      } else {
-        message.success('Password updated');
-        setResetUser(null);
-      }
-    } catch (err: unknown) {
-      const msg =
-        err && typeof err === 'object' && 'response' in err
-          ? String(
-              (err as { response?: { data?: { message?: string } } }).response?.data?.message ??
-                'Failed to reset password',
-            )
-          : 'Failed to reset password';
-      message.error(msg);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const toggleActive = async (user: User) => {
-    try {
-      await api.patch(`/users/${user.id}`, { is_active: !user.isActive });
-      message.success(`User ${user.isActive ? 'Deactivated' : 'Activated'}`);
-      fetchData();
-    } catch {
-      message.error('Failed to update user');
-    }
-  };
-
-  const columns: ColumnsType<User> = [
-    {
-      title: 'User',
-      key: 'user',
-      render: (_: unknown, record: User) => (
-        <div className="flex items-center gap-3">
-          <InitialsAvatar name={record.name} />
-          <div className="min-w-0">
-            <Text strong className="block truncate">{record.name}</Text>
-            <Text type="secondary" className="text-xs block truncate">
-              {record.email || record.phone || 'No contact details'}
-            </Text>
-          </div>
-        </div>
-      ),
-    },
-    ...(isSuperAdmin
-      ? [
-          {
-            title: 'Company',
-            dataIndex: 'companyName',
-            key: 'companyName',
-            width: 180,
-            render: (name: string | undefined) =>
-              name ? (
-                <span className="whitespace-nowrap">{name}</span>
-              ) : (
-                <Text type="secondary">Not assigned</Text>
-              ),
-          } as const,
-        ]
-      : []),
-    {
-      title: 'Role',
-      dataIndex: 'role',
-      key: 'role',
-      width: 160,
-      render: (role: string) => <Tag>{roleLabels[role] ?? role}</Tag>,
-    },
-    {
-      title: 'Station',
-      key: 'station',
-      render: (_: unknown, record: User) =>
-        record.station?.name || (
-          <Text type="secondary">{record.role === 'ADMIN' ? 'All stations' : 'Not assigned'}</Text>
-        ),
-    },
-    {
-      title: 'Phone',
-      dataIndex: 'phone',
-      key: 'phone',
-      width: 160,
-      render: (v: string) => v || <Text type="secondary">Not set</Text>,
-    },
-    {
-      title: 'Status',
-      dataIndex: 'isActive',
-      key: 'isActive',
-      width: 120,
-      render: (active: boolean) => (
-        <span className="inline-flex items-center gap-2 text-sm">
-          <span
-            aria-hidden="true"
-            className={`w-2 h-2 rounded-full ${active ? 'bg-success' : 'bg-text-muted'}`}
-          />
-          {active ? 'Active' : 'Inactive'}
-        </span>
-      ),
-    },
-    {
-      title: 'Joined',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      width: 130,
-      render: (d: string) => (
-        <span className="whitespace-nowrap">{d ? dayjs(d).format('D MMM YYYY') : ''}</span>
-      ),
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      width: isSuperAdmin ? 200 : 240,
-      render: (_: unknown, record: User) => (
-        <Space>
-          {record.role === 'MANAGER' && (
-            <Tooltip title="Open the station dashboard as a manager would see it (same data scope)">
-              <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => previewManagerStation(record)}>
-                Preview
-              </Button>
-            </Tooltip>
-          )}
-          <Tooltip title="Edit">
-            <Button type="text" icon={<EditOutlined />} aria-label="Edit user" onClick={() => openEdit(record)} />
-          </Tooltip>
-          {record.role !== 'ATTENDANT' && (
-            <Tooltip title="Set a new sign-in password">
-              <Button type="text" icon={<KeyOutlined />} aria-label="Reset password" onClick={() => openReset(record)} />
-            </Tooltip>
-          )}
-          <Popconfirm
-            title={`${record.isActive ? 'Deactivate' : 'Activate'} this user?`}
-            onConfirm={() => toggleActive(record)}
-          >
-            <Button
-              type="text"
-              icon={record.isActive ? <StopOutlined /> : <CheckCircleOutlined />}
-              danger={record.isActive}
-              aria-label={record.isActive ? 'Deactivate user' : 'Activate user'}
-            />
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
-
-  const handleTableChange = (pagination: TablePaginationConfig) => {
-    if (pagination.current) setPage(pagination.current);
-    if (pagination.pageSize) setPageSize(pagination.pageSize);
-  };
+  const head =
+    'px-3 py-2.5 text-left type-overline text-11 font-medium whitespace-nowrap text-text-muted first:pl-5 last:pr-5';
+  const cell = 'border-t border-border px-3 py-3 first:pl-5 last:pr-5';
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <Title level={3} className="mb-0!">Users</Title>
-          <Text type="secondary">
-            {isSuperAdmin
-              ? 'Manage managers, attendants, and company administrators'
-              : 'Add managers and attendants; use Preview on a manager row to open their station dashboard'}
-          </Text>
-        </div>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          Add User
-        </Button>
-      </div>
-
-      <Card className="rounded-xl!">
-        <div className="flex flex-wrap items-center gap-3 mb-4">
-          <Input.Search
-            placeholder="Search name, email or phone"
-            allowClear
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="w-full sm:w-72"
-          />
-          <Select
-            placeholder="All roles"
-            allowClear
-            value={roleFilter}
-            onChange={(v) => { setRoleFilter(v); setPage(1); }}
-            options={[
-              { value: 'ADMIN', label: 'Company admins' },
-              { value: 'MANAGER', label: 'Station managers' },
-              { value: 'ATTENDANT', label: 'Attendants' },
-            ]}
-            className="w-44"
-          />
-          {isSuperAdmin && (
-            <Select
-              placeholder="All companies"
-              allowClear
-              showSearch
-              optionFilterProp="label"
-              value={companyFilter}
-              onChange={(v) => { setCompanyFilter(v); setStationFilter(undefined); setPage(1); }}
-              options={companies.map((c) => ({ value: c.id, label: c.name }))}
-              className="w-52"
+    <>
+      <PageHeader
+        title="Users"
+        description={
+          result
+            ? `${num(total)} ${total === 1 ? 'person' : 'people'}${platform && companies.length ? ` across ${companies.length} companies` : ''} · administrators and managers use the web, attendants use the app`
+            : 'Administrators and managers use the web, attendants use the app'
+        }
+        actions={
+          <>
+            <ExportButton
+              filename="users"
+              data={rows.map((u) => ({
+                name: u.name ?? '',
+                contact: u.email ?? formatRwandaPhone(u.phone),
+                role: ROLE[u.role],
+                company: u.companies?.name ?? '',
+                station: u.stations?.name ?? (u.role === 'company_admin' ? 'All stations' : ''),
+                last: lastActive(u),
+                status: STATUS[u.account_status].label,
+              }))}
+              columns={[
+                { header: 'Name', key: 'name' },
+                { header: 'Email or phone', key: 'contact' },
+                { header: 'Role', key: 'role' },
+                { header: 'Company', key: 'company' },
+                { header: 'Station', key: 'station' },
+                { header: 'Last active', key: 'last' },
+                { header: 'Status', key: 'status' },
+              ]}
             />
-          )}
+            <Button kind="primary" icon={MailPlus} onClick={() => setInviting(true)}>
+              Invite user
+            </Button>
+          </>
+        }
+      />
+      {notice ? <Banner tone="success" title={notice} /> : null}
+
+      <div role="search" aria-label="Filter people" className="flex flex-wrap gap-3">
+        <Input
+          aria-label="Search name, email or phone"
+          placeholder="Search name, email or phone"
+          prefix={<Search size={16} aria-hidden className="text-text-muted" />}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          allowClear
+          className="w-full sm:w-70"
+        />
+        <Select
+          aria-label="Role"
+          placeholder="All roles"
+          allowClear
+          value={role}
+          onChange={setRole}
+          className="w-full sm:w-45"
+          options={(['company_admin', 'station_manager', 'attendant'] as const).map((r) => ({
+            value: r,
+            label: ROLE[r],
+          }))}
+        />
+        {platform ? (
           <Select
-            placeholder="All stations"
+            aria-label="Company"
+            placeholder="All companies"
             allowClear
             showSearch
             optionFilterProp="label"
-            value={stationFilter}
-            onChange={(v) => { setStationFilter(v); setPage(1); }}
-            options={stations.map((s) => ({ value: s.id, label: s.name }))}
-            className="w-48"
+            value={company}
+            onChange={setCompany}
+            className="w-full sm:w-45"
+            options={companies.map((c) => ({ value: c.id, label: c.name }))}
           />
-          <Select
-            value={`${sortBy}:${sortOrder}`}
-            onChange={(v: string) => {
-              const [by, order] = v.split(':');
-              setSortBy(by);
-              setSortOrder(order as 'asc' | 'desc');
-              setPage(1);
-            }}
-            options={[
-              { value: 'created_at:desc', label: 'Newest first' },
-              { value: 'created_at:asc', label: 'Oldest first' },
-              { value: 'name:asc', label: 'Name, A to Z' },
-              { value: 'name:desc', label: 'Name, Z to A' },
-              { value: 'role:asc', label: 'By role' },
-            ]}
-            className="w-40"
-          />
-          {(search || roleFilter || stationFilter || (isSuperAdmin && companyFilter)) && (
-            <Button
-              type="link"
-              onClick={() => {
-                setSearch('');
-                setRoleFilter(undefined);
-                setStationFilter(undefined);
-                if (isSuperAdmin) setCompanyFilter(undefined);
-                setPage(1);
-              }}
-            >
-              Clear filters
-            </Button>
-          )}
-        </div>
-        <Table
-          columns={columns}
-          dataSource={users}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            current: page,
-            pageSize,
-            total,
-            showSizeChanger: true,
-            showTotal: (t) => `${t} users`,
-          }}
-          onChange={handleTableChange}
-          size="middle"
-          locale={{ emptyText: 'No users match these filters.' }}
+        ) : null}
+        <Select
+          aria-label="Status"
+          placeholder="All statuses"
+          allowClear
+          value={status}
+          onChange={setStatus}
+          className="w-full sm:w-45"
+          options={[
+            { value: 'active', label: 'Active' },
+            { value: 'invited', label: 'Invite sent' },
+            { value: 'pin_locked', label: 'PIN locked' },
+            { value: 'deactivated', label: 'Deactivated' },
+          ]}
         />
-      </Card>
+      </div>
 
-      <Modal
-        title={editingUser ? 'Edit User' : 'Create User'}
-        open={modalOpen}
-        onCancel={() => setModalOpen(false)}
-        footer={null}
-        destroyOnHidden
-        width={520}
+      <section
+        aria-labelledby="people-title"
+        className="min-w-0 overflow-hidden rounded-card border border-border bg-surface"
       >
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <Form.Item name="name" label="Full Name" rules={[{ required: true }]}>
-            <Input placeholder="John Doe" />
-          </Form.Item>
-          <Form.Item name="role" label="Role" rules={[{ required: true }]}>
-            <Select options={roleFormSelectOptions(isSuperAdmin, editingUser)} />
-          </Form.Item>
-          <Form.Item noStyle shouldUpdate={(p, c) => p.role !== c.role}>
-            {({ getFieldValue }) =>
-              isSuperAdmin && getFieldValue('role') === 'ADMIN' ? (
-                <Form.Item
-                  name="companyId"
-                  label="Company"
-                  rules={[{ required: true, message: 'Select company for this admin' }]}
-                >
-                  <Select
-                    placeholder="Select company"
-                    showSearch
-                    optionFilterProp="label"
-                    /* Fixed once the account exists: update has no path for moving
-                       an admin to another company. */
-                    disabled={!!editingUser}
-                    options={companies.map((c) => ({ value: c.id, label: c.name }))}
-                  />
-                </Form.Item>
-              ) : null}
-          </Form.Item>
-          <Form.Item
-            noStyle
-            shouldUpdate={(prev, cur) => prev.role !== cur.role}
-          >
-            {({ getFieldValue }) =>
-              ['MANAGER', 'ATTENDANT'].includes(getFieldValue('role')) ? (
-                <Form.Item name="stationId" label="Assign to Station" rules={[{ required: true }]}>
-                  <Select
-                    placeholder="Select a station"
-                    options={stations.map((s) => ({ value: s.id, label: s.name }))}
-                  />
-                </Form.Item>
-              ) : null
-            }
-          </Form.Item>
-          <Form.Item
-            noStyle
-            shouldUpdate={(prev, cur) => prev.role !== cur.role}
-          >
-            {({ getFieldValue }) => {
-              const role = getFieldValue('role');
-              if (role === 'ATTENDANT') {
-                return (
-                  <>
-                    <Form.Item name="phone" label="Phone number" rules={[{ required: !editingUser }]}>
-                      <Input placeholder="e.g. +250 788 123 456" />
-                    </Form.Item>
-                    {!editingUser && (
-                      <Form.Item name="pin" label="PIN (4 to 6 digits)" rules={[{ required: true, min: 4, max: 6, message: 'Enter 4 to 6 digits' }]}>
-                        <Input.Password placeholder="1234" maxLength={6} />
-                      </Form.Item>
-                    )}
-                  </>
-                );
-              }
-              if (['ADMIN', 'MANAGER'].includes(role)) {
-                return (
-                  <>
-                    <Form.Item name="phone" label="Phone number">
-                      <Input placeholder="e.g. +250 788 123 456" />
-                    </Form.Item>
-                    <Form.Item
-                      name="email"
-                      label="Email"
-                      rules={[{ required: !editingUser, type: 'email' }]}
+        <header className="flex flex-col gap-0.5 border-b border-border px-5 py-3.5">
+          <h2 id="people-title" className="m-0 text-15 font-semibold text-text">
+            {num(total)} {total === 1 ? 'person' : 'people'}
+          </h2>
+          <p className="m-0 text-12 text-text-muted">Most recently active first</p>
+        </header>
+        {error && !result ? (
+          <div className="p-5">
+            <PanelError message="People could not be loaded." onRetry={() => setNonce((n) => n + 1)} />
+          </div>
+        ) : !result ? (
+          <div className="p-5">
+            <PanelSkeleton rows={8} />
+          </div>
+        ) : rows.length === 0 ? (
+          <p className="m-0 px-5 py-12 text-center text-14 text-text-secondary">Nobody matches these filters.</p>
+        ) : (
+          <div className={cx('overflow-x-auto transition-opacity', loading && 'opacity-60')}>
+            <table className="w-full min-w-225 border-collapse">
+              <thead className="bg-surface-muted">
+                <tr>
+                  {['Person', 'Role', ...(platform ? ['Company'] : []), 'Station', 'Last active', 'Status'].map((h) => (
+                    <th key={h} scope="col" className={head}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((u) => {
+                  const s = STATUS[u.account_status];
+                  const contact =
+                    u.account_status === 'invited' && u.invited_by_name
+                      ? `Invited by ${shortName(u.invited_by_name)}`
+                      : (u.email ?? formatRwandaPhone(u.phone));
+                  return (
+                    <tr
+                      key={u.id}
+                      onClick={() => setOpen(u)}
+                      className="cursor-pointer transition-colors hover:bg-surface-muted"
                     >
-                      <Input placeholder="admin@example.com" />
-                    </Form.Item>
-                    {!editingUser && (
-                      <Form.Item
-                        name="password"
-                        label="Password"
-                        rules={[{ required: true, min: 8, message: 'Minimum 8 characters' }]}
-                      >
-                        <Input.Password placeholder="Minimum 8 characters" />
-                      </Form.Item>
-                    )}
-                  </>
-                );
-              }
-              return null;
-            }}
-          </Form.Item>
-          {editingUser && (
-            <Form.Item name="isActive" label="Active" valuePropName="checked">
-              <Switch />
-            </Form.Item>
-          )}
-          <div className="flex justify-end gap-2">
-            <Button onClick={() => setModalOpen(false)}>Cancel</Button>
-            <Button type="primary" htmlType="submit" loading={submitting}>
-              {editingUser ? 'Update' : 'Create'}
+                      <th scope="row" className={cx(cell, 'text-left font-normal')}>
+                        <button
+                          type="button"
+                          onClick={(e) => (e.stopPropagation(), setOpen(u))}
+                          className={cx(
+                            'flex cursor-pointer items-center gap-3 border-0 bg-transparent p-0 text-left',
+                            focusRing,
+                          )}
+                        >
+                          <span
+                            aria-hidden
+                            className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface-muted text-12 font-semibold text-text-secondary"
+                          >
+                            {initialsOf(u.name || u.email || '?')}
+                          </span>
+                          <span className="flex flex-col gap-0.5">
+                            <span className="text-14 font-semibold text-text">{u.name || u.email}</span>
+                            <span className={cx('text-12 text-text-muted', !u.email && 'font-mono')}>{contact}</span>
+                          </span>
+                        </button>
+                      </th>
+                      <td className={cx(cell, 'text-14 whitespace-nowrap text-text')}>{ROLE[u.role]}</td>
+                      {platform ? <td className={cx(cell, 'text-14 text-text')}>{u.companies?.name ?? '—'}</td> : null}
+                      <td className={cx(cell, 'text-14 text-text')}>
+                        {u.role === 'company_admin'
+                          ? 'All stations'
+                          : (u.stations?.name ?? (u.station_id ? stationName.get(u.station_id) : null) ?? '—')}
+                      </td>
+                      <td className={cx(cell, 'text-14 whitespace-nowrap text-text-secondary')}>{lastActive(u)}</td>
+                      <td className={cell}>
+                        <StatusChip tone={s.tone}>{s.label}</StatusChip>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3">
+          <p className="m-0 text-13 text-text-secondary" aria-live="polite">
+            {total === 0
+              ? 'No results'
+              : `Showing ${num((page - 1) * PAGE + 1)} to ${num(Math.min(page * PAGE, total))} of ${num(total)}`}
+          </p>
+          <div className="flex gap-2">
+            <Button disabled={page <= 1 || loading} onClick={() => setPage((p) => p - 1)}>
+              Previous
+            </Button>
+            <Button disabled={page * PAGE >= total || loading} onClick={() => setPage((p) => p + 1)}>
+              Next
             </Button>
           </div>
-        </Form>
-      </Modal>
+        </footer>
+      </section>
 
-      <Modal
-        open={!!resetUser}
-        title={`Reset password — ${resetUser?.name ?? ''}`}
-        onCancel={() => setResetUser(null)}
-        footer={
-          issuedPassword
-            ? [
-                <Button key="done" type="primary" onClick={() => setResetUser(null)}>
-                  Done
-                </Button>,
-              ]
-            : null
-        }
-        destroyOnHidden
-      >
-        {issuedPassword ? (
-          <Alert
-            type="success"
-            showIcon
-            message="Password updated"
-            description={
-              <div className="space-y-2">
-                <div>
-                  Give this to <strong>{resetUser?.name}</strong>. It is shown once and
-                  cannot be retrieved later.
-                </div>
-                <Input.TextArea
-                  readOnly
-                  autoSize
-                  value={issuedPassword}
-                  onFocus={(e) => e.currentTarget.select()}
-                  className="font-mono!"
-                />
-              </div>
-            }
-          />
-        ) : (
-          <Form form={resetForm} layout="vertical" onFinish={handleReset}>
-            <Text type="secondary" className="block mb-4">
-              Signs in as {resetUser?.email}. Their current password stops working
-              immediately.
-            </Text>
-            <Form.Item
-              name="password"
-              label="New password"
-              extra="Leave blank to generate a strong one."
-              rules={[{ min: 8, message: 'At least 8 characters' }]}
-            >
-              <Input.Password placeholder="Generate automatically" autoComplete="new-password" />
-            </Form.Item>
-            <Form.Item name="sendEmail" label="Email it to them" valuePropName="checked">
-              <Switch />
-            </Form.Item>
-            <Text type="secondary" className="block mb-4 text-xs">
-              Emailing requires RESEND_API_KEY and MAIL_FROM on the API. Left off, the
-              password is shown here for you to pass on.
-            </Text>
-            <div className="flex justify-end gap-2">
-              <Button onClick={() => setResetUser(null)}>Cancel</Button>
-              <Button type="primary" htmlType="submit" loading={submitting} danger>
-                Reset password
-              </Button>
-            </div>
-          </Form>
-        )}
-      </Modal>
-    </div>
+      <InviteUserDrawer
+        open={inviting}
+        platform={platform}
+        companies={companies}
+        onClose={() => setInviting(false)}
+        onDone={changed}
+      />
+      <UserDrawer user={open} meId={me?.id ?? null} onClose={() => setOpen(null)} onDone={changed} />
+    </>
   );
 }
 
-/**
- * `useSearchParams` opts the tree into client-side rendering, and Next needs the
- * boundary spelled out or the static build of this route fails.
- */
-export default function AdminUsersPage() {
+function InviteUserDrawer({
+  open,
+  platform,
+  companies,
+  onClose,
+  onDone,
+}: {
+  open: boolean;
+  platform: boolean;
+  companies: Array<{ id: string; name: string }>;
+  onClose: () => void;
+  onDone: (m: string) => void;
+}) {
+  const me = useAuthStore((s) => s.user);
+  const { stations } = useStationStore();
+  const [role, setRole] = useState<'company_admin' | 'station_manager'>('station_manager');
+  const [companyId, setCompanyId] = useState<string | undefined>(me?.companyId);
+  const [stationId, setStationId] = useState<string | undefined>();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [problem, setProblem] = useState('');
+  const [saving, setSaving] = useState(false);
+  const companyStations = stations.filter((s) => !companyId || s.companyId === companyId);
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (name.trim().length < 2) return setProblem('Enter their name.');
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) return setProblem('Enter an email such as name@company.rw.');
+    if (!companyId) return setProblem('Choose their company.');
+    if (role === 'station_manager' && !stationId) return setProblem('Choose the station they manage.');
+    setSaving(true);
+    setProblem('');
+    try {
+      const res = await api.post('/users', {
+        name: name.trim(),
+        email: email.trim(),
+        role,
+        company_id: companyId,
+        ...(role === 'station_manager' ? { station_id: stationId } : {}),
+      });
+      const invite = (res.data as { invite?: { sent: boolean } }).invite;
+      setName('');
+      setEmail('');
+      onDone(
+        invite?.sent
+          ? `Invitation sent to ${email.trim()}.`
+          : `${name.trim()} is added, but the invitation could not be emailed. Resend it once mail is set up.`,
+      );
+    } catch (err) {
+      setProblem(err instanceof Error ? err.message : 'The invitation could not be sent.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <Suspense fallback={null}>
-      <AdminUsersPageInner />
-    </Suspense>
+    <Drawer
+      open={open}
+      onClose={onClose}
+      size={460}
+      title="Invite user"
+      footer={
+        <div className="flex gap-2.5 py-1">
+          <Button kind="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button kind="primary" icon={MailPlus} htmlType="submit" form="invite-user" loading={saving}>
+            Send invitation
+          </Button>
+        </div>
+      }
+    >
+      <form id="invite-user" onSubmit={submit} noValidate className="flex flex-col gap-5">
+        <p className="m-0 text-14 text-text-secondary">
+          They get an email with a link to set their own password. Attendants are added from the Attendants page, with a
+          phone number and PIN.
+        </p>
+        {problem ? <Banner tone="danger" title={problem} /> : null}
+        <div className="flex flex-col gap-2">
+          <label htmlFor="iu-role" className="text-13 font-medium text-text-secondary">
+            Role
+          </label>
+          <Select
+            id="iu-role"
+            value={role}
+            onChange={setRole}
+            options={[
+              { value: 'station_manager', label: 'Station manager' },
+              { value: 'company_admin', label: 'Company admin' },
+            ]}
+          />
+        </div>
+        {platform ? (
+          <div className="flex flex-col gap-2">
+            <label htmlFor="iu-company" className="text-13 font-medium text-text-secondary">
+              Company
+            </label>
+            <Select
+              id="iu-company"
+              value={companyId}
+              onChange={(v) => (setCompanyId(v), setStationId(undefined))}
+              showSearch
+              optionFilterProp="label"
+              placeholder="Choose a company"
+              options={companies.map((c) => ({ value: c.id, label: c.name }))}
+            />
+          </div>
+        ) : null}
+        {role === 'station_manager' ? (
+          <div className="flex flex-col gap-2">
+            <label htmlFor="iu-station" className="text-13 font-medium text-text-secondary">
+              Station
+            </label>
+            <Select
+              id="iu-station"
+              value={stationId}
+              onChange={setStationId}
+              placeholder="Choose a station"
+              options={companyStations.map((s) => ({ value: s.id, label: s.name }))}
+            />
+          </div>
+        ) : null}
+        <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} />
+        <TextField
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          hint="They sign in with this address."
+        />
+      </form>
+    </Drawer>
+  );
+}
+
+function UserDrawer({
+  user,
+  meId,
+  onClose,
+  onDone,
+}: {
+  user: UserRow | null;
+  meId: string | null;
+  onClose: () => void;
+  onDone: (m: string) => void;
+}) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [problem, setProblem] = useState('');
+  const [pin, setPin] = useState('');
+  if (!user) return <Drawer open={false} onClose={onClose} />;
+  const s = STATUS[user.account_status];
+  const self = user.id === meId;
+  const run = async (key: string, fn: () => Promise<unknown>, message: string) => {
+    setBusy(key);
+    setProblem('');
+    try {
+      await fn();
+      setPin('');
+      onDone(message);
+    } catch (err) {
+      setProblem(err instanceof Error ? err.message : 'That did not work.');
+    } finally {
+      setBusy(null);
+    }
+  };
+  const remove = () =>
+    Modal.confirm({
+      title: `Delete ${user.name ?? user.email}?`,
+      content:
+        'Their sign-in is removed. Sales and records they made stay, under their name. Deactivating is usually enough.',
+      okText: 'Delete',
+      okButtonProps: { danger: true },
+      onOk: () => run('delete', () => api.delete(`/users/${user.id}`), `${user.name ?? 'The user'} is deleted.`),
+    });
+  const rows: Array<[string, string]> = [
+    ['Role', ROLE[user.role]],
+    ['Company', user.companies?.name ?? '—'],
+    ['Station', user.role === 'company_admin' ? 'All stations' : (user.stations?.name ?? '—')],
+    [user.email ? 'Email' : 'Phone', user.email ?? formatRwandaPhone(user.phone)],
+    ['Last active', lastActive(user)],
+    ...(user.invited_at
+      ? ([
+          [
+            'Invited',
+            `${new Date(user.invited_at).toLocaleDateString('en-GB')}${user.invited_by_name ? ` by ${user.invited_by_name}` : ''}`,
+          ],
+        ] as Array<[string, string]>)
+      : []),
+  ];
+  return (
+    <Drawer open onClose={onClose} size={460} title={user.name ?? user.email ?? 'User'}>
+      <div className="flex flex-col gap-5">
+        <StatusChip tone={s.tone} className="self-start">
+          {s.label}
+        </StatusChip>
+        {problem ? <Banner tone="danger" title={problem} /> : null}
+        <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2.5">
+          {rows.map(([k, v]) => (
+            <div key={k} className="contents">
+              <dt className="text-13 text-text-muted">{k}</dt>
+              <dd className="m-0 text-14 text-text">{v}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className="flex flex-col gap-2.5 border-t border-border pt-5">
+          {user.account_status === 'invited' ? (
+            <Button
+              icon={MailPlus}
+              loading={busy === 'invite'}
+              onClick={() => run('invite', () => resendInvite(user.id), `A new invitation went to ${user.email}.`)}
+            >
+              Resend invitation
+            </Button>
+          ) : null}
+          {user.email && user.role !== 'attendant' && user.account_status !== 'invited' && !self ? (
+            <Button
+              icon={KeyRound}
+              loading={busy === 'reset'}
+              onClick={() =>
+                run(
+                  'reset',
+                  () => api.post(`/users/${user.id}/reset-password`, {}),
+                  `A link to choose a new password went to ${user.email}.`,
+                )
+              }
+            >
+              Send a password reset link
+            </Button>
+          ) : null}
+          {user.role === 'attendant' ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!/^\d{4,6}$/.test(pin)) return setProblem('Use 4 to 6 digits.');
+                void run(
+                  'pin',
+                  () => api.post(`/users/${user.id}/unlock-pin`, { pin }),
+                  `New PIN set for ${user.name}. Tell them in person.`,
+                );
+              }}
+              noValidate
+              className="flex items-end gap-2"
+            >
+              <TextField
+                label={user.pin_locked_at ? 'Unlock with a new PIN' : 'New PIN'}
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                type="password"
+                inputMode="numeric"
+                mono
+                className="flex-1"
+              />
+              <Button htmlType="submit" loading={busy === 'pin'}>
+                Set PIN
+              </Button>
+            </form>
+          ) : null}
+          {!self ? (
+            <Button
+              icon={UserX}
+              loading={busy === 'active'}
+              onClick={() =>
+                run(
+                  'active',
+                  () => api.patch(`/users/${user.id}`, { is_active: user.account_status === 'deactivated' }),
+                  user.account_status === 'deactivated'
+                    ? `${user.name} is active again.`
+                    : `${user.name} is deactivated.`,
+                )
+              }
+            >
+              {user.account_status === 'deactivated' ? 'Reactivate' : 'Deactivate'}
+            </Button>
+          ) : null}
+          {!self ? (
+            <Button kind="danger" icon={Trash2} onClick={remove} loading={busy === 'delete'}>
+              Delete
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    </Drawer>
   );
 }

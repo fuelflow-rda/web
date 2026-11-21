@@ -4,10 +4,11 @@ import React, { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { AppShell } from '@/components/shell/AppShell';
 import { AppLoadingScreen } from '@/components/AppLoadingScreen';
+import { CompanyTabs } from '@/components/admin/CompanyTabs';
 import { useAuthStore } from '@/store/auth-store';
 
-/** The platform's tenant list: platform administrators only. */
-const SUPERADMIN_ONLY_PATHS = ['/admin/companies', '/admin/sync-health', '/admin/audit'];
+/** The platform's tenant list and phones: platform administrators only. Company admins have their own audit log. */
+const SUPERADMIN_ONLY_PATHS = ['/admin/companies', '/admin/sync-health'];
 
 /**
  * /admin is the platform for platform administrators, and "Company" (their
@@ -42,6 +43,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <AppShell area={isSuperAdmin ? 'platform' : 'company'} user={user} onSignOut={logout}>
+      {isSuperAdmin ? null : <CompanyTabs />}
       {children}
     </AppShell>
   );
