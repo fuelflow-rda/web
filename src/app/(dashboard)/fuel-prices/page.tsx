@@ -29,6 +29,8 @@ export default function PricesPage() {
   const current = usePolled(stationId, () => getCurrent(stationId!), 60_000);
   const history = usePolled(stationId, () => getHistory(stationId!, kigaliWindow({ days: 90 }).from), 120_000);
   const [draft, setDraft] = useState<Draft>({ editing: null, product: 'GASOLINE' });
+  // No card is marked until someone picks one, as the design shows the page at rest.
+  const [picked, setPicked] = useState(false);
   const [panelKey, setPanelKey] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -48,6 +50,7 @@ export default function PricesPage() {
 
   const done = (message?: string) => {
     if (message) setNotice(message);
+    setPicked(false);
     setDraft((d) => ({ editing: null, product: d.product }));
     setPanelKey((k) => k + 1);
     current.reload();
@@ -103,8 +106,12 @@ export default function PricesPage() {
               key={p}
               product={p}
               row={prices[p] as PriceRow}
-              selected={!draft.editing && draft.product === p}
-              onPick={() => focusPanel({ editing: null, product: p })}
+              selected={picked && !draft.editing && draft.product === p}
+              editable={canEdit}
+              onPick={() => {
+                setPicked(true);
+                focusPanel({ editing: null, product: p });
+              }}
             />
           ))}
         </section>
@@ -155,7 +162,10 @@ export default function PricesPage() {
             draft={draft}
             current={prices}
             canEdit={canEdit}
-            onProduct={(product) => setDraft({ editing: null, product })}
+            onProduct={(product) => {
+              setPicked(true);
+              setDraft({ editing: null, product });
+            }}
             onSave={async ({ product, price, effectiveAt }) => {
               if (draft.editing) {
                 await updateScheduled(draft.editing.id, {

@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { DatePicker, InputNumber, Segmented, Select } from 'antd';
 import dayjs from 'dayjs';
-import { CalendarClock, Trash2 } from 'lucide-react';
+import { CalendarClock, CalendarDays, Pencil, Trash2 } from 'lucide-react';
 import { Banner, Button, Panel, Tag } from '@/components/ui';
 import { focusRing } from '@/components/ui/focus';
 import { num } from '@/components/overview/panels';
@@ -65,11 +65,14 @@ export function PriceCard({
   product,
   row,
   selected,
+  editable = false,
   onPick,
 }: {
   product: string;
   row: PriceRow;
   selected: boolean;
+  /** Shows the design's pencil: the card opens its product in the schedule form. */
+  editable?: boolean;
   onPick: () => void;
 }) {
   return (
@@ -83,9 +86,12 @@ export function PriceCard({
         focusRing,
       )}
     >
-      <Tag color={productColor(product)} className="self-start whitespace-nowrap">
-        {productCode(product)}
-      </Tag>
+      <span className="flex items-start justify-between gap-2">
+        <Tag color={productColor(product)} className="whitespace-nowrap">
+          {productCode(product)}
+        </Tag>
+        {editable ? <Pencil size={16} aria-hidden className="text-text-muted" /> : null}
+      </span>
       <span className="text-14 font-semibold text-text">{productName(product)}</span>
       <span className="flex items-baseline gap-1.5">
         <span className="text-14 font-medium text-text-secondary">RWF</span>
@@ -131,7 +137,7 @@ export function HistoryTable({ rows }: { rows: HistoryRow[] }) {
         <tbody>
           {rows.map((r) => (
             <tr key={r.id}>
-              <td className={cx(cell, 'text-14 whitespace-nowrap text-text')}>{longDate(r.effective_at)}</td>
+              <td className={cx(cell, 'font-mono text-13 whitespace-nowrap text-text-muted')}>{longDate(r.effective_at)}</td>
               <td className={cell}>
                 <Tag color={productColor(r.product_type)} className="whitespace-nowrap">
                   {productCode(r.product_type)}
@@ -286,6 +292,8 @@ export function SchedulePanel({
               value={dayjs(wall)}
               onChange={(v) => v && setWall(v.format('YYYY-MM-DDTHH:mm'))}
               allowClear={false}
+              prefix={<CalendarDays size={16} aria-hidden className="text-text-muted" />}
+              suffix={null}
               disabledDate={(d) => d.isBefore(dayjs().startOf('day')) || d.isAfter(dayjs().add(90, 'day'))}
             />
           ) : null}
@@ -321,7 +329,7 @@ export function SchedulePanel({
             </Button>
           ) : null}
           <Button kind="ghost" onClick={onDone} disabled={busy !== null}>
-            {editing ? 'Back' : 'Clear'}
+            {editing ? 'Back' : 'Cancel'}
           </Button>
         </div>
       </form>
