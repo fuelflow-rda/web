@@ -1,230 +1,240 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
-import {
-  Card,
-  List,
-  Typography,
-  Tag,
-  Button,
-  Space,
-  Select,
-  Badge,
-  Empty,
-  Input,
-  message,
-} from 'antd';
-import {
-  BellOutlined,
-  CheckOutlined,
-  InfoCircleOutlined,
-  WarningOutlined,
-  ExclamationCircleOutlined,
-  CheckCircleOutlined,
-} from '@ant-design/icons';
+import { useEffect, useState } from 'react';
+import { Input, Select } from 'antd';
+import { CheckCheck, Search } from 'lucide-react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import api from '@/lib/api';
 import type { Notification } from '@/types';
-import {
-  NotificationDetailModal,
-  notificationTypeVisuals,
-} from '@/components/NotificationDetailModal';
+import { Banner, Button, PageHeader, Panel, StatusChip } from '@/components/ui';
+import { focusRing } from '@/components/ui/focus';
+import { PanelError, PanelSkeleton, num } from '@/components/overview/panels';
+import { NotificationDetailModal } from '@/components/NotificationDetailModal';
+import { FILTER_KINDS, TONE_BADGE, kigaliWhen, kindOf } from '@/components/notifications/kinds';
+import { toNotification, useNotificationStore } from '@/store/notification-store';
+import { cx } from '@/lib/cx';
 
 dayjs.extend(relativeTime);
 
-const { Title, Text } = Typography;
+const PAGE = 25;
 
+/**
+ * Every notification for the signed-in user. Not designed; restyled from the
+ * components to match the top bar's list.
+ */
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [detailNotification, setDetailNotification] = useState<Notification | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [typeFilter, setTypeFilter] = useState<string | undefined>();
+  const [q, setQ] = useState('');
   const [search, setSearch] = useState('');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-
-  const fetchNotifications = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params: Record<string, string | number> = { limit: 50 };
-      if (typeFilter) params.type = typeFilter;
-      if (search?.trim()) params.search = search.trim();
-      params.sortOrder = sortOrder;
-      const res = await api.get('/notifications', { params });
-      const payload = res.data as { data?: Record<string, unknown>[] };
-      const raw = payload?.data ?? (Array.isArray(res.data) ? res.data : []);
-      setNotifications(raw.map((n: Record<string, unknown>) => ({
-        id: n.id as string,
-        userId: (n.user_id ?? n.userId) as string,
-        stationId: (n.station_id ?? n.stationId) as string | undefined,
-        type: (n.type as Notification['type']) ?? 'INFO',
-        title: (n.title as string) ?? '',
-        message: (n.message as string) ?? '',
-        isRead: Boolean(n.is_read ?? n.isRead),
-        createdAt: (n.created_at ?? n.createdAt) as string,
-      })));
-    } catch {
-      // Handle silently
-    } finally {
-      setLoading(false);
-    }
-  }, [typeFilter, search, sortOrder]);
+  const [kind, setKind] = useState<string | undefined>();
+  const [order, setOrder] = useState<'desc' | 'asc'>('desc');
+  const [page, setPage] = useState(1);
+  const [nonce, setNonce] = useState(0);
+  const [result, setResult] = useState<{ key: string; rows: Notification[]; total: number } | null>(null);
+  const [error, setError] = useState<{ key: string; message: string } | null>(null);
+  const [open, setOpen] = useState<Notification | null>(null);
+  const [notice, setNotice] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null);
 
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    const t = window.setTimeout(() => setSearch(q.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [q]);
 
-  const markAsRead = async (id: string) => {
-    try {
-      await api.patch(`/notifications/${id}/read`);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-      );
-      setDetailNotification((d) => (d?.id === id ? { ...d, isRead: true } : d));
-    } catch {
-      message.error('Failed to mark notification as read');
-    }
+  const filterKey = JSON.stringify([search, kind, order]);
+  const [lastFilter, setLastFilter] = useState(filterKey);
+  if (filterKey !== lastFilter) {
+    setLastFilter(filterKey);
+    setPage(1);
+  }
+
+  const requestKey = JSON.stringify([search, kind, order, page, nonce]);
+  useEffect(() => {
+    let live = true;
+    api
+      .get('/notifications', {
+        params: { search: search || undefined, type: kind, sortOrder: order, page, limit: PAGE },
+      })
+      .then((r) => {
+        if (!live) return;
+        const body = r.data as { data?: Record<string, unknown>[]; pagination?: { total: number } };
+        const rows = (body.data ?? []).map(toNotification);
+        setResult({ key: requestKey, rows, total: body.pagination?.total ?? rows.length });
+      })
+      .catch((err: Error) => live && setError({ key: requestKey, message: err.message }));
+    return () => {
+      live = false;
+    };
+  }, [search, kind, order, page, requestKey]);
+
+  const failed = error?.key === requestKey;
+  const loading = !failed && result?.key !== requestKey;
+  const rows = result?.rows ?? [];
+  const total = result?.total ?? 0;
+  const unreadHere = rows.filter((n) => !n.isRead).length;
+  const filtered = Boolean(search || kind);
+
+  const setRead = (match: (n: Notification) => boolean) => {
+    setResult((r) => (r ? { ...r, rows: r.rows.map((n) => (match(n) ? { ...n, isRead: true } : n)) } : r));
+    useNotificationStore.setState((s) => ({ items: s.items.map((n) => (match(n) ? { ...n, isRead: true } : n)) }));
   };
 
-  const markAllAsRead = async () => {
+  const openOne = (n: Notification) => {
+    setOpen(n);
+    if (n.isRead) return;
+    setRead((x) => x.id === n.id);
+    // Marked here and in the top bar at once; if the PATCH fails, the next load shows it unread.
+    void api.patch(`/notifications/${n.id}/read`).catch(() => {});
+  };
+
+  const markAll = async () => {
     try {
       await api.patch('/notifications/read-all');
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-      message.success('All notifications marked as read');
-    } catch {
-      message.error('Failed to mark all as read');
+      setRead(() => true);
+      setNotice({ tone: 'success', text: 'Everything is marked as read.' });
+    } catch (err) {
+      setNotice({ tone: 'danger', text: err instanceof Error ? err.message : 'Notifications could not be marked as read.' });
     }
   };
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
-
-  const filteredNotifications = notifications;
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <Title level={3} className="mb-0!">
-            <Space>
-              <BellOutlined />
-              Notifications
-              {unreadCount > 0 && (
-                <Badge count={unreadCount} className="ml-2" />
-              )}
-            </Space>
-          </Title>
-          <Text type="secondary">Stay updated with station alerts and events</Text>
-        </div>
-        <Space wrap>
-          <Input.Search
-            placeholder="Search title or message"
-            allowClear
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onSearch={() => fetchNotifications()}
-            className="w-48"
-          />
-          <Select
-            value={typeFilter}
-            onChange={setTypeFilter}
-            placeholder="All Types"
-            allowClear
-            className="w-36"
-            options={[
-              { value: 'ALERT', label: 'Alerts' },
-              { value: 'WARNING', label: 'Warnings' },
-              { value: 'INFO', label: 'Info' },
-              { value: 'SUCCESS', label: 'Success' },
-            ]}
-          />
-          <Select
-            value={sortOrder}
-            onChange={(v) => setSortOrder(v as 'asc' | 'desc')}
-            options={[
-              { value: 'desc', label: 'Newest first' },
-              { value: 'asc', label: 'Oldest first' },
-            ]}
-            className="w-36"
-          />
-          {unreadCount > 0 && (
-            <Button icon={<CheckOutlined />} onClick={markAllAsRead}>
-              Mark All Read
+    <>
+      <PageHeader
+        title="Notifications"
+        description="Discrepancies, long shifts, quiet stations and PIN requests"
+        actions={
+          rows.length ? (
+            <Button icon={CheckCheck} onClick={() => void markAll()}>
+              Mark all as read
             </Button>
-          )}
-        </Space>
-      </div>
-
-      <Card className="rounded-xl!" styles={{ body: { padding: 0 } }}>
-        <List
-          loading={loading}
-          dataSource={filteredNotifications}
-          locale={{ emptyText: <Empty description="No notifications" className="py-12" /> }}
-          renderItem={(notification) => {
-            const config = notificationTypeVisuals[notification.type] || notificationTypeVisuals.INFO;
-            return (
-              <List.Item
-                className={`px-6! py-4! cursor-pointer hover:bg-bg transition-colors ${
-                  !notification.isRead ? 'bg-warning-tint' : ''
-                }`}
-                onClick={() => {
-                  setDetailNotification(notification);
-                  if (!notification.isRead) void markAsRead(notification.id);
-                }}
-                actions={[
-                  !notification.isRead && (
-                    <Button
-                      key="read"
-                      type="text"
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void markAsRead(notification.id);
-                      }}
-                    >
-                      Mark read
-                    </Button>
-                  ),
-                ].filter(Boolean) as React.ReactNode[]}
-              >
-                <List.Item.Meta
-                  avatar={
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
-                      style={{ background: `${config.color}15`, color: config.color }}
-                    >
-                      {config.icon}
-                    </div>
-                  }
-                  title={
-                    <Space>
-                      {!notification.isRead && <Badge status="processing" />}
-                      <Text strong={!notification.isRead}>{notification.title}</Text>
-                      <Tag color={config.tagColor} className="text-xs!">
-                        {notification.type}
-                      </Tag>
-                    </Space>
-                  }
-                  description={
-                    <div>
-                      <Text type="secondary">{notification.message}</Text>
-                      <br />
-                      <Text type="secondary" className="text-xs!">
-                        {dayjs(notification.createdAt).fromNow()}
-                      </Text>
-                    </div>
-                  }
-                />
-              </List.Item>
-            );
-          }}
-        />
-      </Card>
-
-      <NotificationDetailModal
-        open={!!detailNotification}
-        notification={detailNotification}
-        onClose={() => setDetailNotification(null)}
+          ) : null
+        }
       />
-    </div>
+      {notice ? <Banner tone={notice.tone} title={notice.text} /> : null}
+      <div role="search" aria-label="Filter notifications" className="flex flex-wrap gap-3">
+        <Input
+          aria-label="Search notifications"
+          placeholder="Search title or message"
+          prefix={<Search size={16} aria-hidden className="text-text-muted" />}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          allowClear
+          className="w-full sm:w-70"
+        />
+        <Select
+          aria-label="Kind"
+          placeholder="Every kind"
+          allowClear
+          value={kind}
+          onChange={setKind}
+          className="w-full sm:w-50"
+          options={FILTER_KINDS}
+        />
+        <Select
+          aria-label="Order"
+          value={order}
+          onChange={setOrder}
+          className="w-full sm:w-40"
+          options={[
+            { value: 'desc', label: 'Newest first' },
+            { value: 'asc', label: 'Oldest first' },
+          ]}
+        />
+      </div>
+      <Panel
+        title={`${num(total)} ${total === 1 ? 'notification' : 'notifications'}`}
+        meta={unreadHere ? `${unreadHere} unread on this page` : 'Times in Kigali'}
+        padded={false}
+      >
+        {failed && !result ? (
+          <div className="p-5">
+            <PanelError message="Notifications could not be loaded." onRetry={() => setNonce((n) => n + 1)} />
+          </div>
+        ) : !result ? (
+          <div className="p-5">
+            <PanelSkeleton rows={8} />
+          </div>
+        ) : rows.length === 0 ? (
+          <p className="m-0 px-5 py-12 text-center text-14 text-text-secondary">
+            {filtered
+              ? 'No notification matches.'
+              : 'Nothing yet. Discrepancies, long shifts, quiet stations and PIN requests appear here.'}
+          </p>
+        ) : (
+          <ul className={cx('m-0 list-none p-0 transition-opacity', loading && 'opacity-60')} aria-busy={loading}>
+            {rows.map((n) => {
+              const k = kindOf(n.type);
+              const Icon = k.icon;
+              return (
+                <li key={n.id} className="border-b border-border last:border-b-0">
+                  <button
+                    type="button"
+                    onClick={() => openOne(n)}
+                    className={cx(
+                      'flex w-full cursor-pointer items-start gap-3 border-0 px-5 py-4 text-left transition-colors hover:bg-surface-muted',
+                      n.isRead ? 'bg-transparent' : 'bg-warning-tint',
+                      focusRing,
+                    )}
+                  >
+                    <span
+                      aria-hidden
+                      className={cx(
+                        'inline-flex size-9 shrink-0 items-center justify-center rounded-full',
+                        TONE_BADGE[k.tone],
+                      )}
+                    >
+                      <Icon size={18} />
+                    </span>
+                    <span className="flex min-w-0 flex-1 flex-col gap-1">
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span className={cx('text-14 text-text', n.isRead ? 'font-medium' : 'font-semibold')}>
+                          {n.title}
+                        </span>
+                        {n.isRead ? null : <span className="sr-only">(unread)</span>}
+                      </span>
+                      <span className="line-clamp-2 text-13 text-text-secondary">{n.message}</span>
+                      <span className="flex flex-wrap items-center gap-2 pt-0.5">
+                        <StatusChip tone={k.tone} icon={k.icon}>
+                          {k.label}
+                        </StatusChip>
+                        {n.createdAt ? (
+                          <span className="text-12 text-text-muted">
+                            <time dateTime={n.createdAt}>{kigaliWhen(n.createdAt)}</time> ·{' '}
+                            {dayjs(n.createdAt).fromNow()}
+                          </span>
+                        ) : null}
+                      </span>
+                    </span>
+                    <span
+                      aria-hidden
+                      className={cx('mt-2 size-2 shrink-0 rounded-full', n.isRead ? 'bg-transparent' : 'bg-accent')}
+                    />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {failed && result ? (
+          <div className="border-t border-border px-5 py-3">
+            <PanelError message="That page could not be loaded." onRetry={() => setNonce((n) => n + 1)} />
+          </div>
+        ) : null}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3">
+          <p className="m-0 text-13 text-text-secondary">
+            {total ? `Page ${page} of ${Math.max(1, Math.ceil(total / PAGE))}` : ''}
+          </p>
+          <div className="flex gap-2">
+            <Button disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              Previous
+            </Button>
+            <Button disabled={page * PAGE >= total} onClick={() => setPage((p) => p + 1)}>
+              Next
+            </Button>
+          </div>
+        </div>
+      </Panel>
+
+      <NotificationDetailModal open={open !== null} notification={open} onClose={() => setOpen(null)} />
+    </>
   );
 }

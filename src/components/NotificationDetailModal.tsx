@@ -1,36 +1,14 @@
 'use client';
 
-import React from 'react';
-import { Modal, Typography, Tag, Space, Button } from 'antd';
-import {
-  InfoCircleOutlined,
-  WarningOutlined,
-  ExclamationCircleOutlined,
-  CheckCircleOutlined,
-} from '@ant-design/icons';
+import { Modal } from 'antd';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import type { Notification } from '@/types';
+import { Button, StatusChip } from '@/components/ui';
+import { TONE_BADGE, kigaliWhen, kindOf } from '@/components/notifications/kinds';
+import { cx } from '@/lib/cx';
 
 dayjs.extend(relativeTime);
-
-export const notificationTypeVisuals: Record<
-  string,
-  { icon: React.ReactNode; color: string; tagColor: string }
-> = {
-  ALERT: { icon: <ExclamationCircleOutlined />, color: 'var(--danger)', tagColor: 'red' },
-  WARNING: { icon: <WarningOutlined />, color: 'var(--warning)', tagColor: 'orange' },
-  INFO: { icon: <InfoCircleOutlined />, color: 'var(--text-secondary)', tagColor: 'blue' },
-  SUCCESS: { icon: <CheckCircleOutlined />, color: 'var(--success)', tagColor: 'green' },
-  /**
-   * The API emits lower-case types of its own. Anything unlisted falls back to INFO,
-   * which is right for the routine ones; a site that has recorded nothing for a full
-   * day is not routine, so it is called out as a warning rather than a notice.
-   */
-  station_dormant: { icon: <WarningOutlined />, color: 'var(--warning)', tagColor: 'orange' },
-  /** An attendant cut a shift short and gave a reason — worth a manager's attention. */
-  shift_early_end: { icon: <WarningOutlined />, color: 'var(--warning)', tagColor: 'orange' },
-};
 
 export interface NotificationDetailModalProps {
   open: boolean;
@@ -38,56 +16,46 @@ export interface NotificationDetailModalProps {
   onClose: () => void;
 }
 
-export function NotificationDetailModal({
-  open,
-  notification,
-  onClose,
-}: NotificationDetailModalProps) {
-  if (!open || !notification) {
-    return null;
-  }
+/** One notification in full, opened from the top bar or the Notifications page. */
+export function NotificationDetailModal({ open, notification, onClose }: NotificationDetailModalProps) {
+  if (!open || !notification) return null;
 
-  const cfg = notificationTypeVisuals[notification.type] || notificationTypeVisuals.INFO;
-  const created = dayjs(notification.createdAt);
+  const kind = kindOf(notification.type);
+  const Icon = kind.icon;
 
   return (
     <Modal
-      title={
-        <Space align="start" className="items-start!">
-          <span
-            className="inline-flex w-9 h-9 rounded-lg items-center justify-center text-base shrink-0"
-            style={{ backgroundColor: `${cfg.color}18`, color: cfg.color }}
-          >
-            {cfg.icon}
-          </span>
-          <span className="text-base font-semibold text-text leading-snug pr-6">
-            {notification.title}
-          </span>
-        </Space>
-      }
       open={open}
       onCancel={onClose}
+      title={
+        <span className="flex items-start gap-3 pr-6">
+          <span
+            aria-hidden
+            className={cx('inline-flex size-9 shrink-0 items-center justify-center rounded-full', TONE_BADGE[kind.tone])}
+          >
+            <Icon size={18} />
+          </span>
+          <span className="pt-1.5 text-16 font-semibold text-text">{notification.title}</span>
+        </span>
+      }
       footer={
-        <Button type="primary" onClick={onClose} className="rounded-lg!">
+        <Button kind="primary" onClick={onClose}>
           Close
         </Button>
       }
-      width={420}
       centered
       destroyOnHidden
-      classNames={{ body: 'pt-2!' }}
     >
-      <div className="space-y-3">
-        <Space wrap>
-          <Tag color={cfg.tagColor}>{notification.type}</Tag>
-          {!notification.isRead && <Tag color="orange">Unread</Tag>}
-        </Space>
-        <Typography.Paragraph className="mb-0! text-text-secondary! whitespace-pre-wrap wrap-break-word">
-          {notification.message}
-        </Typography.Paragraph>
-        <Typography.Text type="secondary" className="text-xs!">
-          {created.format('MMM D, YYYY h:mm A')} ({created.fromNow()})
-        </Typography.Text>
+      <div className="flex flex-col gap-3">
+        <StatusChip tone={kind.tone} icon={kind.icon} className="self-start">
+          {kind.label}
+        </StatusChip>
+        <p className="m-0 text-14 whitespace-pre-wrap text-text-secondary wrap-break-word">{notification.message}</p>
+        {notification.createdAt ? (
+          <p className="m-0 text-12 text-text-muted">
+            {kigaliWhen(notification.createdAt)}, Kigali time ({dayjs(notification.createdAt).fromNow()})
+          </p>
+        ) : null}
       </div>
     </Modal>
   );

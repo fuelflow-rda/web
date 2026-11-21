@@ -35,6 +35,20 @@ export function storeSession(token: string, userJson: string, remember: boolean)
   target.setItem(USER_KEY, userJson);
 }
 
+/** Rewrites the stored user where the session already lives, keeping "Keep me signed in" as chosen. */
+export function replaceStoredUser(userJson: string) {
+  for (const s of stores()) {
+    try {
+      if (s.getItem(USER_KEY) !== null) {
+        s.setItem(USER_KEY, userJson);
+        return;
+      }
+    } catch {
+      // Storage blocked: the change still shows until the tab closes.
+    }
+  }
+}
+
 export function clearStoredSession() {
   for (const s of stores()) {
     try {

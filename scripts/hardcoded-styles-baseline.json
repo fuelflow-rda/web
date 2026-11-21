@@ -1,22 +1,12 @@
 {
   "$description": "Hardcoded style values in pages built before the redesign. Counts may only go down; regenerate with `node scripts/check-hardcoded-styles.mjs --update` after removing some.",
   "files": {
-    "src/app/(dashboard)/notifications/page.tsx": {
-      "spacing": 1,
-      "type": 3
-    },
-    "src/app/(dashboard)/settings/page.tsx": {
-      "type": 1
-    },
     "src/app/(marketing)/page.tsx": {
       "colour": 3,
       "spacing": 2
     },
     "src/components/ExportButton.tsx": {
       "type": 1
-    },
-    "src/components/NotificationDetailModal.tsx": {
-      "type": 3
     },
     "src/components/marketing/DemoRequestForm.tsx": {
       "spacing": 2

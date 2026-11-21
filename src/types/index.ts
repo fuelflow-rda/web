@@ -212,7 +212,8 @@ export interface Notification {
   id: string;
   userId: string;
   stationId?: string;
-  type: 'ALERT' | 'INFO' | 'WARNING' | 'SUCCESS';
+  /** The API's own names (reconciliation_discrepancy, shift_overtime…); old rows carry ALERT and the like. */
+  type: 'ALERT' | 'INFO' | 'WARNING' | 'SUCCESS' | (string & {});
   title: string;
   message: string;
   isRead: boolean;

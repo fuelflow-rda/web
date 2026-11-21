@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import api, { clearApiCache } from '@/lib/api';
-import { clearStoredSession, readStoredToken, readStoredUser, storeSession } from '@/lib/stored-session';
+import {
+  clearStoredSession,
+  readStoredToken,
+  readStoredUser,
+  replaceStoredUser,
+  storeSession,
+} from '@/lib/stored-session';
 
 export interface AuthUser {
   id: string;
@@ -22,6 +28,8 @@ interface AuthState {
   login: (email: string, password: string, remember?: boolean) => Promise<AuthUser>;
   logout: () => void;
   initialize: () => void;
+  /** After a profile save, so the new name shows everywhere without signing in again. */
+  updateUser: (patch: Partial<Pick<AuthUser, 'name'>>) => void;
 
   isAdmin: () => boolean;
   isManager: () => boolean;
@@ -109,6 +117,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (get().initialized) return;
     const { user, token } = readStoredSession();
     set({ user, token, initialized: true });
+  },
+
+  updateUser: (patch) => {
+    const user = get().user;
+    if (!user) return;
+    const next = { ...user, ...patch };
+    replaceStoredUser(JSON.stringify(next));
+    set({ user: next });
   },
 
   isAdmin: () => {
