@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { App, DatePicker, Tabs } from 'antd';
 import dayjs from 'dayjs';
-import { CalendarDays, CheckCheck, RefreshCw } from 'lucide-react';
+import { CalendarDays, CheckCheck, Fuel, Gauge, Receipt, RefreshCw, TriangleAlert } from 'lucide-react';
 import ExportButton from '@/components/ExportButton';
 import { Banner, Button, KpiTile, PageHeader, Panel } from '@/components/ui';
 import { focusRing } from '@/components/ui/focus';
@@ -24,18 +24,12 @@ import { cx } from '@/lib/cx';
 import { formatMeter, pointLabel, productName } from '@/lib/product-types';
 import { useAuthStore } from '@/store/auth-store';
 import { useStationStore } from '@/store/station-store';
+import { fullDate } from '@/lib/dates';
 
 const isDay = (v: string | null): v is string => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
 /** Reports are per UTC day, as the nightly job builds them. */
 const yesterdayUtc = () => new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
-const longDate = (d: string) =>
-  new Intl.DateTimeFormat('en-GB', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(`${d}T12:00:00Z`));
+const longDate = (d: string) => fullDate(new Date(`${d}T12:00:00Z`), 'UTC');
 const at = (iso: string) =>
   new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Kigali' }).format(
     new Date(iso),
@@ -281,6 +275,7 @@ function ReconciliationView() {
           >
             <KpiTile
               label="Expected revenue"
+              icon={Gauge}
               prefix="RWF"
               value={num(report.expectedRevenue)}
               delta={{
@@ -295,6 +290,7 @@ function ReconciliationView() {
             />
             <KpiTile
               label="Recorded revenue"
+              icon={Receipt}
               prefix="RWF"
               value={num(report.recordedRevenue)}
               delta={{
@@ -304,6 +300,8 @@ function ReconciliationView() {
             />
             <KpiTile
               label="Difference"
+              icon={TriangleAlert}
+              valueTone={report.difference < 0 ? 'danger' : undefined}
               prefix="RWF"
               value={`${report.difference < 0 ? '−' : report.difference > 0 ? '+' : ''}${num(Math.abs(report.difference))}`}
               delta={{
@@ -316,6 +314,7 @@ function ReconciliationView() {
             />
             <KpiTile
               label="Meter variance"
+              icon={Fuel}
               value={`${report.volumeDifference.liters < 0 ? '−' : report.volumeDifference.liters > 0 ? '+' : ''}${Math.abs(report.volumeDifference.liters).toFixed(1)}`}
               suffix="L"
               delta={{

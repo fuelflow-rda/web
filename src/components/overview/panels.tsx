@@ -2,31 +2,32 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CircleCheck, CircleDashed, Info, TriangleAlert, ArrowRight, type LucideIcon } from 'lucide-react';
+import { CircleCheck, CircleDashed, Info, TriangleAlert, type LucideIcon } from 'lucide-react';
 import { Button, Panel, StatusChip, Tag, type StatusTone } from '@/components/ui';
 import { initialsOf } from '@/components/ui/Avatar';
 import { cx } from '@/lib/cx';
 import { formatMeter, pointLabel, productCode, productColor, productName, unitForProduct } from '@/lib/product-types';
 import type { Dashboard, LivePump, RecentSale, ReconciliationSummary, StationToday } from './data';
+import { fullDate } from '@/lib/dates';
 
 export const rwf = (n: number) => `RWF ${Math.round(n).toLocaleString('en-US')}`;
 export const num = (n: number) => Math.round(n).toLocaleString('en-US');
 const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
 
 /** "Friday 20 November", in Kigali. */
-export const longDay = (iso: string) =>
-  new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Africa/Kigali' }).format(new Date(iso));
+/** "Friday 20 November 2026" in Kigali, as the page subtitles read. */
+export const longDay = (iso: string) => fullDate(new Date(iso));
 /** A report's calendar day, which has no time zone of its own. */
 export const reportDay = (date: string) =>
   new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`));
 export const clock = (iso: string) =>
   new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Kigali' }).format(new Date(iso));
 
-/** "Aline U." */
-const shortName = (name?: string | null) => {
+/** "Aline U.", "Jean Paul H.": every given name, then the family name's initial. */
+export const shortName = (name?: string | null) => {
   const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return 'Unknown';
-  return parts.length === 1 ? parts[0] : `${parts[0]} ${parts[parts.length - 1][0]}.`;
+  return parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(' ')} ${parts[parts.length - 1][0]}.`;
 };
 
 /** A panel's body while its data is on the way: quiet bars, not a spinner. */
@@ -77,13 +78,13 @@ export function ReconciliationPanel({ summary, loading }: { summary: Reconciliat
               const unit = item.unit || unitForProduct(item.productType);
               const missing = item.reason === 'readings_missing';
               return (
-                <li key={item.pumpId} className="flex items-center gap-3 border-b border-border py-3">
+                <li key={item.pumpId} className="flex items-center gap-3 border-t border-border py-3">
                   <TriangleAlert size={16} aria-hidden className={cx('shrink-0', missing ? 'text-warning' : 'text-danger')} />
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="truncate text-14 font-semibold text-text">
                       {pointLabel(item.pumpNumber, item.productType)} · {productName(item.productType)}
                     </span>
-                    <span className="truncate text-12 text-text-muted">
+                    <span className="text-12 text-text-muted">
                       {missing
                         ? 'A closing meter reading is missing'
                         : `Metered ${formatMeter(item.meteredQuantity, unit)}, recorded ${formatMeter(item.recordedQuantity, unit)}`}
@@ -116,7 +117,6 @@ export function ReconciliationPanel({ summary, loading }: { summary: Reconciliat
             ) : null}
           </ul>
           <Button
-            icon={ArrowRight}
             onClick={() => router.push(`/reconciliation?date=${summary.date}`)}
             block
           >
@@ -293,7 +293,7 @@ export function RecentSalesPanel({ sales, loading, error, onRetry }: { sales: Re
             <thead className="bg-surface-muted">
               <tr>
                 {['Time', 'Pump', 'Product', 'Quantity', 'Amount', 'Payment', 'Attendant', 'Status'].map((h) => (
-                  <th key={h} scope="col" className={head}>
+                  <th key={h} scope="col" className={cx(head, (h === 'Quantity' || h === 'Amount') && 'text-right')}>
                     {h}
                   </th>
                 ))}
@@ -310,8 +310,8 @@ export function RecentSalesPanel({ sales, loading, error, onRetry }: { sales: Re
                     <td className={cell}>
                       <Tag color={productColor(product)}>{productCode(product)}</Tag>
                     </td>
-                    <td className={cx(cell, 'font-mono text-13 whitespace-nowrap text-text')}>{formatMeter(s.quantity, s.unit)}</td>
-                    <td className={cx(cell, 'font-mono text-13 font-semibold', voided ? 'text-text-muted line-through' : 'text-text')}>{num(s.total_amount)}</td>
+                    <td className={cx(cell, 'text-right font-mono text-13 whitespace-nowrap text-text')}>{formatMeter(s.quantity, s.unit)}</td>
+                    <td className={cx(cell, 'text-right font-mono text-13 font-semibold', voided ? 'text-text-muted' : 'text-text')}>{num(s.total_amount)}</td>
                     <td className={cx(cell, 'text-14 text-text-secondary')}>{PAY[s.payment_method]?.label ?? s.payment_method}</td>
                     <td className={cx(cell, 'text-14 whitespace-nowrap text-text')}>{shortName(s.users?.name)}</td>
                     <td className={cell}>

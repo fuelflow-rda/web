@@ -122,7 +122,8 @@ describe('StatusChip, Tag and Avatar', () => {
 
   it.each([
     ['Aline Uwase', 'AU'],
-    ['  jean   paul habimana ', 'JP'],
+    // First and last name, as the design draws them: Jean Paul Habimana is JH.
+    ['  jean   paul habimana ', 'JH'],
     ['Claudine', 'C'],
     ['', ''],
   ])('initialsOf(%j) is %j', (name, expected) => {

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { BarChart, compact, niceMax } from './BarChart';
 import { ago, delta, kigaliDayStart, reviewBanner } from './logic';
-import { OnShiftPanel, PumpsPanel, RecentSalesPanel, ReconciliationPanel } from './panels';
+import { OnShiftPanel, PumpsPanel, RecentSalesPanel, ReconciliationPanel, shortName } from './panels';
 import type { LivePump, RecentSale, ReconciliationSummary } from './data';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
@@ -108,7 +108,7 @@ describe('panels', () => {
     expect(rows[1].textContent).toContain('74.7 kWh');
   });
 
-  it('shows a voided sale struck through, and status in words', () => {
+  it('shows a voided sale muted, with its status in words', () => {
     const sale: RecentSale = {
       id: 's1',
       timestamp: '2026-11-21T09:30:00Z',
@@ -125,7 +125,9 @@ describe('panels', () => {
     const row = screen.getAllByRole('row')[1];
     expect(row.textContent).toContain('Aline U.');
     expect(row.textContent).toContain('Voided');
-    expect(within(row).getByText('24,495').className).toContain('line-through');
+    // Muted as the design draws it; the word "Voided" carries the meaning, not a strike.
+    expect(within(row).getByText('24,495').className).toContain('text-text-muted');
+    expect(within(row).getByText('24,495').className).not.toContain('line-through');
   });
 
   it('offers a retry instead of an empty list when loading fails', () => {
@@ -166,5 +168,14 @@ describe('kigaliWindow', () => {
       to: '2026-11-20T21:59:59.999Z',
     });
     expect(kigaliWindow({ days: 7 }, Date.parse('2026-11-21T09:00:00Z'))).toEqual({ from: '2026-11-14T22:00:00.000Z' });
+  });
+});
+
+describe('shortName', () => {
+  it('keeps every given name and the family initial, as the design writes them', () => {
+    expect(shortName('Jean Paul Habimana')).toBe('Jean Paul H.');
+    expect(shortName('Aline Uwase')).toBe('Aline U.');
+    expect(shortName('Claudine')).toBe('Claudine');
+    expect(shortName('  ')).toBe('Unknown');
   });
 });

@@ -1,12 +1,11 @@
 import { cx } from '@/lib/cx';
 
-/** First letter of the first two words: "Aline Uwase" is AU. */
+/** First and last name's first letters: "Aline Uwase" is AU, "Jean Paul Habimana" JH. */
 export function initialsOf(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
-  return words
-    .slice(0, 2)
-    .map((w) => w[0]!.toUpperCase())
-    .join('');
+  if (words.length === 0) return '';
+  const ends = words.length === 1 ? [words[0]] : [words[0], words[words.length - 1]];
+  return ends.map((w) => w[0]!.toUpperCase()).join('');
 }
 
 export interface AvatarProps {

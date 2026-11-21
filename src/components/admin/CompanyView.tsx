@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { App, Drawer } from 'antd';
-import { MailPlus, MapPinPlus, Pencil, Trash2 } from 'lucide-react';
+import { Banknote, MailPlus, MapPinPlus, Pencil, Trash2, TriangleAlert, Users } from 'lucide-react';
 import { Banner, Button, KpiTile, PageHeader, Panel, StatusChip, TextField, type StatusTone } from '@/components/ui';
 import { focusRing } from '@/components/ui/focus';
 import { initialsOf } from '@/components/ui/Avatar';
@@ -318,6 +318,7 @@ export function CompanyView({
       <section aria-label="Key figures" className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <KpiTile
           label="Revenue today"
+          icon={Banknote}
           prefix="RWF"
           value={num(o.kpis.revenueToday)}
           delta={{
@@ -327,11 +328,13 @@ export function CompanyView({
         />
         <KpiTile
           label="On shift now"
+          icon={Users}
           value={num(o.kpis.onShiftNow)}
           delta={{ text: `of ${o.kpis.attendants} attendants`, direction: 'flat' }}
         />
         <KpiTile
           label="Open discrepancies"
+          icon={TriangleAlert}
           value={num(o.kpis.openDiscrepancies)}
           delta={{
             text: o.kpis.oldestOpenDiscrepancy

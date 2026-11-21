@@ -19,6 +19,8 @@ export interface KpiTileProps {
   /** Unit after the figure, in Geist: "L", "kWh". */
   suffix?: string;
   icon?: LucideIcon;
+  /** Colours the figure itself, as a shortfall in red. Pair it with a sign, never colour alone. */
+  valueTone?: 'danger' | 'success';
   delta?: KpiDelta;
   /** Makes the whole tile a link to the detail. */
   href?: string;
@@ -29,7 +31,7 @@ export interface KpiTileProps {
  * Leads a dashboard: an overline label, the figure in Geist Mono at 30px with
  * its currency or unit beside it in Geist, and how it moved.
  */
-export function KpiTile({ label, value, prefix, suffix, icon: Icon, delta, href, className }: KpiTileProps) {
+export function KpiTile({ label, value, prefix, suffix, icon: Icon, valueTone, delta, href, className }: KpiTileProps) {
   const tone = !delta || delta.direction === 'flat' ? 'text-text-muted' : delta.good ? 'text-success' : 'text-danger';
   const Trend = delta?.direction === 'up' ? TrendingUp : delta?.direction === 'down' ? TrendingDown : null;
   const body = (
@@ -40,7 +42,14 @@ export function KpiTile({ label, value, prefix, suffix, icon: Icon, delta, href,
       </div>
       <div className="flex items-baseline gap-1.5">
         {prefix ? <span className="text-14 font-medium text-text-secondary">{prefix}</span> : null}
-        <span className="font-mono text-30 leading-none font-medium tracking-n20 text-text">{value}</span>
+        <span
+          className={cx(
+            'font-mono text-30 leading-none font-medium tracking-n20',
+            valueTone === 'danger' ? 'text-danger' : valueTone === 'success' ? 'text-success' : 'text-text',
+          )}
+        >
+          {value}
+        </span>
         {suffix ? <span className="text-14 font-medium text-text-secondary">{suffix}</span> : null}
       </div>
       {delta ? (

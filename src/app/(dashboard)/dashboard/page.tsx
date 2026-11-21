@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Segmented } from 'antd';
-import { MapPin } from 'lucide-react';
+import { Banknote, Fuel, MapPin, Receipt, Zap } from 'lucide-react';
 import ExportButton from '@/components/ExportButton';
 import ActivityHeatmap from '@/components/metrics/ActivityHeatmap';
 import { Banner, KpiTile, PageHeader, Panel } from '@/components/ui';
@@ -196,10 +196,10 @@ export default function OverviewPage() {
       <section aria-label="Key figures" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis ? (
           <>
-            <KpiTile label={isToday ? 'Revenue today' : 'Revenue'} prefix="RWF" value={num(kpis.revenue)} delta={kpis.revenueDelta ?? { text: 'Nothing to compare with yet', direction: 'flat' }} href={transactionsHref({ from: ymd(new Date(from).getTime()), to: ymd(now) })} />
-            <KpiTile label="Fuel dispensed" value={one(kpis.liters)} suffix="L" delta={{ text: kpis.litersMeta, direction: 'flat' }} />
-            <KpiTile label="Energy delivered" value={one(kpis.kwh)} suffix="kWh" delta={{ text: kpis.kwhMeta, direction: 'flat' }} />
-            <KpiTile label="Sales" value={num(kpis.sales)} delta={{ text: kpis.salesMeta, direction: 'flat' }} />
+            <KpiTile label={isToday ? 'Revenue today' : 'Revenue'} icon={Banknote} prefix="RWF" value={num(kpis.revenue)} delta={kpis.revenueDelta ?? { text: 'Nothing to compare with yet', direction: 'flat' }} href={transactionsHref({ from: ymd(new Date(from).getTime()), to: ymd(now) })} />
+            <KpiTile label="Fuel dispensed" icon={Fuel} value={one(kpis.liters)} suffix="L" delta={{ text: kpis.litersMeta, direction: 'flat' }} />
+            <KpiTile label="Energy delivered" icon={Zap} value={one(kpis.kwh)} suffix="kWh" delta={{ text: kpis.kwhMeta, direction: 'flat' }} />
+            <KpiTile label="Sales" icon={Receipt} value={num(kpis.sales)} delta={{ text: kpis.salesMeta, direction: 'flat' }} />
           </>
         ) : (
           Array.from({ length: 4 }, (_, i) => (

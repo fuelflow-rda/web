@@ -4,7 +4,7 @@ import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Modal } from 'antd';
-import { Building2, ScrollText } from 'lucide-react';
+import { Banknote, Building2, MapPin, ScrollText, Users } from 'lucide-react';
 import { Banner, Button, KpiTile, PageHeader, Panel, StatusChip, TextField, type StatusTone } from '@/components/ui';
 import { focusRing } from '@/components/ui/focus';
 import { initialsOf } from '@/components/ui/Avatar';
@@ -357,18 +357,21 @@ export function PlatformOverview() {
           <section aria-label="Key figures" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <KpiTile
               label="Companies"
+              icon={Building2}
               value={num(h.kpis.companies)}
               delta={{ text: `${h.kpis.live} live, ${h.kpis.onboarding} onboarding`, direction: 'flat' }}
               href="/admin/companies"
             />
             <KpiTile
               label="Stations"
+              icon={MapPin}
               value={num(h.kpis.stations)}
               delta={{ text: `${h.kpis.stationsReporting} reporting today`, direction: 'flat' }}
               href="/admin/stations"
             />
             <KpiTile
               label="Shifts open now"
+              icon={Users}
               value={num(h.kpis.shiftsOpen)}
               delta={{
                 text: `${h.kpis.attendantsActiveLastHour} attendants active in the last hour`,
@@ -377,6 +380,7 @@ export function PlatformOverview() {
             />
             <KpiTile
               label="Revenue today"
+              icon={Banknote}
               prefix="RWF"
               value={num(h.kpis.revenueToday)}
               delta={{ text: 'All companies, all products', direction: 'flat' }}
