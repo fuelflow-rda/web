@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { Dropdown } from "antd";
-import { ChevronsUpDown, LogOut } from "lucide-react";
-import { RelaiLockup } from "@/components/brand";
-import { NavItem } from "@/components/ui/NavItem";
-import { focusRing } from "@/components/ui/focus";
-import { initialsOf } from "@/components/ui/Avatar";
-import { cx } from "@/lib/cx";
-import type { AuthUser } from "@/store/auth-store";
-import { activeItem, ROLE_LABEL, type NavGroup, type ShellArea } from "./nav";
+import { Dropdown } from 'antd';
+import { ChevronsUpDown, LogOut } from 'lucide-react';
+import { RelaiLockup } from '@/components/brand';
+import { NavItem } from '@/components/ui/NavItem';
+import { focusRing } from '@/components/ui/focus';
+import { initialsOf } from '@/components/ui/Avatar';
+import { cx } from '@/lib/cx';
+import type { AuthUser } from '@/store/auth-store';
+import { activeItem, ROLE_LABEL, type NavGroup, type ShellArea } from './nav';
 
 export interface SidebarStation {
   id: string;
@@ -51,46 +51,29 @@ export function Sidebar({
   const active = activeItem(groups, pathname);
   const current = stations.find((s) => s.id === currentStationId) ?? null;
   const role = ROLE_LABEL[user.role];
-  const subtitle =
-    area === "company" && companyName && user.role !== "SUPERADMIN"
-      ? `${role} · ${companyName}`
-      : role;
+  const subtitle = area === 'company' && companyName && user.role !== 'SUPERADMIN' ? `${role} · ${companyName}` : role;
 
   return (
-    <nav
-      aria-label="Main"
-      className="flex h-full w-(--size-sidebar-width) flex-col gap-6 bg-sidebar-bg px-4 pt-6 pb-5"
-    >
+    <nav aria-label="Main" className="flex h-full w-(--size-sidebar-width) flex-col gap-6 bg-sidebar-bg px-4 pt-6 pb-5">
       <div className="flex items-center gap-2.5 px-2">
         <span className="text-sidebar-text">
           <RelaiLockup />
         </span>
-        {area === "platform" ? (
+        {area === 'platform' ? (
           <span className="rounded-badge bg-sidebar-line px-1.5 py-px type-overline text-10 text-sidebar-text">
             Admin
           </span>
         ) : null}
       </div>
 
-      {area === "company" ? (
-        <StationSwitcher
-          stations={stations}
-          current={current}
-          onChange={onStationChange}
-        />
-      ) : null}
+      {area === 'company' ? <StationSwitcher stations={stations} current={current} onChange={onStationChange} /> : null}
 
       <div className="-mx-1 flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-1">
         {groups.map((group) => (
           <div key={group.label} className="flex flex-col gap-0.5">
-            <div className="px-3 pb-1.5 type-overline text-10 text-sidebar-text-muted">
-              {group.label}
-            </div>
+            <div className="px-3 pb-1.5 type-overline text-10 text-sidebar-text-muted">{group.label}</div>
             {group.items.map((item) => (
-              <div
-                key={`${item.href}-${item.label}`}
-                onClickCapture={onNavigate}
-              >
+              <div key={`${item.href}-${item.label}`} onClickCapture={onNavigate}>
                 <NavItem
                   href={item.href}
                   label={item.label}
@@ -112,12 +95,8 @@ export function Sidebar({
           {initialsOf(user.name || user.email)}
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="truncate text-13 font-semibold text-sidebar-text">
-            {user.name || user.email}
-          </span>
-          <span className="truncate text-12 text-sidebar-text-muted">
-            {subtitle}
-          </span>
+          <span className="truncate text-13 font-semibold text-sidebar-text">{user.name || user.email}</span>
+          <span className="truncate text-12 text-sidebar-text-muted">{subtitle}</span>
         </div>
         <button
           type="button"
@@ -125,7 +104,7 @@ export function Sidebar({
           aria-label="Sign out"
           title="Sign out"
           className={cx(
-            "inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-control border-0 bg-transparent text-sidebar-text-muted transition-colors hover:bg-sidebar-surface hover:text-sidebar-text",
+            'inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-control border-0 bg-transparent text-sidebar-text-muted transition-colors hover:bg-sidebar-surface hover:text-sidebar-text',
             focusRing,
           )}
         >
@@ -148,32 +127,25 @@ function StationSwitcher({
   const body = (
     <>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-left">
-        <span className="type-overline text-10 text-sidebar-text-muted">
-          Station
-        </span>
+        <span className="type-overline text-10 text-sidebar-text-muted">Station</span>
         <span className="truncate text-14 font-semibold text-sidebar-text">
-          {current?.name ??
-            (stations.length ? "Choose a station" : "No stations yet")}
+          {current?.name ?? (stations.length ? 'Choose a station' : 'No stations yet')}
         </span>
       </span>
       {stations.length > 1 ? (
-        <ChevronsUpDown
-          size={16}
-          aria-hidden
-          className="shrink-0 text-sidebar-text-muted"
-        />
+        <ChevronsUpDown size={16} aria-hidden className="shrink-0 text-sidebar-text-muted" />
       ) : null}
     </>
   );
   const box =
-    "flex w-full items-center gap-2.5 rounded-control border border-sidebar-line bg-sidebar-surface px-3 py-2.5";
+    'flex w-full items-center gap-2.5 rounded-control border border-sidebar-line bg-sidebar-surface px-3 py-2.5';
 
   // One station (a station manager, most often): nothing to switch.
   if (stations.length <= 1) return <div className={box}>{body}</div>;
 
   return (
     <Dropdown
-      trigger={["click"]}
+      trigger={['click']}
       menu={{
         items: stations.map((s) => ({ key: s.id, label: s.name })),
         selectable: true,
@@ -183,12 +155,8 @@ function StationSwitcher({
     >
       <button
         type="button"
-        aria-label={`Station: ${current?.name ?? "none chosen"}. Change station`}
-        className={cx(
-          box,
-          "cursor-pointer transition-colors hover:border-sidebar-text-muted",
-          focusRing,
-        )}
+        aria-label={`Station: ${current?.name ?? 'none chosen'}. Change station`}
+        className={cx(box, 'cursor-pointer transition-colors hover:border-sidebar-text-muted', focusRing)}
       >
         {body}
       </button>

@@ -1,26 +1,18 @@
-"use client";
+'use client';
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { Drawer } from "antd";
-import api from "@/lib/api";
-import { NotificationDetailModal } from "@/components/NotificationDetailModal";
-import type { AuthUser } from "@/store/auth-store";
-import { useStationStore } from "@/store/station-store";
-import { unreadCount, useNotificationStore } from "@/store/notification-store";
-import type { Notification } from "@/types";
-import { CommandPalette } from "./CommandPalette";
-import { Sidebar } from "./Sidebar";
-import { TopBar, type Crumb } from "./TopBar";
-import { activeItem, navFor, type ShellArea } from "./nav";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Drawer } from 'antd';
+import api from '@/lib/api';
+import { NotificationDetailModal } from '@/components/NotificationDetailModal';
+import type { AuthUser } from '@/store/auth-store';
+import { useStationStore } from '@/store/station-store';
+import { unreadCount, useNotificationStore } from '@/store/notification-store';
+import type { Notification } from '@/types';
+import { CommandPalette } from './CommandPalette';
+import { Sidebar } from './Sidebar';
+import { TopBar, type Crumb } from './TopBar';
+import { activeItem, navFor, type ShellArea } from './nav';
 
 /** Lets a page add its own last crumb ("City Gas Co" on a company's page). */
 const CrumbContext = createContext<(label: string | null) => void>(() => {});
@@ -34,8 +26,8 @@ export function useShellCrumb(label: string | null | undefined) {
 }
 
 const SEARCH_PLACEHOLDER: Record<ShellArea, string> = {
-  company: "Search plates, phones, attendants",
-  platform: "Search companies, stations, users",
+  company: 'Search plates, phones, attendants',
+  platform: 'Search companies, stations, users',
 };
 
 /**
@@ -57,8 +49,7 @@ export function AppShell({
   const pathname = usePathname();
   const router = useRouter();
   const groups = useMemo(() => navFor(user, area), [user, area]);
-  const { stations, currentStation, fetchStations, setCurrentStationById } =
-    useStationStore();
+  const { stations, currentStation, fetchStations, setCurrentStationById } = useStationStore();
   const notifications = useNotificationStore((s) => s.items);
   const fetchNotifications = useNotificationStore((s) => s.fetch);
 
@@ -67,9 +58,7 @@ export function AppShell({
   const [detail, setDetail] = useState<string | null>(null);
   const [companyName, setCompanyName] = useState<string | null>(null);
   const [toReview, setToReview] = useState<number | undefined>(undefined);
-  const [openNotification, setOpenNotification] = useState<Notification | null>(
-    null,
-  );
+  const [openNotification, setOpenNotification] = useState<Notification | null>(null);
 
   useEffect(() => {
     void fetchStations();
@@ -78,22 +67,15 @@ export function AppShell({
 
   // Warm every sidebar destination so the first click does not wait for code.
   useEffect(() => {
-    for (const item of groups.flatMap((g) => g.items))
-      router.prefetch(item.href);
+    for (const item of groups.flatMap((g) => g.items)) router.prefetch(item.href);
   }, [groups, router]);
 
   useEffect(() => {
-    if (user.role === "SUPERADMIN" || !user.companyId) return;
+    if (user.role === 'SUPERADMIN' || !user.companyId) return;
     let live = true;
     api
       .get(`/companies/${user.companyId}`)
-      .then(
-        (res) =>
-          live &&
-          setCompanyName(
-            ((res.data as { name?: string })?.name as string) ?? null,
-          ),
-      )
+      .then((res) => live && setCompanyName(((res.data as { name?: string })?.name as string) ?? null))
       .catch(() => {});
     return () => {
       live = false;
@@ -103,7 +85,7 @@ export function AppShell({
   // Days at this station with a discrepancy nobody has signed off.
   const stationId = currentStation?.id;
   useEffect(() => {
-    if (area !== "company" || !stationId) return;
+    if (area !== 'company' || !stationId) return;
     let live = true;
     api
       .get(`/reconciliation/${stationId}`)
@@ -112,11 +94,7 @@ export function AppShell({
           status?: string;
           reviewed_at?: string | null;
         }>;
-        if (live)
-          setToReview(
-            rows.filter((r) => r.status === "discrepancy" && !r.reviewed_at)
-              .length,
-          );
+        if (live) setToReview(rows.filter((r) => r.status === 'discrepancy' && !r.reviewed_at).length);
       })
       .catch(() => live && setToReview(undefined));
     return () => {
@@ -126,42 +104,37 @@ export function AppShell({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setSearchOpen(true);
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const page = activeItem(groups, pathname)?.label ?? "";
+  const page = activeItem(groups, pathname)?.label ?? '';
   const crumbs: Crumb[] =
-    area === "platform"
+    area === 'platform'
       ? [
-          { label: "Relai platform", href: "/admin" },
-          { label: page || "Overview" },
+          { label: 'Relai platform', href: '/admin' },
+          { label: page || 'Overview' },
           ...(detail ? [{ label: detail }] : []),
         ]
       : [
           {
-            label:
-              user.role === "SUPERADMIN"
-                ? "Relai platform"
-                : (companyName ?? "Company"),
-            href: user.role === "SUPERADMIN" ? "/admin" : undefined,
+            label: user.role === 'SUPERADMIN' ? 'Relai platform' : (companyName ?? 'Company'),
+            href: user.role === 'SUPERADMIN' ? '/admin' : undefined,
           },
-          ...(currentStation
-            ? [{ label: currentStation.name, href: "/dashboard" }]
-            : []),
-          { label: page || "Overview" },
+          ...(currentStation ? [{ label: currentStation.name, href: '/dashboard' }] : []),
+          { label: page || 'Overview' },
           ...(detail ? [{ label: detail }] : []),
         ];
   // The last crumb is the page; the ones before it are where it sits.
   if (detail && crumbs.length > 1)
     crumbs[crumbs.length - 2] = {
       ...crumbs[crumbs.length - 2],
-      href: pathname.split("/").slice(0, -1).join("/") || undefined,
+      href: pathname.split('/').slice(0, -1).join('/') || undefined,
     };
 
   const sidebar = (onNavigate?: () => void) => (
@@ -194,16 +167,14 @@ export function AppShell({
         Skip to content
       </a>
       <div className="min-h-screen bg-bg">
-        <aside className="fixed inset-y-0 left-0 z-30 hidden lg:block">
-          {sidebar()}
-        </aside>
+        <aside className="fixed inset-y-0 left-0 z-30 hidden lg:block">{sidebar()}</aside>
         <Drawer
           open={menuOpen}
           onClose={() => setMenuOpen(false)}
           placement="left"
           closable={false}
           size="var(--size-sidebar-width)"
-          classNames={{ body: "p-0!", section: "bg-sidebar-bg!" }}
+          classNames={{ body: 'p-0!', section: 'bg-sidebar-bg!' }}
           title={null}
         >
           {sidebar(() => setMenuOpen(false))}

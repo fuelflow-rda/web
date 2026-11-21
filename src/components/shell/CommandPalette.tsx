@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Modal } from "antd";
-import { CornerDownLeft, Search } from "lucide-react";
-import api from "@/lib/api";
-import { cx } from "@/lib/cx";
-import type { NavGroup, ShellArea } from "./nav";
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Modal } from 'antd';
+import { CornerDownLeft, Search } from 'lucide-react';
+import api from '@/lib/api';
+import { cx } from '@/lib/cx';
+import type { NavGroup, ShellArea } from './nav';
 
 export interface PaletteResult {
   id: string;
@@ -18,9 +18,7 @@ export interface PaletteResult {
 
 type Row = Record<string, unknown>;
 const rowsOf = (data: unknown): Row[] =>
-  Array.isArray(data)
-    ? (data as Row[])
-    : (((data as { data?: Row[] })?.data ?? []) as Row[]);
+  Array.isArray(data) ? (data as Row[]) : (((data as { data?: Row[] })?.data ?? []) as Row[]);
 
 /**
  * Mounted only while open, so each opening starts empty.
@@ -31,30 +29,26 @@ const rowsOf = (data: unknown): Row[] =>
  * phone. Platform: companies, stations and people. Every source is scoped by
  * the API to what the person may see.
  */
-async function searchRemote(
-  area: ShellArea,
-  term: string,
-  signal: AbortSignal,
-): Promise<PaletteResult[]> {
+async function searchRemote(area: ShellArea, term: string, signal: AbortSignal): Promise<PaletteResult[]> {
   const q = encodeURIComponent(term);
-  if (area === "company") {
+  if (area === 'company') {
     const res = await api
-      .get("/users", {
-        params: { role: "attendant", search: term, limit: 5 },
+      .get('/users', {
+        params: { role: 'attendant', search: term, limit: 5 },
         signal,
       })
       .catch(() => null);
     const people = rowsOf(res?.data).map((u) => ({
       id: `att-${u.id}`,
-      group: "Attendants",
-      label: String(u.name ?? "Unnamed"),
+      group: 'Attendants',
+      label: String(u.name ?? 'Unnamed'),
       detail: (u.phone as string | undefined) ?? undefined,
       href: `/attendants?search=${encodeURIComponent(String(u.name ?? term))}`,
     }));
     return [
       {
-        id: "sales",
-        group: "Sales",
+        id: 'sales',
+        group: 'Sales',
         label: `Sales with plate or phone “${term}”`,
         href: `/transactions?search=${q}`,
       },
@@ -63,40 +57,36 @@ async function searchRemote(
   }
 
   const [companies, stations, users] = await Promise.all([
-    api.get("/companies", { signal }).catch(() => null),
-    api
-      .get("/stations", { params: { search: term, limit: 5 }, signal })
-      .catch(() => null),
-    api
-      .get("/users", { params: { search: term, limit: 5 }, signal })
-      .catch(() => null),
+    api.get('/companies', { signal }).catch(() => null),
+    api.get('/stations', { params: { search: term, limit: 5 }, signal }).catch(() => null),
+    api.get('/users', { params: { search: term, limit: 5 }, signal }).catch(() => null),
   ]);
   const needle = term.toLowerCase();
   return [
     ...rowsOf(companies?.data)
       .filter((c) =>
-        String(c.name ?? "")
+        String(c.name ?? '')
           .toLowerCase()
           .includes(needle),
       )
       .slice(0, 5)
       .map((c) => ({
         id: `co-${c.id}`,
-        group: "Companies",
+        group: 'Companies',
         label: String(c.name),
         href: `/admin/companies/${c.id}`,
       })),
     ...rowsOf(stations?.data).map((s) => ({
       id: `st-${s.id}`,
-      group: "Stations",
+      group: 'Stations',
       label: String(s.name),
       detail: (s.location as string | undefined) ?? undefined,
       href: `/admin/stations?search=${encodeURIComponent(String(s.name))}`,
     })),
     ...rowsOf(users?.data).map((u) => ({
       id: `us-${u.id}`,
-      group: "People",
-      label: String(u.name ?? u.email ?? "Unnamed"),
+      group: 'People',
+      label: String(u.name ?? u.email ?? 'Unnamed'),
       detail: (u.email ?? u.phone) as string | undefined,
       href: `/admin/users?search=${encodeURIComponent(String(u.email ?? u.name ?? term))}`,
     })),
@@ -119,7 +109,7 @@ export function CommandPalette({
   const router = useRouter();
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [term, setTerm] = useState("");
+  const [term, setTerm] = useState('');
   const [remote, setRemote] = useState<PaletteResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [index, setIndex] = useState(0);
@@ -148,7 +138,7 @@ export function CommandPalette({
       .filter((i) => !needle || i.label.toLowerCase().includes(needle))
       .map((i): PaletteResult => ({
         id: `page-${i.href}-${i.label}`,
-        group: "Go to",
+        group: 'Go to',
         label: i.label,
         href: i.href,
       }));
@@ -164,19 +154,19 @@ export function CommandPalette({
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowDown") {
+    if (e.key === 'ArrowDown') {
       e.preventDefault();
       setIndex(Math.min(active + 1, results.length - 1));
-    } else if (e.key === "ArrowUp") {
+    } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setIndex(Math.max(active - 1, 0));
-    } else if (e.key === "Enter") {
+    } else if (e.key === 'Enter') {
       e.preventDefault();
       go(results[active]);
     }
   };
 
-  let lastGroup = "";
+  let lastGroup = '';
   return (
     <Modal
       open={open}
@@ -187,7 +177,7 @@ export function CommandPalette({
       width={560}
       destroyOnHidden
       afterOpenChange={(visible) => visible && inputRef.current?.focus()}
-      classNames={{ container: "p-0! overflow-hidden" }}
+      classNames={{ container: 'p-0! overflow-hidden' }}
       aria-label="Search"
     >
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
@@ -204,9 +194,7 @@ export function CommandPalette({
           role="combobox"
           aria-expanded
           aria-controls={listId}
-          aria-activedescendant={
-            results[active] ? `${listId}-${active}` : undefined
-          }
+          aria-activedescendant={results[active] ? `${listId}-${active}` : undefined}
           aria-label="Search"
           className="min-w-0 flex-1 border-0 bg-transparent text-15 text-text outline-none placeholder:text-text-muted"
         />
@@ -214,22 +202,13 @@ export function CommandPalette({
           Esc
         </kbd>
       </div>
-      <ul
-        id={listId}
-        role="listbox"
-        aria-label="Results"
-        className="m-0 max-h-96 list-none overflow-y-auto p-2"
-      >
+      <ul id={listId} role="listbox" aria-label="Results" className="m-0 max-h-96 list-none overflow-y-auto p-2">
         {results.map((r, i) => {
           const header = r.group !== lastGroup ? r.group : null;
           lastGroup = r.group;
           return (
             <li key={r.id} role="presentation">
-              {header ? (
-                <div className="px-2 pt-2 pb-1 type-overline text-10 text-text-muted">
-                  {header}
-                </div>
-              ) : null}
+              {header ? <div className="px-2 pt-2 pb-1 type-overline text-10 text-text-muted">{header}</div> : null}
               <div
                 id={`${listId}-${i}`}
                 role="option"
@@ -237,35 +216,20 @@ export function CommandPalette({
                 onMouseEnter={() => setIndex(i)}
                 onClick={() => go(r)}
                 className={cx(
-                  "flex cursor-pointer items-center gap-3 rounded-control px-2 py-2 text-14",
-                  i === active
-                    ? "bg-surface-muted text-text"
-                    : "text-text-secondary",
+                  'flex cursor-pointer items-center gap-3 rounded-control px-2 py-2 text-14',
+                  i === active ? 'bg-surface-muted text-text' : 'text-text-secondary',
                 )}
               >
                 <span className="min-w-0 flex-1 truncate">{r.label}</span>
-                {r.detail ? (
-                  <span className="shrink-0 font-mono text-12 text-text-muted">
-                    {r.detail}
-                  </span>
-                ) : null}
-                {i === active ? (
-                  <CornerDownLeft
-                    size={14}
-                    aria-hidden
-                    className="shrink-0 text-text-muted"
-                  />
-                ) : null}
+                {r.detail ? <span className="shrink-0 font-mono text-12 text-text-muted">{r.detail}</span> : null}
+                {i === active ? <CornerDownLeft size={14} aria-hidden className="shrink-0 text-text-muted" /> : null}
               </div>
             </li>
           );
         })}
         {results.length === 0 ? (
-          <li
-            role="presentation"
-            className="px-2 py-6 text-center text-13 text-text-secondary"
-          >
-            {searching && query.length >= 2 ? "Searching…" : "No matches."}
+          <li role="presentation" className="px-2 py-6 text-center text-13 text-text-secondary">
+            {searching && query.length >= 2 ? 'Searching…' : 'No matches.'}
           </li>
         ) : searching && query.length >= 2 ? (
           <li role="presentation" className="px-2 py-2 text-12 text-text-muted">
