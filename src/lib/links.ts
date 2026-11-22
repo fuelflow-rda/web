@@ -4,7 +4,7 @@
  * with the parsers below, so the two ends cannot drift.
  */
 
-export type PaymentFilter = 'CASH' | 'CARD' | 'MOMO';
+export type PaymentFilter = 'CASH' | 'CARD' | 'MOMO' | 'ACCOUNT' | 'VOUCHER';
 
 export interface TransactionsLink {
   /** Inclusive calendar days, YYYY-MM-DD. */
@@ -21,7 +21,7 @@ export interface TransactionsLink {
   hour?: number;
 }
 
-const PAYMENT_FILTERS: PaymentFilter[] = ['CASH', 'CARD', 'MOMO'];
+const PAYMENT_FILTERS: PaymentFilter[] = ['CASH', 'CARD', 'MOMO', 'ACCOUNT', 'VOUCHER'];
 
 function withQuery(path: string, params: Record<string, string | undefined>): string {
   const q = new URLSearchParams();

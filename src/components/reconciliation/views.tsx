@@ -251,20 +251,35 @@ export function AttendantTable({ report }: { report: Report }) {
   );
 }
 
-const PAY: Record<string, string> = { CASH: 'Cash', MOMO: 'MoMo', CARD: 'Card' };
+const PAY: Record<string, string> = { CASH: 'Cash', MOMO: 'MoMo', CARD: 'Bank card', ACCOUNT: 'Prepaid balance', VOUCHER: 'Prepaid voucher' };
+const PAY_DOT: Record<string, string> = { CASH: 'bg-pay-cash', MOMO: 'bg-pay-momo', CARD: 'bg-pay-card', ACCOUNT: 'bg-pay-account', VOUCHER: 'bg-pay-voucher' };
+const TILL: Record<string, string> = { CASH: 'Yes', MOMO: 'MoMo wallet', CARD: 'Card terminal', ACCOUNT: 'No · paid earlier', VOUCHER: 'No · paid earlier' };
 
+/**
+ * The day by payment (Pencil "Web / Reconciliation · By payment"). Balance and
+ * voucher payments were paid for before the sale, so they are marked as not
+ * in the till; discounts are shown beside, with how expected revenue allows
+ * for them.
+ */
 export function PaymentTable({ report }: { report: Report }) {
   const total = report.paymentBreakdown.reduce((s, p) => s + p.amount, 0);
-  return (
-    <Panel title="By payment" meta="What was recorded against each way of paying" padded={false}>
+  const payments = report.paymentBreakdown.reduce((s, p) => s + p.count, 0);
+  const d = report.discounts;
+  const hasNew = report.paymentBreakdown.some((p) => p.prepaid) || (d?.total ?? 0) > 0;
+  const table = (
+    <Panel
+      title="By payment"
+      meta={hasNew ? 'Balance and voucher payments were paid for in advance; they are not cash in the till' : 'What was recorded against each way of paying'}
+      padded={false}
+    >
       <div className="overflow-x-auto">
-        <table className="w-full min-w-120 border-collapse">
+        <table className="w-full min-w-150 border-collapse">
           <thead className="bg-surface-muted">
             <tr>
               <th scope="col" className={head}>
                 Payment
               </th>
-              {['Sales', 'Amount RWF', 'Share'].map((h) => (
+              {['Payments', 'Amount RWF', 'Share', ...(hasNew ? ['In the till'] : [])].map((h) => (
                 <th key={h} scope="col" className={cx(head, right)}>
                   {h}
                 </th>
@@ -275,19 +290,74 @@ export function PaymentTable({ report }: { report: Report }) {
             {report.paymentBreakdown.map((p) => (
               <tr key={p.method}>
                 <th scope="row" className={cx(cellBase, 'text-left text-14 font-semibold text-text')}>
-                  {PAY[p.method] ?? p.method}
+                  <span className="flex items-center gap-2.5">
+                    <span aria-hidden className={cx('size-2 rounded-full', PAY_DOT[p.method] ?? 'bg-text-muted')} />
+                    {PAY[p.method] ?? p.method}
+                  </span>
                 </th>
                 <td className={cx(cellBase, right, 'font-mono text-13 text-text')}>{num(p.count)}</td>
                 <td className={cx(cellBase, right, 'font-mono text-13 font-semibold text-text')}>{num(p.amount)}</td>
                 <td className={cx(cellBase, right, 'font-mono text-13 text-text-muted')}>
-                  {total ? Math.round((p.amount / total) * 100) : 0}%
+                  {total ? ((p.amount / total) * 100).toFixed(1) : '0.0'}%
                 </td>
+                {hasNew ? <td className={cx(cellBase, right, 'text-13 text-text-secondary')}>{TILL[p.method] ?? '—'}</td> : null}
               </tr>
             ))}
+            <tr className="bg-surface-muted">
+              <th scope="row" className={cx(cellBase, 'text-left text-14 font-semibold text-text')}>
+                Recorded revenue
+              </th>
+              <td className={cx(cellBase, right, 'font-mono text-13 text-text')}>{num(payments)}</td>
+              <td className={cx(cellBase, right, 'font-mono text-13 font-semibold text-text')}>{num(total)}</td>
+              <td className={cx(cellBase, right, 'font-mono text-13 text-text-muted')}>100%</td>
+              {hasNew ? <td className={cellBase} /> : null}
+            </tr>
           </tbody>
         </table>
       </div>
+      {report.splitSales ? (
+        <p className="m-0 border-t border-border px-5 py-3 text-13 text-text-secondary">
+          {num(report.totalTransactions)} sales. {num(report.splitSales)} {report.splitSales === 1 ? 'was' : 'were'} paid two ways, a balance or voucher plus
+          cash, card or MoMo; each part is counted in its own row.
+        </p>
+      ) : null}
     </Panel>
+  );
+  if (!hasNew || !d) return table;
+  return (
+    <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+      {table}
+      <div className="flex flex-col gap-4">
+        <Panel title="Discounts" meta="Already taken off the price of each sale">
+          <dl className="m-0 flex flex-col">
+            {[
+              [`Card discounts · ${num(d.card_sales)} ${d.card_sales === 1 ? 'sale' : 'sales'}`, d.card],
+              [`Promo vouchers · ${num(d.promo_sales)} ${d.promo_sales === 1 ? 'sale' : 'sales'}`, d.promo],
+              ['Total discounts', d.total],
+            ].map(([k, v], i) => (
+              <div key={String(k)} className={cx('flex items-center justify-between gap-3 py-2.5', i > 0 && 'border-t border-border')}>
+                <dt className="text-14 text-text-secondary">{k}</dt>
+                <dd className="m-0 font-mono text-13 font-medium text-text">−{rwf(Number(v))}</dd>
+              </div>
+            ))}
+          </dl>
+        </Panel>
+        <Panel title="How expected revenue is worked out">
+          <dl className="m-0 flex flex-col">
+            {[
+              ['Volume × list price', rwf(report.expectedRevenue + d.total)],
+              ['Less discounts recorded', `−${rwf(d.total)}`],
+              ['Expected revenue', rwf(report.expectedRevenue)],
+            ].map(([k, v], i) => (
+              <div key={k} className={cx('flex items-center justify-between gap-3 py-2.5', i > 0 && 'border-t border-border')}>
+                <dt className="text-14 text-text-secondary">{k}</dt>
+                <dd className="m-0 font-mono text-13 font-medium text-text">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </Panel>
+      </div>
+    </div>
   );
 }
 

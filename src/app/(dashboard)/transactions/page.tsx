@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { DatePicker, Drawer, Input, Segmented, Select } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -38,7 +39,14 @@ const PAGE = 12;
 /** Columns of figures, set right-aligned so the digits line up. */
 const NUMERIC = new Set(['Quantity', 'Price', 'Amount']);
 
-const PAY: Record<string, string> = { CASH: 'Cash', MOMO: 'MoMo', CARD: 'Card' };
+const PAY: Record<string, string> = { CASH: 'Cash', MOMO: 'MoMo', CARD: 'Card', ACCOUNT: 'Prepaid balance', VOUCHER: 'Voucher' };
+const PAY_DOT: Record<string, string> = { CASH: 'bg-pay-cash', MOMO: 'bg-pay-momo', CARD: 'bg-pay-card', ACCOUNT: 'bg-pay-account', VOUCHER: 'bg-pay-voucher' };
+
+/** "MoMo", or "Balance + MoMo" for a sale paid two ways. */
+function payLabel(s: Pick<Sale, 'payment_method' | 'other_amount' | 'other_method'>): string {
+  const main = s.payment_method === 'ACCOUNT' ? 'Balance' : (PAY[s.payment_method] ?? s.payment_method);
+  return s.other_amount && s.other_method ? `${main} + ${PAY[s.other_method] ?? s.other_method}` : main;
+}
 const STATUS: Record<'pending' | 'locked' | 'voided', { label: string; tone: StatusTone; title: string }> = {
   pending: { label: 'Pending', tone: 'warning', title: 'Saved under 2 minutes ago: the attendant can still undo it' },
   locked: { label: 'Synced', tone: 'success', title: 'Saved and locked' },
@@ -66,6 +74,15 @@ interface Sale {
   void_reason: string | null;
   users?: { id: string; name: string | null } | null;
   pumps?: { pump_number: number; product_type?: string } | null;
+  /** Set on sales with a membership card or a voucher. */
+  list_unit_price?: number | null;
+  discount_amount?: number | null;
+  prepaid_amount?: number | null;
+  other_amount?: number | null;
+  other_method?: string | null;
+  customers?: { id: string; name: string } | null;
+  customer_cards?: { id: string; number: number; vehicle_plate: string | null } | null;
+  vouchers?: { id: string; code: string } | null;
 }
 interface Summary {
   sales: number;
@@ -280,7 +297,7 @@ function TransactionsView() {
     quantity: formatMeter(s.quantity, s.unit),
     price: s.unit_price,
     amount: s.total_amount,
-    payment: PAY[s.payment_method] ?? s.payment_method,
+    payment: payLabel(s),
     attendant: s.users?.name ?? '',
     plate: s.vehicle_plate ?? '',
     status: STATUS[s.sale_status].label,
@@ -549,7 +566,7 @@ function TransactionsView() {
                         {num(s.total_amount)}
                       </td>
                       <td className={cx(cell, 'text-14 text-text-secondary')}>
-                        {PAY[s.payment_method] ?? s.payment_method}
+                        {payLabel(s)}
                       </td>
                       <td className={cx(cell, 'text-14 whitespace-nowrap text-text')}>{s.users?.name ?? '—'}</td>
                       <td className={cx(cell, 'font-mono text-13 whitespace-nowrap text-text-secondary')}>
@@ -681,14 +698,42 @@ function SaleDrawer({
   };
 
   const st = STATUS[sale.sale_status];
+  const per = sale.unit === 'KWH' ? 'kWh' : 'litre';
+  const discount = Number(sale.discount_amount ?? 0);
+  const split: Array<[string, number]> =
+    sale.payment_method === 'ACCOUNT' || sale.payment_method === 'VOUCHER'
+      ? [
+          [sale.payment_method, Number(sale.prepaid_amount ?? 0)],
+          ...(Number(sale.other_amount) > 0 && sale.other_method ? ([[sale.other_method, Number(sale.other_amount)]] as Array<[string, number]>) : []),
+        ]
+      : [];
   const rows: Array<[string, React.ReactNode]> = [
     ['Time', dateTime(sale.timestamp)],
     ['Pump', sale.pumps ? pointLabel(sale.pumps.pump_number, sale.product_type) : '—'],
     ['Product', productName(sale.product_type)],
     ['Quantity', formatMeter(sale.quantity, sale.unit)],
-    ['Price', `${rwf(sale.unit_price)} per ${sale.unit === 'KWH' ? 'kWh' : 'litre'}`],
+    ...(discount > 0
+      ? ([
+          ['List price', `${rwf(Number(sale.list_unit_price ?? sale.unit_price))} per ${per}`],
+          [sale.vouchers ? 'Promo discount' : 'Card discount', <span key="d" className="text-success">−{rwf(discount)}</span>],
+        ] as Array<[string, React.ReactNode]>)
+      : ([['Price', `${rwf(sale.unit_price)} per ${per}`]] as Array<[string, React.ReactNode]>)),
     ['Amount', rwf(sale.total_amount)],
-    ['Payment', PAY[sale.payment_method] ?? sale.payment_method],
+    ['Payment', payLabel(sale)],
+    ...(sale.customers
+      ? ([
+          [
+            'Customer',
+            <Link key="c" href={`/customers/${sale.customers.id}`} className="text-link no-underline hover:underline">
+              {sale.customers.name}
+            </Link>,
+          ],
+        ] as Array<[string, React.ReactNode]>)
+      : []),
+    ...(sale.customer_cards
+      ? ([['Card', <span key="k" className="font-mono">{`··· ${String(sale.customer_cards.number).padStart(4, '0')}${sale.customer_cards.vehicle_plate ? ` · ${sale.customer_cards.vehicle_plate}` : ''}`}</span>]] as Array<[string, React.ReactNode]>)
+      : []),
+    ...(sale.vouchers ? ([['Voucher', <span key="v" className="font-mono">{sale.vouchers.code}</span>]] as Array<[string, React.ReactNode]>) : []),
     ['Attendant', sale.users?.name ?? '—'],
     ['Plate', sale.vehicle_plate ?? '—'],
     ['Customer phone', sale.customer_phone ?? '—'],
@@ -721,6 +766,25 @@ function SaleDrawer({
             </div>
           ))}
         </dl>
+        {split.length ? (
+          <div className="flex flex-col gap-2.5 rounded-card bg-surface-muted p-4">
+            <p className="m-0 text-14 font-semibold text-text">{split.length > 1 ? 'Paid two ways' : 'Paid in advance'}</p>
+            {split.map(([m, amount]) => (
+              <div key={m} className="flex items-center justify-between">
+                <span className="flex items-center gap-2 text-14 text-text">
+                  <span aria-hidden className={cx('size-2 rounded-full', PAY_DOT[m])} />
+                  {PAY[m] ?? m}
+                  {m === 'MOMO' && sale.customer_phone ? ` · ${sale.customer_phone}` : ''}
+                </span>
+                <span className="font-mono text-13 font-medium text-text">{rwf(amount)}</span>
+              </div>
+            ))}
+            <div className="flex justify-between border-t border-border pt-2.5">
+              <span className="text-14 font-semibold text-text">Total</span>
+              <span className="font-mono text-14 font-semibold text-text">{rwf(sale.total_amount)}</span>
+            </div>
+          </div>
+        ) : null}
         {sale.is_flagged ? (
           <div className="flex flex-col gap-3 rounded-control bg-danger-tint p-4">
             <p className="m-0 flex items-center gap-2 text-14 font-semibold text-danger">

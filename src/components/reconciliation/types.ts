@@ -43,7 +43,12 @@ export interface Report {
   expectedBasis: 'metered' | 'sales' | 'mixed';
   status: 'BALANCED' | 'DISCREPANCY';
   pumpBreakdown: PumpLine[];
-  paymentBreakdown: Array<{ method: string; count: number; amount: number }>;
+  /** prepaid: paid before the sale (a balance or a prepaid voucher), not cash in the till. */
+  paymentBreakdown: Array<{ method: string; count: number; amount: number; prepaid?: boolean }>;
+  /** RWF taken off list prices by membership cards and promo vouchers; absent on older reports. */
+  discounts?: { total: number; card: number; promo: number; card_sales: number; promo_sales: number };
+  /** Sales paid two ways; each part is in its own payment row. */
+  splitSales?: number;
   attendantBreakdown: Array<{
     attendantId: string;
     attendantName: string;
