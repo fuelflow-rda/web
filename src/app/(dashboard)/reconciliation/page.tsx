@@ -58,6 +58,8 @@ function ReconciliationView() {
   const params = useSearchParams();
   const { currentStation } = useStationStore();
   const role = useAuthStore((s) => s.user?.role);
+  // The platform admin reads reports too, but building, deciding and signing
+  // off are the company's (the API refuses them).
   const canDecide = role === 'ADMIN' || role === 'MANAGER';
   const stationId = currentStation?.id ?? null;
 
@@ -259,7 +261,10 @@ function ReconciliationView() {
         <Panel title="No report for this day yet">
           <div className="flex flex-col items-start gap-4">
             <p className="m-0 text-14 text-text-secondary">
-              Reports are built each night for every station that sold anything. You can build this one now.
+              Reports are built each night for every station that sold anything.{' '}
+              {canDecide
+                ? 'You can build this one now.'
+                : "The station's manager or a company admin can build this one now."}
             </p>
             {canDecide ? (
               <Button kind="primary" icon={RefreshCw} onClick={() => run('generate')} loading={busy === 'generate'}>

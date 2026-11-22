@@ -10,6 +10,7 @@ import { focusRing } from '@/components/ui/focus';
 import { PanelError, PanelSkeleton, num } from '@/components/overview/panels';
 import { cx } from '@/lib/cx';
 import { useAuthStore } from '@/store/auth-store';
+import { ReconciliationButton } from '@/components/admin/ReconciliationButton';
 
 interface StationRow {
   id: string;
@@ -216,6 +217,7 @@ function StationsView() {
                     </td>
                     <td className={cx(cell, 'text-right')}>
                       <span className="inline-flex gap-1">
+                        {platform ? <ReconciliationButton station={{ ...s, companyId: s.company_id }} /> : null}
                         <button
                           type="button"
                           aria-label={`Edit ${s.name}`}

@@ -12,6 +12,7 @@ import { usePolled } from '@/components/overview/data';
 import { useShellCrumb } from '@/components/shell/AppShell';
 import { cx } from '@/lib/cx';
 import { productList } from '@/lib/product-types';
+import { ReconciliationButton } from './ReconciliationButton';
 import {
   deleteCompany,
   getCompanyOverview,
@@ -371,6 +372,9 @@ export function CompanyView({
                         <th scope="col" className={head}>
                           Status
                         </th>
+                        <th scope="col" className={cx(head, 'text-right')}>
+                          <span className="sr-only">Reports</span>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -404,6 +408,9 @@ export function CompanyView({
                                   ? 'Live'
                                   : 'No sales today'}
                             </StatusChip>
+                          </td>
+                          <td className={cx(cell, 'w-12 text-right')}>
+                            <ReconciliationButton station={{ ...s, companyId }} />
                           </td>
                         </tr>
                       ))}

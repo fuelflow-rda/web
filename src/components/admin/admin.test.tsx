@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { useStationStore } from '@/store/station-store';
 import { CompaniesTable, duration, shortAgo, stationWords } from './PlatformOverview';
+import { ReconciliationButton } from './ReconciliationButton';
 import { lastActive } from './format';
 import { RolePill } from './roles';
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => '/admin' }));
+const push = vi.fn();
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push }), usePathname: () => '/admin' }));
 
 describe('admin wording', () => {
   const now = Date.parse('2026-11-21T10:00:00Z');
@@ -61,5 +64,23 @@ describe('RolePill', () => {
     expect(container.querySelector('[aria-hidden]')?.className).toContain('bg-info');
     rerender(<RolePill role="attendant" />);
     expect(container.querySelector('[aria-hidden]')?.className).toContain('bg-accent');
+  });
+});
+
+describe('ReconciliationButton', () => {
+  it("makes the station the sidebar's station, then opens its reconciliation", () => {
+    const listed = { id: 'st-1', companyId: 'co-1', name: 'Remera', location: 'Kigali', isActive: true, createdAt: '', updatedAt: '' };
+    useStationStore.setState({ stations: [listed], currentStation: null });
+    render(<ReconciliationButton station={{ id: 'st-1', name: 'Remera' }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Reconciliation for Remera' }));
+    expect(useStationStore.getState().currentStation).toBe(listed);
+    expect(push).toHaveBeenLastCalledWith('/reconciliation');
+  });
+
+  it('opens a station the sidebar list does not hold yet', () => {
+    useStationStore.setState({ stations: [], currentStation: null });
+    render(<ReconciliationButton station={{ id: 'st-2', name: 'Rubavu', location: null, companyId: 'co-2' }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Reconciliation for Rubavu' }));
+    expect(useStationStore.getState().currentStation).toMatchObject({ id: 'st-2', name: 'Rubavu', companyId: 'co-2', location: '' });
   });
 });

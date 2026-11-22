@@ -82,8 +82,8 @@ export function AppShell({
     };
   }, [user.role, user.companyId]);
 
-  // Days at this station with a discrepancy nobody has signed off. The reports
-  // API serves company admins and managers only, so the platform admin gets no count.
+  // Days at this station with a discrepancy nobody has signed off. Only company
+  // admins and managers can sign a day off, so the platform admin gets no count.
   const stationId = currentStation?.id;
   const reviews = area === 'company' && user.role !== 'SUPERADMIN';
   useEffect(() => {
