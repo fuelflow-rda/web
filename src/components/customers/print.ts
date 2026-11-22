@@ -14,14 +14,31 @@ const C = themedColors.light;
 /** Blank modules around a QR code, so a scanner finds its edges. */
 const QUIET_ZONE = 2;
 
-async function qr(code: string): Promise<string> {
+type Pdf = Awaited<ReturnType<typeof newPdf>>;
+
+/**
+ * Draws a QR code as vector squares at (x, y), `size` mm wide. Crisp at any
+ * print size, and far smaller than an image: a sheet of a hundred vouchers
+ * stays well under a megabyte.
+ */
+async function drawQr(doc: Pdf, code: string, x: number, y: number, size: number): Promise<void> {
   const QRCode = (await import('qrcode')).default;
-  return QRCode.toDataURL(code, { margin: QUIET_ZONE, width: 320, errorCorrectionLevel: 'M', color: { dark: C.text, light: C.surface } });
+  const { modules } = QRCode.create(code, { errorCorrectionLevel: 'M' });
+  const n = modules.size;
+  const cell = size / (n + 2 * QUIET_ZONE);
+  doc.setFillColor(C.surface);
+  doc.rect(x, y, size, size, 'F');
+  doc.setFillColor(C.text);
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      if (modules.get(r, c)) doc.rect(x + (c + QUIET_ZONE) * cell, y + (r + QUIET_ZONE) * cell, cell + 0.01, cell + 0.01, 'F');
+    }
+  }
 }
 
 async function newPdf(format: [number, number] | 'a4', orientation: 'landscape' | 'portrait') {
   const { default: jsPDF } = await import('jspdf');
-  return new jsPDF({ unit: 'mm', format, orientation });
+  return new jsPDF({ unit: 'mm', format, orientation, compress: true });
 }
 
 export interface PrintableCard {
@@ -64,7 +81,7 @@ export async function printCard(card: PrintableCard): Promise<void> {
   doc.rect(0, 0, W, H, 'F');
   doc.setFillColor(C.surface);
   doc.roundedRect(5, 5, 34, 34, 2, 2, 'F');
-  doc.addImage(await qr(card.code), 'PNG', 7, 7, 30, 30);
+  await drawQr(doc, card.code, 7, 7, 30);
   doc.setTextColor(C.text);
   doc.setFont('courier', 'bold');
   doc.setFontSize(9);
@@ -102,7 +119,6 @@ export async function printVoucherSheet(batch: PrintableVoucherBatch): Promise<v
   const PER = COLS * ROWS;
   const pages = Math.max(1, Math.ceil(batch.codes.length / PER));
   const until = new Date(`${batch.expiresOn}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
-  const images = await Promise.all(batch.codes.map(qr));
 
   for (let page = 0; page < pages; page++) {
     if (page) doc.addPage('a4', 'portrait');
@@ -116,7 +132,8 @@ export async function printVoucherSheet(batch: PrintableVoucherBatch): Promise<v
     doc.text(`${batch.name} · ${batch.codes.length} vouchers`, M, 18.5);
     doc.text(`PAGE ${page + 1} OF ${pages}`, 210 - M, 18.5, { align: 'right' });
 
-    batch.codes.slice(page * PER, page * PER + PER).forEach((code, i) => {
+    const onPage = batch.codes.slice(page * PER, page * PER + PER);
+    for (const [i, code] of onPage.entries()) {
       const x = M + (i % COLS) * TW;
       const y = 26 + Math.floor(i / COLS) * TH;
       doc.setDrawColor(C['border-strong']);
@@ -141,12 +158,12 @@ export async function printVoucherSheet(batch: PrintableVoucherBatch): Promise<v
       doc.text(doc.splitTextToSize(`One sale, any ${batch.companyName} station. Valid until ${until}.`, TW - 46), x + 5, y + 38);
       if (batch.forName) doc.text(batch.forName, x + 5, y + 53);
       const q = 32;
-      doc.addImage(images[page * PER + i], 'PNG', x + TW - q - 6, y + 8, q, q);
+      await drawQr(doc, code, x + TW - q - 6, y + 8, q);
       doc.setTextColor(C.text);
       doc.setFont('courier', 'bold');
       doc.setFontSize(9);
       doc.text(code, x + TW - 6 - q / 2, y + 47, { align: 'center' });
-    });
+    }
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
