@@ -1,0 +1,4 @@
+{
+  "$description": "Hardcoded style values in pages built before the redesign. Counts may only go down; regenerate with `node scripts/check-hardcoded-styles.mjs --update` after removing some.",
+  "files": {}
+}

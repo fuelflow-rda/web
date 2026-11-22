@@ -1,7 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Relai">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="Relai">
   <title>Relai</title>
-  <rect width="64" height="64" rx="15" fill="#2E5E52"/>
-  <g transform="translate(8 8)"><g transform="rotate(-18 24 24)">
-    <path fill-rule="evenodd" fill="#FFFFFF" d="M24 4C24 4 38 20 38 29A14 14 0 0 1 10 29C10 20 24 4 24 4ZM26.4 16.5L17.6 30.5H22.2L21.6 40L30.4 26.5H25.6Z"/>
-  </g></g>
+  <style>path{stroke:#1A422F}@media (prefers-color-scheme:dark){path{stroke:#F3EBD6}}</style>
+  <path d="M13 44 V14 A6 6 0 0 1 19 8 H23 A9.5 9.5 0 0 1 23 27 H13 M21 27 L28.94 34.94" fill="none" stroke-width="7" stroke-linejoin="round"/>
+  <circle cx="34.6" cy="40.6" r="4" fill="#C8B68E"/>
 </svg>

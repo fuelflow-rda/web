@@ -1,428 +1,147 @@
 'use client';
 
-import React, { Suspense, useEffect, useState, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { Segmented } from 'antd';
+import { Plus } from 'lucide-react';
+import { Banner, Button, PageHeader, Panel } from '@/components/ui';
+import { PanelError } from '@/components/overview/panels';
+import { usePolled } from '@/components/overview/data';
+import { getPoints, type Point } from '@/components/pumps/data';
 import {
-  Table,
-  Card,
-  Typography,
-  Radio,
-  Tag,
-  Space,
-  Select,
-  Button,
-  Modal,
-  Form,
-  InputNumber,
-  message,
-} from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import api from '@/lib/api';
-import { formatRWF } from '@/lib/format';
-import {
-  CONNECTOR_TYPES,
-  PRODUCT_TYPES,
-  connectorLabel,
-  formatQuantity,
-  isEvProductType,
-  normalizeProductType,
-  productLabel,
-  productTagColor,
-  unitForProduct,
-  unitLabel,
-} from '@/lib/product-types';
+  AddPointModal,
+  EndMaintenanceModal,
+  MaintenanceBanners,
+  MaintenanceLogDrawer,
+  PointCard,
+  PumpReportDrawer,
+  StartMaintenanceModal,
+} from '@/components/pumps/views';
+import { useAuthStore } from '@/store/auth-store';
 import { useStationStore } from '@/store/station-store';
-import ExportButton from '@/components/ExportButton';
-import PumpPerformanceChart from '@/components/charts/PumpPerformanceChart';
-import type { PumpReport, Pump } from '@/types';
 
-const { Title, Text } = Typography;
+type Show = 'all' | 'pump' | 'charger';
 
-type ViewMode = 'daily' | 'weekly' | 'monthly';
-
-// useSearchParams needs a Suspense boundary for Next to prerender the page.
 export default function PumpsPage() {
-  return (
-    <Suspense>
-      <PumpsView />
-    </Suspense>
-  );
-}
-
-function PumpsView() {
   const { currentStation } = useStationStore();
-  const searchParams = useSearchParams();
-  const [reports, setReports] = useState<PumpReport[]>([]);
-  const [pumps, setPumps] = useState<Pump[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('daily');
-  // A dashboard link names the pump to open.
-  const [selectedPumpId, setSelectedPumpId] = useState<string | undefined>(
-    () => searchParams.get('pump') ?? undefined,
+  const role = useAuthStore((s) => s.user?.role);
+  const canManage = role === 'ADMIN' || role === 'MANAGER';
+  const canAdd = canManage || role === 'SUPERADMIN';
+  const stationId = currentStation?.id ?? null;
+
+  const points = usePolled(stationId, () => getPoints(stationId!), 30_000);
+  const [show, setShow] = useState<Show>('all');
+  const [now, setNow] = useState(() => Date.now());
+  const [adding, setAdding] = useState(false);
+  const [starting, setStarting] = useState<Point | null>(null);
+  const [ending, setEnding] = useState<Point | null>(null);
+  const [report, setReport] = useState<Point | null>(null);
+  const [log, setLog] = useState(false);
+
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(t);
+  }, []);
+
+  const all = [...(points.data ?? [])].sort(
+    (a, b) => Number(a.kind === 'charger') - Number(b.kind === 'charger') || a.pump_number - b.pump_number,
   );
-  const [addModalOpen, setAddModalOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [form] = Form.useForm();
-
-  const fetchPumps = useCallback(async () => {
-    if (!currentStation) return;
-    try {
-      const pumpsRes = await api.get('/pumps', { params: { stationId: currentStation.id } });
-      const out = pumpsRes.data as { data?: unknown[] };
-      const raw = out?.data ?? (Array.isArray(pumpsRes.data) ? pumpsRes.data : []);
-      const mapped = (
-        Array.isArray(raw) ? raw : []
-      ).map((p: Record<string, unknown>) => {
-        const productType = normalizeProductType(
-          (p.product_type as string | undefined) ?? (p.fuel_type as string | undefined),
-        );
-        return {
-          id: p.id as string,
-          stationId: p.station_id as string,
-          pumpNumber: Number(p.pump_number) ?? 0,
-          productType,
-          fuelType: productType,
-          connectorType: (p.connector_type as Pump['connectorType']) ?? null,
-          powerKw: p.power_kw == null ? null : Number(p.power_kw),
-          status: (String(p.status ?? 'active').toUpperCase() === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE') as Pump['status'],
-          createdAt: (p.created_at as string) ?? '',
-          updatedAt: (p.updated_at as string) ?? '',
-        };
-      });
-      setPumps(mapped);
-    } catch {
-      setPumps([]);
-    }
-  }, [currentStation]);
-
-  useEffect(() => {
-    // Also covers a linked pump that no longer exists or belongs to another station.
-    if (pumps.length > 0 && !pumps.some((p) => p.id === selectedPumpId)) {
-      setSelectedPumpId(pumps[0].id);
-    }
-  }, [pumps, selectedPumpId]);
-
-  const fetchReports = useCallback(async () => {
-    if (!currentStation || !selectedPumpId) {
-      setReports([]);
-      return;
-    }
-    setLoading(true);
-    try {
-      const to = new Date();
-      const from = new Date();
-      if (viewMode === 'daily') from.setDate(from.getDate() - 30);
-      else if (viewMode === 'weekly') from.setDate(from.getDate() - 90);
-      else from.setMonth(from.getMonth() - 12);
-      const res = await api.get(`/reports/pump/${selectedPumpId}`, {
-        params: { from: from.toISOString(), to: to.toISOString() },
-      });
-      const payload = res.data as {
-        transactions?: Array<{
-          quantity?: number;
-          liters?: number;
-          total_amount?: number;
-          timestamp?: string;
-          product_type?: string;
-          fuel_type?: string;
-        }>;
-      };
-      const tx = Array.isArray(payload?.transactions) ? payload.transactions : [];
-      const pump = pumps.find((p) => p.id === selectedPumpId);
-      const pumpProduct = pump?.productType ?? 'GASOLINE';
-      const totalQuantity = tx.reduce((s, t) => s + parseFloat(String(t.quantity ?? t.liters ?? 0)), 0);
-      const totalRev = tx.reduce((s, t) => s + (t.total_amount ?? 0), 0);
-      const summaryRow: PumpReport = {
-        date: `${from.toISOString().slice(0, 10)} to ${to.toISOString().slice(0, 10)}`,
-        pumpId: selectedPumpId,
-        pumpNumber: pump?.pumpNumber ?? 0,
-        productType: pumpProduct,
-        fuelType: pumpProduct,
-        unit: unitForProduct(pumpProduct),
-        quantityDispensed: totalQuantity,
-        expectedRevenue: totalRev,
-        recordedRevenue: totalRev,
-        discrepancy: 0,
-      };
-      const transactionRows: PumpReport[] = tx.map((t) => {
-        const productType = normalizeProductType(t.product_type ?? t.fuel_type);
-        const quantity = parseFloat(String(t.quantity ?? t.liters ?? 0));
-        const amt = t.total_amount ?? 0;
-        const dateStr = t.timestamp ? new Date(t.timestamp).toISOString().slice(0, 10) : to.toISOString().slice(0, 10);
-        return {
-          date: dateStr,
-          pumpId: selectedPumpId,
-          pumpNumber: pump?.pumpNumber ?? 0,
-          productType,
-          fuelType: productType,
-          unit: unitForProduct(productType),
-          quantityDispensed: quantity,
-          expectedRevenue: amt,
-          recordedRevenue: amt,
-          discrepancy: 0,
-        };
-      });
-      setReports(transactionRows.length > 0 ? transactionRows : (totalQuantity > 0 || totalRev > 0 ? [summaryRow] : []));
-    } catch {
-      setReports([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentStation, viewMode, selectedPumpId, pumps]);
-
-  useEffect(() => {
-    fetchPumps();
-  }, [fetchPumps]);
-
-  useEffect(() => {
-    if (selectedPumpId && pumps.length > 0) fetchReports();
-    else setReports([]);
-  }, [selectedPumpId, pumps.length, viewMode, fetchReports]);
-
-  useEffect(() => {
-    if (addModalOpen && currentStation?.id) {
-      api.get<{ nextNumber: number }>('/pumps/next-number', { params: { stationId: currentStation.id } })
-        .then((res) => {
-          const next = res.data?.nextNumber ?? (pumps.length > 0 ? Math.max(...pumps.map((p) => p.pumpNumber), 0) + 1 : 1);
-          form.setFieldsValue({ pumpNumber: next, productType: 'GASOLINE' });
-        })
-        .catch(() => {
-          const nextNum = pumps.length > 0 ? Math.max(...pumps.map((p) => p.pumpNumber), 0) + 1 : 1;
-          form.setFieldsValue({ pumpNumber: nextNum, productType: 'GASOLINE' });
-        });
-    }
-  }, [addModalOpen, currentStation?.id, pumps, form]);
-
-  const handleAddPump = async (values: {
-    pumpNumber: number;
-    productType: string;
-    connectorType?: string;
-    powerKw?: number;
-  }) => {
-    if (!currentStation) return;
-    setSubmitting(true);
-    try {
-      const productType = values.productType ?? 'GASOLINE';
-      const isEv = isEvProductType(productType);
-      await api.post('/pumps', {
-        station_id: currentStation.id,
-        pump_number: Number(values.pumpNumber) ?? 1,
-        product_type: productType,
-        // The API rejects these on a fuel pump, so only send them for charge points.
-        ...(isEv
-          ? { connector_type: values.connectorType, power_kw: Number(values.powerKw) }
-          : {}),
-      });
-      message.success(isEv ? 'Charge point added.' : 'Pump added.');
-      setAddModalOpen(false);
-      form.resetFields();
-      fetchPumps();
-    } catch (err: unknown) {
-      const ax = err as { response?: { data?: { message?: string | string[] } } };
-      const msg = Array.isArray(ax?.response?.data?.message)
-        ? ax.response.data.message[0]
-        : (ax?.response?.data?.message as string) || 'Failed to add pump';
-      message.error(msg);
-    } finally {
-      setSubmitting(false);
-    }
+  const pumps = all.filter((p) => p.kind === 'pump');
+  const chargers = all.filter((p) => p.kind === 'charger');
+  const shown = show === 'all' ? all : show === 'pump' ? pumps : chargers;
+  const done = () => {
+    setAdding(false);
+    setStarting(null);
+    setEnding(null);
+    points.reload();
   };
 
-  const columns: ColumnsType<PumpReport> = [
-    {
-      title: 'Date',
-      dataIndex: 'date',
-      key: 'date',
-      sorter: (a, b) => a.date.localeCompare(b.date),
-    },
-    {
-      title: 'Pump',
-      key: 'pump',
-      render: (_: unknown, record: PumpReport) => (
-        <Space>
-          <Text strong>#{record.pumpNumber}</Text>
-          <Tag color={productTagColor(record.productType)}>{productLabel(record.productType)}</Tag>
-        </Space>
-      ),
-    },
-    {
-      title: 'Dispensed',
-      dataIndex: 'quantityDispensed',
-      key: 'quantityDispensed',
-      sorter: (a, b) => a.quantityDispensed - b.quantityDispensed,
-      align: 'right',
-      render: (v: number, record: PumpReport) => formatQuantity(v, record.unit),
-    },
-    {
-      title: 'Expected Revenue',
-      dataIndex: 'expectedRevenue',
-      key: 'expectedRevenue',
-      sorter: (a, b) => a.expectedRevenue - b.expectedRevenue,
-      align: 'right',
-      render: (v: number) => formatRWF(v),
-    },
-    {
-      title: 'Recorded Revenue',
-      dataIndex: 'recordedRevenue',
-      key: 'recordedRevenue',
-      sorter: (a, b) => a.recordedRevenue - b.recordedRevenue,
-      align: 'right',
-      render: (v: number) => formatRWF(v),
-    },
-    {
-      title: 'Discrepancy',
-      dataIndex: 'discrepancy',
-      key: 'discrepancy',
-      sorter: (a, b) => a.discrepancy - b.discrepancy,
-      align: 'right',
-      render: (v: number) => (
-        <Text
-          strong
-          className={Math.abs(v) > 0 ? '!text-danger' : '!text-accent'}
-        >
-          {formatRWF(v)}
-        </Text>
-      ),
-    },
-  ];
-
-  const exportColumns = [
-    { header: 'Date', key: 'date' },
-    { header: 'Pump #', key: 'pumpNumber' },
-    { header: 'Product', key: 'productType' },
-    { header: 'Quantity', key: 'quantityDispensed' },
-    { header: 'Unit', key: 'unit' },
-    { header: 'Expected (RWF)', key: 'expectedRevenue' },
-    { header: 'Recorded (RWF)', key: 'recordedRevenue' },
-    { header: 'Discrepancy (RWF)', key: 'discrepancy' },
-  ];
+  if (!stationId) {
+    return (
+      <PageHeader
+        title="Pumps and chargers"
+        description="Choose a station in the sidebar to see its pumps and chargers."
+      />
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <Title level={3} className="!mb-0">Pump Reports</Title>
-          <Text type="secondary">
-            Pumps are assigned to the current station. Use &quot;Add Pump&quot; to create a new pump here; select a pump below to view reports.
-          </Text>
-        </div>
-        <Space wrap>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddModalOpen(true)} disabled={!currentStation}>
-            Add Pump
-          </Button>
-          <ExportButton data={reports} columns={exportColumns} filename="pump-reports" />
-        </Space>
-      </div>
-
-      <Modal
-        title="Add Pump or Charge Point"
-        open={addModalOpen}
-        onCancel={() => { setAddModalOpen(false); form.resetFields(); }}
-        footer={null}
-        destroyOnClose
-      >
-        <Form form={form} layout="vertical" onFinish={handleAddPump}>
-          <Form.Item name="pumpNumber" label="Number" rules={[{ required: true, type: 'number', min: 1 }]}>
-            <InputNumber className="!w-full" placeholder="e.g. 1" min={1} />
-          </Form.Item>
-          <Form.Item name="productType" label="Product" rules={[{ required: true }]} initialValue="GASOLINE">
-            <Select
+    <>
+      <PageHeader
+        title="Pumps and chargers"
+        description={`${currentStation?.name} · ${pumps.length} ${pumps.length === 1 ? 'pump' : 'pumps'} and ${chargers.length} ${chargers.length === 1 ? 'charger' : 'chargers'} · live status`}
+        actions={
+          <>
+            <Segmented<Show>
+              aria-label="Show"
+              value={show}
+              onChange={setShow}
               options={[
-                {
-                  label: 'Fuel',
-                  options: PRODUCT_TYPES.filter((p) => !isEvProductType(p)).map((p) => ({
-                    value: p,
-                    label: productLabel(p),
-                  })),
-                },
-                {
-                  label: 'EV Charging',
-                  options: PRODUCT_TYPES.filter(isEvProductType).map((p) => ({
-                    value: p,
-                    label: productLabel(p),
-                  })),
-                },
+                { value: 'all', label: `All ${all.length}` },
+                { value: 'pump', label: `Pumps ${pumps.length}` },
+                { value: 'charger', label: `Chargers ${chargers.length}` },
               ]}
             />
-          </Form.Item>
+            {canAdd ? (
+              <Button kind="primary" icon={Plus} onClick={() => setAdding(true)}>
+                Add pump or charger
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
-          {/* A charge point is identified by its connector and rated power. */}
-          <Form.Item noStyle shouldUpdate={(prev, next) => prev.productType !== next.productType}>
-            {({ getFieldValue }) =>
-              isEvProductType(getFieldValue('productType')) ? (
-                <>
-                  <Form.Item
-                    name="connectorType"
-                    label="Connector"
-                    rules={[{ required: true, message: 'Select the connector this charge point uses' }]}
-                  >
-                    <Select
-                      placeholder="e.g. CCS Combo"
-                      options={CONNECTOR_TYPES.map((c) => ({ value: c, label: connectorLabel(c) }))}
-                    />
-                  </Form.Item>
-                  <Form.Item
-                    name="powerKw"
-                    label="Rated Power (kW)"
-                    rules={[{ required: true, type: 'number', min: 0.1, message: 'Enter the rated output in kW' }]}
-                  >
-                    <InputNumber className="!w-full" placeholder="e.g. 60" min={0.1} step={1} />
-                  </Form.Item>
-                </>
-              ) : null
-            }
-          </Form.Item>
+      <MaintenanceBanners points={all} now={now} onLog={() => setLog(true)} />
+      {points.error && points.data ? (
+        <Banner tone="warning" title="Showing the last status received; the latest could not be loaded." />
+      ) : null}
 
-          <div className="flex justify-end gap-2">
-            <Button onClick={() => setAddModalOpen(false)}>Cancel</Button>
-            <Button type="primary" htmlType="submit" loading={submitting}>Add</Button>
-          </div>
-        </Form>
-      </Modal>
-
-      <Card className="!rounded-xl">
-        <div className="flex flex-wrap items-center gap-4 mb-6">
-          <Radio.Group
-            value={viewMode}
-            onChange={(e) => setViewMode(e.target.value)}
-            buttonStyle="solid"
-          >
-            <Radio.Button value="daily">Daily</Radio.Button>
-            <Radio.Button value="weekly">Weekly</Radio.Button>
-            <Radio.Button value="monthly">Monthly</Radio.Button>
-          </Radio.Group>
-          <Select
-            value={selectedPumpId}
-            onChange={setSelectedPumpId}
-            placeholder="All Pumps"
-            allowClear
-            className="w-44"
-            options={pumps.map((p) => ({
-              value: p.id,
-              label: isEvProductType(p.productType)
-                ? `#${p.pumpNumber} · ${productLabel(p.productType)} · ${connectorLabel(p.connectorType)} ${p.powerKw ?? 0}kW`
-                : `Pump #${p.pumpNumber} (${productLabel(p.productType)})`,
-            }))}
-          />
+      {points.error && !points.data ? (
+        <Panel title="Pumps and chargers">
+          <PanelError message="Pumps and chargers could not be loaded." onRetry={points.reload} />
+        </Panel>
+      ) : !points.data ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 3 }, (_, i) => (
+            <div
+              key={i}
+              className="h-67.5 animate-pulse rounded-card border border-border bg-surface motion-reduce:animate-none"
+            />
+          ))}
         </div>
+      ) : shown.length === 0 ? (
+        <Panel title={all.length ? 'Nothing to show' : 'No pumps or chargers yet'}>
+          <p className="m-0 text-14 text-text-secondary">
+            {all.length
+              ? `This station has no ${show === 'pump' ? 'pumps' : 'chargers'}.`
+              : 'Add the station’s pumps and chargers so attendants can record sales on them.'}
+          </p>
+        </Panel>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {shown.map((p) => (
+            <PointCard
+              key={p.id}
+              point={p}
+              now={now}
+              canManage={canManage}
+              onReport={() => setReport(p)}
+              onStart={() => setStarting(p)}
+              onEnd={() => setEnding(p)}
+              onLog={() => setLog(true)}
+            />
+          ))}
+        </div>
+      )}
+      <p className="m-0 text-12 text-text-muted">
+        Status comes from what is recorded: in use or charging means a sale in the last 10 minutes during an open shift.
+        Totaliser is the last meter reading an attendant entered.
+      </p>
 
-        <PumpPerformanceChart data={reports} />
-      </Card>
-
-      <Card className="!rounded-xl" title="Detailed Report">
-        <Table
-          columns={columns}
-          dataSource={reports}
-          rowKey={(_, index) => `report-${selectedPumpId}-${index}`}
-          loading={loading}
-          pagination={{ pageSize: 20, showTotal: (t) => `${t} records` }}
-          size="middle"
-          rowClassName={(record) =>
-            Math.abs(record.discrepancy) > 0 ? 'bg-danger-tint' : ''
-          }
-        />
-      </Card>
-    </div>
+      <AddPointModal stationId={stationId} open={adding} onClose={() => setAdding(false)} onDone={done} />
+      <StartMaintenanceModal point={starting} onClose={() => setStarting(null)} onDone={done} />
+      <EndMaintenanceModal point={ending} onClose={() => setEnding(null)} onDone={done} />
+      <MaintenanceLogDrawer stationId={stationId} open={log} onClose={() => setLog(false)} />
+      <PumpReportDrawer point={report} onClose={() => setReport(null)} />
+    </>
   );
 }

@@ -53,17 +53,17 @@ const PRODUCT_COLORS: Record<ProductType, string> = {
   GASOLINE: 'var(--product-gasoline)',
   DIESEL: 'var(--product-diesel)',
   EV_AC: 'var(--product-ev-ac)',
-  EV_DC_FAST: 'var(--product-ev-dc-fast)',
-  EV_DC_ULTRA: 'var(--product-ev-dc-ultra)',
+  EV_DC_FAST: 'var(--product-ev-dc)',
+  EV_DC_ULTRA: 'var(--product-ev-ultra)',
 };
 
 /** Quiet backing for a product chip, in the same theme-aware form. */
 const PRODUCT_TINTS: Record<ProductType, string> = {
-  GASOLINE: 'var(--product-gasoline-tint)',
-  DIESEL: 'var(--product-diesel-tint)',
-  EV_AC: 'var(--product-ev-ac-tint)',
-  EV_DC_FAST: 'var(--product-ev-dc-fast-tint)',
-  EV_DC_ULTRA: 'var(--product-ev-dc-ultra-tint)',
+  GASOLINE: 'var(--surface-muted)',
+  DIESEL: 'var(--surface-muted)',
+  EV_AC: 'var(--surface-muted)',
+  EV_DC_FAST: 'var(--surface-muted)',
+  EV_DC_ULTRA: 'var(--surface-muted)',
 };
 
 /** Ant Design tag colors, which take names rather than hex values. */
@@ -148,4 +148,75 @@ export function formatQuantity(
 /** "RWF 420/kWh" — price is per liter for fuel, per kWh for EV. */
 export function formatUnitPrice(price: number | undefined | null, unit: ProductUnit | string): string {
   return `RWF ${Number(price ?? 0).toLocaleString()}/${unitLabel(unit)}`;
+}
+
+/** The design's three-letter codes, for tags in tables: GAS, DSL, EV DC, EV AC. */
+const PRODUCT_CODES: Record<ProductType, string> = {
+  GASOLINE: 'GAS',
+  DIESEL: 'DSL',
+  EV_AC: 'EV AC',
+  EV_DC_FAST: 'EV DC',
+  EV_DC_ULTRA: 'EV UL',
+};
+
+/** The design's product names, for legends and lists: "EV · DC fast". */
+const PRODUCT_NAMES: Record<ProductType, string> = {
+  GASOLINE: 'Gasoline',
+  DIESEL: 'Diesel',
+  EV_AC: 'EV · AC',
+  EV_DC_FAST: 'EV · DC fast',
+  EV_DC_ULTRA: 'EV · DC ultra',
+};
+
+export function productCode(type: string | undefined | null): string {
+  return PRODUCT_CODES[normalizeProductType(type)];
+}
+
+export function productName(type: string | undefined | null): string {
+  return PRODUCT_NAMES[normalizeProductType(type)];
+}
+
+const PRODUCT_WORDS: Record<ProductType, string> = {
+  GASOLINE: 'gasoline',
+  DIESEL: 'diesel',
+  EV_AC: 'EV AC',
+  EV_DC_FAST: 'EV DC',
+  EV_DC_ULTRA: 'EV DC ultra',
+};
+
+/** What a company sells, as a sentence lists it: "Gasoline, diesel, EV AC, EV DC". */
+export function productList(types: readonly string[]): string {
+  const known = new Set(types.map(normalizeProductType));
+  const text = PRODUCT_TYPES.filter((t) => known.has(t))
+    .map((t) => PRODUCT_WORDS[t])
+    .join(', ');
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/**
+ * "Pump 2" or "Charger 4". The number is the station's own: pumps and chargers
+ * share one numbering, so a charger keeps the number attendants pick it by.
+ */
+export function pointLabel(number: number | string, type: string | undefined | null): string {
+  return `${isEvProductType(type) ? 'Charger' : 'Pump'} ${number}`;
+}
+
+/** "512.0 L", "48.0 kWh": one decimal, as meters read. */
+export function formatMeter(quantity: number | undefined | null, unit: ProductUnit | string | undefined | null): string {
+  const v = Number(quantity ?? 0);
+  return `${v.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ${unitLabel(unit)}`;
+}
+
+/** The design's short connector names, for card meta: "CCS2", "Type 2". */
+const CONNECTOR_SHORT: Record<ConnectorType, string> = {
+  TYPE2: 'Type 2',
+  CCS: 'CCS2',
+  CHADEMO: 'CHAdeMO',
+  GBT: 'GB/T',
+  TESLA: 'Tesla',
+};
+
+export function connectorShort(connector: string | undefined | null): string {
+  const u = String(connector ?? '').toUpperCase() as ConnectorType;
+  return CONNECTOR_SHORT[u] ?? (connector ? String(connector) : '');
 }

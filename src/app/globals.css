@@ -1,9 +1,45 @@
-/* Tokens define every colour for both themes; nothing below may use a raw hex. */
+/*
+ * Design tokens. tokens.css and theme.css are generated from
+ * design-tokens/tokens.json (run `pnpm run tokens`). Nothing below may use a
+ * raw hex.
+ */
 @import '../styles/tokens.css';
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/*
+ * Tailwind 4. Only the theme and utilities layers are imported: Preflight, the
+ * base reset, stays off as it was in v3 (`corePlugins.preflight: false`),
+ * because it fights Ant Design's own base styles.
+ *
+ * Ant Design's runtime styles go in `antd` (see StyleProvider in Providers.tsx),
+ * below utilities, so a utility on an antd element wins as it did in v3. The
+ * rules in this file stay unlayered and so still beat both.
+ */
+@layer theme, base, antd, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+@import '../styles/theme.css';
+
+/* Matches the attribute ThemeScript sets on <html> before first paint. */
+@custom-variant dark (&:where([data-theme="dark"] *));
+
+@theme inline {
+  --background-image-gradient-radial: radial-gradient(var(--tw-gradient-stops));
+  --background-image-dot-pattern: radial-gradient(circle, var(--border) 1px, transparent 1px);
+  --background-size-dots: 20px 20px;
+}
+
+/*
+ * The one part of Preflight the redesign needs: a width or height includes
+ * padding and border, as every Tailwind layout and every antd component
+ * assumes. In the base layer, so any component that wants otherwise can say so.
+ */
+@layer base {
+  *,
+  ::before,
+  ::after {
+    box-sizing: border-box;
+  }
+}
 
 html,
 body {
@@ -14,11 +50,11 @@ body {
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--surface-sunken);
-  color: var(--ink);
+  background: var(--bg);
+  color: var(--text);
 }
 
 /* Chrome paints its own opaque background on an autofilled input, and it ignores
@@ -32,8 +68,8 @@ input:-webkit-autofill:active,
 textarea:-webkit-autofill,
 select:-webkit-autofill {
   box-shadow: inset 0 0 0 1000px var(--surface) !important;
-  -webkit-text-fill-color: var(--ink);
-  caret-color: var(--ink);
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
   /* `.ant-input` transitions box-shadow, and Chrome applies autofill styling
      outside the recalc that would start that transition — so the shadow stays
      pinned at its `from` value (transparent) and the fill never paints. Has to
@@ -46,9 +82,9 @@ select:-webkit-autofill {
 input:-webkit-autofill:focus,
 textarea:-webkit-autofill:focus,
 select:-webkit-autofill:focus {
-  box-shadow: inset 0 0 0 1000px var(--surface), var(--focus-ring) !important;
-  -webkit-text-fill-color: var(--ink);
-  caret-color: var(--ink);
+  box-shadow: inset 0 0 0 1000px var(--surface), var(--shadow-focus) !important;
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
   transition: none !important;
 }
 
@@ -61,8 +97,8 @@ select:-webkit-autofill:focus {
 .ant-input-affix-wrapper > input.ant-input:-webkit-autofill:focus,
 .ant-input-affix-wrapper > input.ant-input:-webkit-autofill:active {
   box-shadow: inset 0 0 0 1000px var(--surface) !important;
-  -webkit-text-fill-color: var(--ink);
-  caret-color: var(--ink);
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
   transition: none !important;
   /* The inner input carries its own 8px radius, so the fill gets clipped to a
      curve and antialiases into the wrapper as a faint arc at each end. The
@@ -81,313 +117,133 @@ select:-webkit-autofill:focus {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--line-strong);
+  background: var(--border-strong);
   border-radius: 100px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--ink-disabled);
+  background: var(--text-muted);
 }
 
-/* ===== BUTTON LEVELS =====
-   Primary (filled) is rationed to one per screen; everything else steps down to
-   tinted, outlined or text. No shadows — focus is communicated with a ring. */
+/* ===== ANT DESIGN =====
+   Colours, sizes, radii, borders and focus come from the antd theme, which is
+   built from the tokens (src/theme/antd-theme.ts). Only what the theme cannot
+   express is set here. antd's styles sit in `@layer antd`, so these unlayered
+   rules win without !important. */
 
-.ant-btn {
-  border-radius: var(--radius-control) !important;
-  height: var(--control-height) !important;
-  font-weight: 600 !important;
-  box-shadow: none !important;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
+/* Dialog and drawer footers: one filled action; Cancel is a ghost button. */
+.ant-modal-footer .ant-btn-default:not(.ant-btn-dangerous),
+.ant-drawer-footer .ant-btn-default:not(.ant-btn-dangerous) {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-secondary);
 }
 
-.ant-btn:focus-visible {
-  outline: none !important;
-  box-shadow: var(--focus-ring) !important;
+.ant-modal-footer .ant-btn-default:not(.ant-btn-dangerous):hover,
+.ant-drawer-footer .ant-btn-default:not(.ant-btn-dangerous):hover {
+  background: var(--surface-muted);
+  color: var(--text);
 }
 
-/* Primary — filled accent */
-.ant-btn-primary:not(.ant-btn-dangerous) {
-  background: var(--accent) !important;
-  border-color: var(--accent) !important;
-  color: var(--accent-on) !important;
-}
-
-.ant-btn-primary:not(.ant-btn-dangerous):hover {
-  background: var(--accent-hover) !important;
-  border-color: var(--accent-hover) !important;
-}
-
-.ant-btn-primary:not(.ant-btn-dangerous):active {
-  background: var(--accent-pressed) !important;
-  border-color: var(--accent-pressed) !important;
-}
-
-/* Outlined — the default secondary */
-.ant-btn-default:not(.ant-btn-dangerous) {
-  background: var(--surface) !important;
-  border-color: var(--line) !important;
-  color: var(--ink) !important;
-}
-
-.ant-btn-default:not(.ant-btn-dangerous):hover {
-  background: var(--surface-sunken) !important;
-  border-color: var(--line-strong) !important;
-  color: var(--ink) !important;
-}
-
-/* Tinted — quieter than outlined, still clearly actionable. Opt in per button. */
-.ant-btn.btn-tinted,
-.ant-btn.btn-tinted.ant-btn-default {
-  background: var(--accent-tint) !important;
-  border-color: transparent !important;
-  color: var(--accent) !important;
-}
-
-.ant-btn.btn-tinted:hover,
-.ant-btn.btn-tinted.ant-btn-default:hover {
-  background: var(--accent-tint-hover) !important;
-  border-color: transparent !important;
-  color: var(--accent) !important;
-}
-
-/* Text / link */
-.ant-btn-text:not(.ant-btn-dangerous),
-.ant-btn-link:not(.ant-btn-dangerous) {
-  color: var(--accent) !important;
-  background: transparent !important;
-  border-color: transparent !important;
-}
-
-.ant-btn-text:not(.ant-btn-dangerous):hover,
-.ant-btn-link:not(.ant-btn-dangerous):hover {
-  background: var(--accent-tint) !important;
-  color: var(--accent-hover) !important;
-}
-
-/* Destructive — filled is reserved for irreversible physical actions */
-.ant-btn-primary.ant-btn-dangerous {
-  background: var(--danger) !important;
-  border-color: var(--danger) !important;
-  color: var(--danger-on) !important;
-}
-
-.ant-btn-primary.ant-btn-dangerous:hover {
-  background: var(--danger-hover) !important;
-  border-color: var(--danger-hover) !important;
-}
-
-.ant-btn-primary.ant-btn-dangerous:active {
-  background: var(--danger-pressed) !important;
-  border-color: var(--danger-pressed) !important;
-}
-
-/* Destructive quiet — the default for ordinary deletes */
-.ant-btn-default.ant-btn-dangerous {
-  background: var(--surface) !important;
-  border-color: var(--danger-border) !important;
-  color: var(--danger) !important;
-}
-
-.ant-btn-default.ant-btn-dangerous:hover {
-  background: var(--danger-tint) !important;
-  border-color: var(--danger-border) !important;
-  color: var(--danger-hover) !important;
-}
-
-.ant-btn-text.ant-btn-dangerous,
-.ant-btn-link.ant-btn-dangerous {
-  color: var(--danger) !important;
-  background: transparent !important;
-  border-color: transparent !important;
-}
-
-.ant-btn-text.ant-btn-dangerous:hover,
-.ant-btn-link.ant-btn-dangerous:hover {
-  background: var(--danger-tint) !important;
-  color: var(--danger-hover) !important;
-}
-
-.ant-btn-dangerous:focus-visible {
-  box-shadow: var(--focus-ring-danger) !important;
-}
-
-/* Dialog footers: one filled action, and Cancel steps down to text. */
-.ant-modal-footer .ant-btn-default:not(.ant-btn-dangerous) {
-  background: transparent !important;
-  border-color: transparent !important;
-  color: var(--ink-secondary) !important;
-}
-
-.ant-modal-footer .ant-btn-default:not(.ant-btn-dangerous):hover {
-  background: var(--surface-muted) !important;
-  border-color: transparent !important;
-  color: var(--ink) !important;
-}
-
-/* Disabled beats every level above */
-.ant-btn:disabled,
-.ant-btn.ant-btn-disabled,
-.ant-btn[disabled] {
-  background: var(--surface-muted) !important;
-  border-color: transparent !important;
-  color: var(--ink-disabled) !important;
-}
-
-/* ===== ANT DESIGN OVERRIDES ===== */
-
-.ant-switch-checked {
-  background-color: var(--accent) !important;
-}
-
-.ant-pagination-item-active {
-  border-color: var(--accent) !important;
-}
-
-.ant-pagination-item-active a {
-  color: var(--accent) !important;
-}
-
-.ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
-  color: var(--accent) !important;
-}
-
-.ant-tabs-ink-bar {
-  background: var(--accent) !important;
-}
-
-.ant-menu-item-selected {
-  background-color: var(--accent-tint) !important;
-  color: var(--accent) !important;
-}
-
+/* Table header: the overline style (Geist Mono 11, caps, +8%). */
 .ant-table-thead > tr > th {
-  background: var(--surface-sunken) !important;
-  font-weight: 600 !important;
-  color: var(--ink-secondary) !important;
-  font-size: 12px !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
-  border-bottom: 1px solid var(--line) !important;
+  font-family: var(--font-mono);
+  font-size: var(--text-11);
+  font-weight: 500;
+  letter-spacing: var(--tracking-p80);
+  text-transform: uppercase;
 }
 
-.ant-table-tbody > tr {
-  transition: background-color 0.15s ease !important;
-}
-
-.ant-table-tbody > tr:hover > td {
-  background: var(--surface-sunken) !important;
-}
-
-/* Hairline geometry: borders carry the structure, not shadow. */
-.ant-card {
-  border-radius: var(--radius-card) !important;
-  border: 1px solid var(--line-subtle) !important;
-  box-shadow: none !important;
-  transition: border-color 0.2s ease !important;
-}
-
-.ant-card:hover {
-  border-color: var(--line) !important;
-}
-
-.ant-card-head {
-  border-bottom: 1px solid var(--line-subtle) !important;
-  padding: 16px 24px !important;
-}
-
-.ant-card-head-title {
-  font-weight: 700 !important;
-  font-size: 15px !important;
-  color: var(--ink) !important;
-}
-
-.ant-statistic-content-value {
-  font-weight: 700 !important;
-}
-
-.ant-modal-content {
-  border-radius: 16px !important;
-  overflow: hidden !important;
-}
-
+/* Drawer and dialog heads, as the design's drawer: 24 by 28 padding, H2 title. */
+.ant-drawer-header,
 .ant-modal-header {
-  padding: 20px 24px !important;
-  border-bottom: 1px solid var(--line-subtle) !important;
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--border);
 }
 
+/* The drawer's close button, at the top right: a bordered 34px square. */
+.ant-drawer .ant-drawer-close {
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  color: var(--text-secondary);
+}
+
+/* antd pads the whole dialog too, which put a dialog's title 28px in from its
+   body. The padding sits on head, body and footer instead, on one 28px edge.
+   Confirm dialogs have no head, so their body takes all of it. */
+.ant-modal .ant-modal-container {
+  padding: 0;
+}
+
+.ant-modal .ant-modal-header {
+  margin-bottom: 0;
+}
+
+.ant-modal .ant-modal-body {
+  padding: 20px 28px;
+}
+
+.ant-modal .ant-modal-footer {
+  margin-top: 0;
+  padding: 0 28px 24px;
+}
+
+.ant-modal.ant-modal-confirm .ant-modal-body {
+  padding: 24px 28px;
+}
+
+.ant-drawer-title,
 .ant-modal-title {
-  font-weight: 700 !important;
-  font-size: 18px !important;
+  font-size: var(--text-22);
+  line-height: 30px;
+  font-weight: 600;
+  letter-spacing: var(--tracking-n10);
 }
 
-.ant-input,
-.ant-input-affix-wrapper,
-.ant-select-selector,
-.ant-picker {
-  border-radius: var(--radius-control) !important;
-  border-color: var(--line) !important;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
-}
-
-.ant-input:focus,
-.ant-input-affix-wrapper:focus,
-.ant-input-affix-wrapper-focused,
-.ant-picker-focused,
-.ant-select-focused .ant-select-selector {
-  border-color: var(--accent) !important;
-  box-shadow: var(--focus-ring) !important;
-}
-
-.ant-drawer-header {
-  padding: 20px 24px !important;
-  border-bottom: 1px solid var(--line-subtle) !important;
-}
-
-.ant-drawer-title {
-  font-weight: 700 !important;
-  font-size: 18px !important;
-}
-
-/* Tags — preset names are remapped onto the palette so call sites stay declarative. */
+/* Tags: antd's preset colour names map onto the design's status chips (tint
+   background, status text, 6px corners, no border), so call sites stay
+   declarative. */
 .ant-tag {
-  border-radius: 6px !important;
-  font-weight: 600 !important;
-  border: 1px solid transparent !important;
+  border-color: transparent;
+  font-size: var(--text-12);
+  font-weight: 500;
 }
 
 .ant-tag-green,
 .ant-tag-success,
 .ant-tag-cyan {
-  background: var(--accent-tint) !important;
-  border-color: var(--accent-ring) !important;
-  color: var(--accent) !important;
+  background: var(--success-tint);
+  color: var(--success);
 }
 
 .ant-tag-red,
 .ant-tag-error,
 .ant-tag-volcano {
-  background: var(--danger-tint) !important;
-  border-color: var(--danger-border) !important;
-  color: var(--danger) !important;
+  background: var(--danger-tint);
+  color: var(--danger);
 }
 
 .ant-tag-orange,
 .ant-tag-warning,
 .ant-tag-gold {
-  background: var(--warn-tint) !important;
-  border-color: var(--warn-border) !important;
-  color: var(--warn) !important;
+  background: var(--warning-tint);
+  color: var(--warning);
 }
 
 .ant-tag-blue,
 .ant-tag-processing,
-.ant-tag-geekblue,
+.ant-tag-geekblue {
+  background: var(--info-tint);
+  color: var(--info);
+}
+
 .ant-tag-purple,
 .ant-tag-default {
-  background: var(--surface-muted) !important;
-  border-color: var(--line) !important;
-  color: var(--ink-secondary) !important;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
 }
 
 /* ===== SIDEBAR ===== */
@@ -427,11 +283,11 @@ select:-webkit-autofill:focus {
 /* The sidebar is dark in both themes, so its scrollbar must not borrow the
    light-theme page colours. */
 .sidebar-nav::-webkit-scrollbar-thumb {
-  background: var(--sidebar-border);
+  background: var(--sidebar-line);
 }
 
 .sidebar-nav::-webkit-scrollbar-thumb:hover {
-  background: var(--sidebar-ink-muted);
+  background: var(--sidebar-text-muted);
 }
 
 .sidebar-nav .ant-menu-root {
@@ -440,7 +296,7 @@ select:-webkit-autofill:focus {
 }
 
 .sidebar-nav .ant-menu-item {
-  color: var(--sidebar-ink-muted) !important;
+  color: var(--sidebar-text-muted) !important;
   margin: 2px 12px !important;
   border-radius: var(--radius-control) !important;
   height: 40px !important;
@@ -450,84 +306,86 @@ select:-webkit-autofill:focus {
 }
 
 .sidebar-nav .ant-menu-item:hover {
-  color: var(--sidebar-ink) !important;
-  background: var(--sidebar-hover) !important;
+  color: var(--sidebar-text) !important;
+  background: var(--sidebar-surface) !important;
 }
 
 .sidebar-nav .ant-menu-item-selected {
-  color: var(--accent-on) !important;
-  background: var(--accent) !important;
+  color: var(--on-primary) !important;
+  background: var(--primary) !important;
   font-weight: 600 !important;
 }
 
 .sidebar-nav .ant-menu-item-selected:hover {
-  background: var(--accent-hover) !important;
-  color: var(--accent-on) !important;
+  background: var(--primary-hover) !important;
+  color: var(--on-primary) !important;
 }
 
 .sidebar-nav .ant-menu-item-selected::after {
   display: none !important;
 }
 
-/* Station select, on the dark sidebar */
+/* Station select, on the dark sidebar. antd 6 dropped .ant-select-selector: the
+   border, background and padding now sit on .ant-select itself, the value in
+   .ant-select-content and the arrow in .ant-select-suffix. */
 .sidebar-station-select-wrapper {
   position: relative;
 }
 
-.sidebar-station-select.ant-select .ant-select-selector {
-  background: var(--sidebar-hover) !important;
-  border: 1px solid var(--sidebar-border) !important;
+.sidebar-station-select.ant-select {
+  background: var(--sidebar-surface) !important;
+  border: 1px solid var(--sidebar-line) !important;
   border-radius: var(--radius-control) !important;
-  color: var(--sidebar-ink) !important;
+  color: var(--sidebar-text) !important;
   min-height: 38px !important;
   padding-inline: 12px 28px !important;
   align-items: center !important;
 }
 
-.sidebar-station-select.ant-select .ant-select-selection-item,
-.sidebar-station-select.ant-select .ant-select-selection-placeholder {
-  color: var(--sidebar-ink) !important;
+.sidebar-station-select.ant-select .ant-select-content,
+.sidebar-station-select.ant-select .ant-select-placeholder {
+  color: var(--sidebar-text) !important;
   line-height: 1.4 !important;
 }
 
-.sidebar-station-select.ant-select .ant-select-selection-placeholder {
-  color: var(--sidebar-ink-muted) !important;
+.sidebar-station-select.ant-select .ant-select-placeholder {
+  color: var(--sidebar-text-muted) !important;
 }
 
-.sidebar-station-select.ant-select:hover .ant-select-selector {
-  border-color: var(--line-strong) !important;
-  background: var(--sidebar-hover) !important;
+.sidebar-station-select.ant-select:hover {
+  border-color: var(--border-strong) !important;
+  background: var(--sidebar-surface) !important;
 }
 
-.sidebar-station-select.ant-select.ant-select-focused .ant-select-selector {
-  border-color: var(--accent) !important;
-  box-shadow: var(--focus-ring) !important;
-  background: var(--sidebar-hover) !important;
+.sidebar-station-select.ant-select.ant-select-focused {
+  border-color: var(--primary) !important;
+  box-shadow: var(--shadow-focus) !important;
+  background: var(--sidebar-surface) !important;
 }
 
-.sidebar-station-select.ant-select .ant-select-arrow {
-  color: var(--sidebar-ink-muted) !important;
+.sidebar-station-select.ant-select .ant-select-suffix {
+  color: var(--sidebar-text-muted) !important;
 }
 
 .ant-select-dropdown.sidebar-station-select-dropdown {
   border-radius: 12px !important;
   overflow: hidden;
-  border: 1px solid var(--sidebar-border) !important;
+  border: 1px solid var(--sidebar-line) !important;
   background: var(--sidebar-surface) !important;
 }
 
 .ant-select-dropdown.sidebar-station-select-dropdown .ant-select-item {
-  color: var(--sidebar-ink) !important;
+  color: var(--sidebar-text) !important;
 }
 
 .ant-select-dropdown.sidebar-station-select-dropdown .ant-select-item-option-active,
 .ant-select-dropdown.sidebar-station-select-dropdown .ant-select-item-option-selected {
-  background: var(--accent) !important;
-  color: var(--accent-on) !important;
+  background: var(--primary) !important;
+  color: var(--on-primary) !important;
 }
 
-.ant-select-dropdown.sidebar-station-select-dropdown .rc-virtual-list-holder,
-.ant-select-dropdown.sidebar-station-select-dropdown .rc-virtual-list {
+.ant-select-dropdown.sidebar-station-select-dropdown .ant-select-dropdown-list-holder,
+.ant-select-dropdown.sidebar-station-select-dropdown .ant-select-dropdown-list {
   background: var(--sidebar-surface) !important;
 }
 
@@ -547,35 +405,35 @@ select:-webkit-autofill:focus {
 }
 
 .transaction-feed::-webkit-scrollbar-thumb {
-  background: var(--line-subtle);
+  background: var(--border);
   border-radius: 100px;
 }
 
 /* ===== UTILITIES ===== */
 
-@layer utilities {
-  .surface-card {
-    background: var(--surface);
-    border: 1px solid var(--line-subtle);
-    border-radius: var(--radius-card);
-  }
+@utility surface-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
 
-  .focus-ring-accent:focus-visible {
+@utility focus-ring-accent {
+  &:focus-visible {
     outline: none;
-    box-shadow: var(--focus-ring);
+    box-shadow: var(--shadow-focus);
   }
+}
 
-  .animate-float {
-    animation: float 6s ease-in-out infinite;
-  }
+@utility animate-float {
+  animation: float 6s ease-in-out infinite;
+}
 
-  .animate-float-delayed {
-    animation: float 6s ease-in-out 3s infinite;
-  }
+@utility animate-float-delayed {
+  animation: float 6s ease-in-out 3s infinite;
+}
 
-  .animate-pulse-soft {
-    animation: pulse-soft 3s ease-in-out infinite;
-  }
+@utility animate-pulse-soft {
+  animation: pulse-soft 3s ease-in-out infinite;
 }
 
 @keyframes float {

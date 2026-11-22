@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button, Tooltip } from 'antd';
-import { MoonOutlined, SunOutlined } from '@ant-design/icons';
+import { Moon, Sun } from 'lucide-react';
 import { useThemeStore } from '@/store/theme-store';
 
 /**
@@ -19,7 +19,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       <Button
         type="text"
         aria-label={`Switch to ${next} theme`}
-        icon={mode === 'dark' ? <SunOutlined /> : <MoonOutlined />}
+        icon={mode === 'dark' ? <Sun size={16} aria-hidden /> : <Moon size={16} aria-hidden />}
         onClick={toggle}
         className={className}
       />

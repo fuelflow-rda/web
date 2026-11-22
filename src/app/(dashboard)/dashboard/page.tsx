@@ -1,511 +1,286 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Card, Col, Empty, Progress, Row, Segmented, Spin, Table, Tag, Typography } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
-import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import api from '@/lib/api';
-import { attendantsHref, isPaymentFilter, pumpsHref, transactionsHref } from '@/lib/links';
-import { formatRWF } from '@/lib/format';
-import { formatQuantity, isEvProductType, productColor, productLabel } from '@/lib/product-types';
+import { Segmented } from 'antd';
+import { Banknote, Fuel, MapPin, Receipt, Zap } from 'lucide-react';
+import ExportButton from '@/components/ExportButton';
+import ActivityHeatmap from '@/components/metrics/ActivityHeatmap';
+import { Banner, KpiTile, PageHeader, Panel } from '@/components/ui';
+import { BarChart, type Bar } from '@/components/overview/BarChart';
+import {
+  getDashboard,
+  getLivePumps,
+  getRecentSales,
+  getToday,
+  usePolled,
+} from '@/components/overview/data';
+import {
+  OnShiftPanel,
+  PanelError,
+  PanelSkeleton,
+  PaymentsPanel,
+  ProductMixPanel,
+  PumpsPanel,
+  ReconciliationPanel,
+  RecentSalesPanel,
+  longDay,
+  num,
+  rwf,
+} from '@/components/overview/panels';
+import { ago, delta, kigaliDayStart, reviewBanner, ymd } from '@/components/overview/logic';
+import { transactionsHref } from '@/lib/links';
+import { isEvProductType, productName } from '@/lib/product-types';
 import { useStationStore } from '@/store/station-store';
-import MetricTile from '@/components/metrics/MetricTile';
-import ActivityHeatmap, { type HeatCell } from '@/components/metrics/ActivityHeatmap';
-import ProductMixBar, { type ProductMixRow } from '@/components/metrics/ProductMixBar';
-import RevenueChart from '@/components/charts/RevenueChart';
-import type { ProductType, ProductUnit } from '@/types';
 
-const { Title, Text } = Typography;
+/** "1,103.2": one decimal, grouped. */
+const one = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-type Period = 'today' | 'week' | 'month' | 'quarter';
-
-const PERIODS: { value: Period; label: string }[] = [
-  { value: 'today', label: 'Today' },
-  { value: 'week', label: '7 days' },
-  { value: 'month', label: '30 days' },
-  { value: 'quarter', label: '90 days' },
+type Range = 'today' | '7d' | '30d' | '90d';
+const RANGES: Array<{ value: Range; label: string; days: number }> = [
+  { value: 'today', label: 'Today', days: 1 },
+  { value: '7d', label: '7 days', days: 7 },
+  { value: '30d', label: '30 days', days: 30 },
+  { value: '90d', label: '90 days', days: 90 },
 ];
 
-function windowFor(period: Period): { from: string; to: string } {
-  const to = dayjs();
-  const from =
-    period === 'today'
-      ? to.startOf('day')
-      : period === 'week'
-        ? to.subtract(6, 'day').startOf('day')
-        : period === 'month'
-          ? to.subtract(29, 'day').startOf('day')
-          : to.subtract(89, 'day').startOf('day');
-  return { from: from.toISOString(), to: to.toISOString() };
-}
-
-interface DashboardPayload {
-  window: { from: string; to: string; bucket: string; tz: string };
-  totals: {
-    revenue: number;
-    transactions: number;
-    liters: number;
-    kwh: number;
-    avgTicket: number;
-    flagged: number;
-    offline: number;
-  };
-  deltas: {
-    revenue: number | null;
-    transactions: number | null;
-    liters: number | null;
-    kwh: number | null;
-    avgTicket: number | null;
-  };
-  payments: { method: string; amount: number }[];
-  series: { bucket: string; revenue: number; transactions: number; liters: number; kwh: number }[];
-  heatmap: HeatCell[];
-  productMix: ProductMixRow[];
-  attendants: {
-    attendantId: string | null;
-    name: string;
-    revenue: number;
-    transactions: number;
-    liters: number;
-    kwh: number;
-    avgTicket: number;
-    flagged: number;
-  }[];
-  pumps: {
-    pumpId: string;
-    pumpNumber: number;
-    productType: ProductType;
-    label: string;
-    connectorType: string | null;
-    powerKw: number | null;
-    unit: ProductUnit;
-    revenue: number;
-    transactions: number;
-    quantity: number;
-    utilisation: number | null;
-  }[];
-}
-
-/** Compact money for tiles, where the full figure would dominate the layout. */
-function compactRWF(amount: number): string {
-  if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)}M`;
-  if (amount >= 1_000) return `${(amount / 1_000).toFixed(0)}K`;
-  return String(Math.round(amount));
-}
-
-export default function DashboardPage() {
-  const { currentStation } = useStationStore();
-  const [period, setPeriod] = useState<Period>('month');
-  const [data, setData] = useState<DashboardPayload | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchData = useCallback(async () => {
-    if (!currentStation) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const { from, to } = windowFor(period);
-      const res = await api.get(`/analytics/station/${currentStation.id}/dashboard`, {
-        params: { from, to },
-      });
-      setData(res.data as DashboardPayload);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load analytics');
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentStation, period]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  // Refresh while the tab is visible; a background tab does not need to poll.
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (document.visibilityState === 'visible') fetchData();
-    }, 60_000);
-    return () => clearInterval(id);
-  }, [fetchData]);
-
-  const revenueSpark = useMemo(() => data?.series.map((s) => s.revenue) ?? [], [data]);
-  const txSpark = useMemo(() => data?.series.map((s) => s.transactions) ?? [], [data]);
-  const litersSpark = useMemo(() => data?.series.map((s) => s.liters) ?? [], [data]);
-  const kwhSpark = useMemo(() => data?.series.map((s) => s.kwh) ?? [], [data]);
-
-  const chartData = useMemo(
-    () =>
-      (data?.series ?? []).map((s) => ({
-        hour: dayjs(s.bucket).format(data?.window.bucket === 'hour' ? 'HH:mm' : 'MMM D'),
-        revenue: s.revenue,
-        liters: s.liters,
-        kwh: s.kwh,
-      })),
-    [data],
-  );
-
-  const totalPayments = (data?.payments ?? []).reduce((sum, p) => sum + p.amount, 0);
-
-  // Every link out of the dashboard carries the period on screen, so the page it opens
-  // shows the same numbers that were clicked.
+export default function OverviewPage() {
   const router = useRouter();
-  const range = useMemo(() => {
-    const { from, to } = windowFor(period);
-    return { from: dayjs(from).format('YYYY-MM-DD'), to: dayjs(to).format('YYYY-MM-DD') };
-  }, [period]);
-  const evPumps = (data?.pumps ?? []).filter((p) => isEvProductType(p.productType));
+  const { currentStation, loading: stationsLoading, stations } = useStationStore();
+  const stationId = currentStation?.id ?? null;
+  const [range, setRange] = useState<Range>('today');
+  const [now, setNow] = useState(() => Date.now());
 
-  const attendantColumns: ColumnsType<DashboardPayload['attendants'][number]> = [
-    {
-      title: '#',
-      key: 'rank',
-      width: 44,
-      render: (_: unknown, __: unknown, index: number) => (
-        <span className="text-ink-muted tabular-nums text-xs">{index + 1}</span>
-      ),
-    },
-    {
-      title: 'Attendant',
-      dataIndex: 'name',
-      key: 'name',
-      render: (name: string, r) => (
-        <span className="font-medium text-ink">
-          {r.attendantId ? (
-            <Link
-              href={attendantsHref({ attendant: r.attendantId, ...range })}
-              className="text-ink hover:text-accent hover:underline"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {name}
-            </Link>
-          ) : (
-            name
-          )}
-          {r.flagged > 0 && (
-            <Tag className="!ml-2 !text-[10px]" color="warning">
-              {r.flagged} flagged
-            </Tag>
-          )}
-        </span>
-      ),
-    },
-    {
-      title: 'Sales',
-      dataIndex: 'transactions',
-      key: 'transactions',
-      align: 'right',
-      width: 80,
-      sorter: (a, b) => a.transactions - b.transactions,
-      render: (v: number) => <span className="tabular-nums">{v.toLocaleString()}</span>,
-    },
-    {
-      title: 'Avg ticket',
-      dataIndex: 'avgTicket',
-      key: 'avgTicket',
-      align: 'right',
-      width: 120,
-      sorter: (a, b) => a.avgTicket - b.avgTicket,
-      render: (v: number) => <span className="tabular-nums text-ink-muted">{formatRWF(v)}</span>,
-    },
-    {
-      title: 'Revenue',
-      dataIndex: 'revenue',
-      key: 'revenue',
-      align: 'right',
-      width: 140,
-      defaultSortOrder: 'descend',
-      sorter: (a, b) => a.revenue - b.revenue,
-      render: (v: number) => <span className="font-semibold tabular-nums">{formatRWF(v)}</span>,
-    },
-  ];
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 5000);
+    return () => window.clearInterval(t);
+  }, []);
 
-  if (!currentStation) {
+  const days = RANGES.find((r) => r.value === range)!.days;
+  // The window's start moves only when the day or the range does, so polling reuses it.
+  const dayStart = kigaliDayStart(now);
+  const from = new Date(dayStart - (days - 1) * 86_400_000).toISOString();
+
+  const today = usePolled(stationId, () => getToday(stationId!), 30_000);
+  const dash = usePolled(stationId ? `${stationId}|${range}|${from}` : null, () => getDashboard(stationId!, from, new Date().toISOString()), 60_000);
+  const pumps = usePolled(stationId, () => getLivePumps(stationId!), 30_000);
+  const recent = usePolled(stationId, () => getRecentSales(stationId!), 10_000);
+
+  const t = today.data;
+  const d = dash.data;
+  const isToday = range === 'today';
+  const banner = reviewBanner(t?.reconciliation ?? null);
+
+  const kpis = useMemo(() => {
+    if (isToday && t) {
+      const fuel = t.kpis.fuelByProduct.map((f) => `${productName(f.productType)} ${one(f.quantity)}`).join(' · ');
+      return {
+        revenue: t.kpis.revenue,
+        revenueDelta: delta(t.kpis.revenueVsYesterday, 'vs yesterday'),
+        liters: t.kpis.liters,
+        litersMeta: fuel || 'No fuel sold yet',
+        kwh: t.kpis.kwh,
+        kwhMeta: `${num(t.kpis.chargingSessions)} charging ${t.kpis.chargingSessions === 1 ? 'session' : 'sessions'}`,
+        sales: t.kpis.sales,
+        salesMeta: `Average ticket ${rwf(t.kpis.avgTicket)}`,
+      };
+    }
+    if (!isToday && d) {
+      const fuel = d.productMix.filter((m) => !isEvProductType(m.productType));
+      const sessions = d.productMix.filter((m) => isEvProductType(m.productType)).reduce((s, m) => s + m.transactions, 0);
+      return {
+        revenue: d.totals.revenue,
+        revenueDelta: delta(d.deltas.revenue, 'vs the previous period'),
+        liters: d.totals.liters,
+        litersMeta: fuel.map((f) => `${productName(f.productType)} ${one(f.quantity)}`).join(' · ') || 'No fuel sold',
+        kwh: d.totals.kwh,
+        kwhMeta: `${num(sessions)} charging ${sessions === 1 ? 'session' : 'sessions'}`,
+        sales: d.totals.transactions,
+        salesMeta: `Average ticket ${rwf(d.totals.avgTicket)}`,
+      };
+    }
+    return null;
+  }, [isToday, t, d]);
+
+  const bars: Bar[] = useMemo(() => {
+    if (isToday) {
+      const hours = t?.revenueByHour ?? [];
+      // The trading day the design shows, widened if a sale fell outside it.
+      const active = hours.filter((h) => (h.today ?? 0) > 0 || h.yesterday > 0).map((h) => h.hour);
+      const first = Math.min(6, ...active);
+      const last = Math.max(22, ...active);
+      return hours
+        .filter((h) => h.hour >= first && h.hour <= last)
+        .map((h) => ({
+          label: h.hour % 2 === 0 ? String(h.hour).padStart(2, '0') : null,
+          name: `${String(h.hour).padStart(2, '0')}:00`,
+          value: h.today,
+          highlight: h.inProgress,
+        }));
+    }
+    const series = d?.series ?? [];
+    const every = Math.ceil(series.length / 12);
+    return series.map((s, i) => {
+      const day = new Date(s.bucket);
+      return {
+        label: i % every === 0 ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'Africa/Kigali' }).format(day) : null,
+        name: new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Africa/Kigali' }).format(day),
+        value: s.revenue,
+        highlight: i === series.length - 1,
+      };
+    });
+  }, [isToday, t, d]);
+
+  const exportRows = bars.filter((b) => b.value !== null).map((b) => ({ period: b.name, revenue: b.value ?? 0 }));
+  const updated = today.updatedAt ? ` · updated ${ago(now - today.updatedAt)}` : '';
+
+  if (!stationId) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <Empty description={<span className="text-ink-muted">Select a station to see its dashboard</span>} />
-      </div>
+      <>
+        <PageHeader title="Overview" />
+        {stationsLoading ? (
+          <PanelSkeleton />
+        ) : (
+          <Panel title={stations.length ? 'Choose a station' : 'No stations yet'}>
+            <p className="m-0 flex items-center gap-2 text-14 text-text-secondary">
+              <MapPin size={16} aria-hidden />
+              {stations.length
+                ? 'Pick a station in the sidebar to see its day.'
+                : 'Once your company has a station, its sales, pumps and shifts appear here.'}
+            </p>
+          </Panel>
+        )}
+      </>
     );
   }
 
-  if (loading && !data) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <Spin size="large" />
-      </div>
-    );
-  }
+  const chartLoading = isToday ? today.loading && !t : dash.loading && !d;
+  const chartError = isToday ? (!t ? today.error : null) : !d ? dash.error : null;
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-end justify-between flex-wrap gap-3">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <Title level={3} className="!mb-0">
-              {currentStation.name}
-            </Title>
-            <span className="flex items-center gap-1.5 px-2.5 py-1 bg-accent-tint rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-              <span className="text-xs font-semibold text-accent">Live</span>
-            </span>
+    <>
+      <PageHeader
+        title="Overview"
+        description={`${currentStation?.name} · ${longDay(new Date(now).toISOString())}${updated}`}
+        actions={
+          <>
+            <Segmented<Range>
+              aria-label="Period"
+              value={range}
+              onChange={setRange}
+              options={RANGES.map((r) => ({ value: r.value, label: r.label }))}
+            />
+            <ExportButton
+              data={exportRows}
+              columns={[
+                { header: isToday ? 'Hour' : 'Day', key: 'period' },
+                { header: 'Revenue (RWF)', key: 'revenue' },
+              ]}
+              filename={`${currentStation?.name ?? 'station'}-overview-${ymd(dayStart)}`}
+            />
+          </>
+        }
+      />
+
+      {banner ? (
+        <Banner
+          tone="danger"
+          title={banner.title}
+          action={{ label: 'Open reconciliation', onClick: () => router.push(`/reconciliation?date=${banner.date}`) }}
+        >
+          {banner.body}
+        </Banner>
+      ) : null}
+      {today.error && t ? <Banner tone="warning" title="Showing the last figures received; the latest could not be loaded." /> : null}
+
+      <section aria-label="Key figures" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {kpis ? (
+          <>
+            <KpiTile label={isToday ? 'Revenue today' : 'Revenue'} icon={Banknote} prefix="RWF" value={num(kpis.revenue)} delta={kpis.revenueDelta ?? { text: 'Nothing to compare with yet', direction: 'flat' }} href={transactionsHref({ from: ymd(new Date(from).getTime()), to: ymd(now) })} />
+            <KpiTile label="Fuel dispensed" icon={Fuel} value={one(kpis.liters)} suffix="L" delta={{ text: kpis.litersMeta, direction: 'flat' }} />
+            <KpiTile label="Energy delivered" icon={Zap} value={one(kpis.kwh)} suffix="kWh" delta={{ text: kpis.kwhMeta, direction: 'flat' }} />
+            <KpiTile label="Sales" icon={Receipt} value={num(kpis.sales)} delta={{ text: kpis.salesMeta, direction: 'flat' }} />
+          </>
+        ) : (
+          Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="h-32.5 animate-pulse rounded-card border border-border bg-surface motion-reduce:animate-none" />
+          ))
+        )}
+      </section>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
+        <Panel
+          title={isToday ? 'Revenue by hour' : 'Revenue by day'}
+          meta={
+            isToday
+              ? t
+                ? `RWF, today against yesterday's total of ${rwf(t.kpis.yesterdayRevenue)}`
+                : 'RWF'
+              : 'RWF, each day of the period'
+          }
+          action={{ label: 'Open transactions', href: '/transactions' }}
+          className="self-start"
+        >
+          <div className="flex flex-col gap-4">
+            <div aria-hidden className="flex flex-wrap gap-5 text-12 text-text-secondary">
+              <span className="inline-flex items-center gap-2">
+                <span className="size-2.5 rounded-indicator bg-primary" /> {isToday ? 'Completed hours' : 'Completed days'}
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <span className="size-2.5 rounded-indicator bg-accent" /> {isToday ? 'Current hour, in progress' : 'Today, in progress'}
+              </span>
+            </div>
+            {chartError ? (
+              <PanelError message="Revenue could not be loaded." onRetry={isToday ? today.reload : dash.reload} />
+            ) : chartLoading ? (
+              <div className="h-59 animate-pulse rounded-control bg-surface-muted motion-reduce:animate-none" />
+            ) : (
+              <BarChart
+                bars={bars}
+                format={rwf}
+                summary={
+                  isToday
+                    ? `Revenue by hour today: ${rwf(t?.kpis.revenue ?? 0)} so far, against ${rwf(t?.kpis.yesterdayRevenue ?? 0)} for all of yesterday.`
+                    : `Revenue by day over ${days} days: ${rwf(d?.totals.revenue ?? 0)} in all.`
+                }
+              />
+            )}
           </div>
-          <Text type="secondary" className="!text-sm">
-            {data
-              ? `${dayjs(data.window.from).format('MMM D')} – ${dayjs(data.window.to).format('MMM D, YYYY')}`
-              : 'Loading…'}
-          </Text>
-        </div>
-        <Segmented value={period} onChange={(v) => setPeriod(v as Period)} options={PERIODS} />
+        </Panel>
+        <ReconciliationPanel summary={t ? t.reconciliation : undefined} loading={today.loading} />
       </div>
 
-      {error && (
-        <Card className="!rounded-card" size="small">
-          <Text type="danger">{error}</Text>
-        </Card>
-      )}
+      <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <ProductMixPanel
+          mix={d?.productMix}
+          loading={dash.loading}
+          error={dash.error}
+          onRetry={dash.reload}
+          meta={isToday ? 'Share of revenue today' : 'Share of revenue in the period'}
+        />
+        <PaymentsPanel payments={d?.payments} sales={d?.totals.transactions} loading={dash.loading} error={dash.error} onRetry={dash.reload} />
+        <PumpsPanel pumps={pumps.data} loading={pumps.loading} error={pumps.error} onRetry={pumps.reload} />
+      </div>
 
-      {/* Headline metrics. Deltas compare with the previous window of equal length. */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} xl={6}>
-          <MetricTile
-            label="Revenue"
-            href={transactionsHref(range)}
-            linkLabel="View transactions"
-            value={`RWF ${compactRWF(data?.totals.revenue ?? 0)}`}
-            delta={data?.deltas.revenue}
-            spark={revenueSpark}
-            accent="var(--accent)"
-            detail={`${(data?.totals.transactions ?? 0).toLocaleString()} sales · avg ${formatRWF(data?.totals.avgTicket ?? 0)}`}
-          />
-        </Col>
-        <Col xs={24} sm={12} xl={6}>
-          <MetricTile
-            label="Fuel dispensed"
-            href={pumpsHref()}
-            linkLabel="View pumps"
-            value={`${Math.round(data?.totals.liters ?? 0).toLocaleString()} L`}
-            delta={data?.deltas.liters}
-            spark={litersSpark}
-            accent="var(--product-diesel)"
-            detail="Gasoline and diesel combined"
-          />
-        </Col>
-        <Col xs={24} sm={12} xl={6}>
-          <MetricTile
-            label="Energy delivered"
-            href={pumpsHref(evPumps[0]?.pumpId)}
-            linkLabel="View charge points"
-            value={`${Math.round(data?.totals.kwh ?? 0).toLocaleString()} kWh`}
-            delta={data?.deltas.kwh}
-            spark={kwhSpark}
-            accent="var(--product-ev-dc-fast)"
-            detail={
-              evPumps.length > 0
-                ? `${evPumps.length} charge point${evPumps.length === 1 ? '' : 's'}`
-                : 'No charge points yet'
-            }
-          />
-        </Col>
-        <Col xs={24} sm={12} xl={6}>
-          <MetricTile
-            label="Transactions"
-            href={transactionsHref(range)}
-            linkLabel="View transactions"
-            value={(data?.totals.transactions ?? 0).toLocaleString()}
-            delta={data?.deltas.transactions}
-            spark={txSpark}
-            accent="var(--chart-5)"
-            detail={
-              <>
-                {data?.totals.flagged ? `${data.totals.flagged} flagged · ` : ''}
-                {data?.totals.offline ? `${data.totals.offline} synced offline` : 'all synced live'}
-              </>
-            }
-          />
-        </Col>
-      </Row>
-
-      {/* Trend + product mix */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} xl={16}>
-          <Card title="Revenue trend" className="!rounded-card h-full" size="small">
-            <RevenueChart
-              data={chartData}
-              onPointClick={(i) => {
-                const bucket = data?.series[i]?.bucket;
-                if (!bucket) return;
-                const day = dayjs(bucket).format('YYYY-MM-DD');
-                router.push(transactionsHref({ from: day, to: day }));
-              }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} xl={8}>
-          <Card title="Product mix" className="!rounded-card h-full" size="small">
-            <ProductMixBar
-              data={data?.productMix ?? []}
-              hrefFor={(row) => transactionsHref({ ...range, product: row.productType })}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* When the forecourt is busy + how customers paid */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} xl={16}>
-          <Card
-            title="Activity by hour"
-            className="!rounded-card h-full"
-            size="small"
-            extra={
-              <Text type="secondary" className="!text-xs">
-                {data?.window.tz ? `Times in ${data.window.tz}` : 'Station local time'}
-              </Text>
-            }
-          >
+      {!isToday ? (
+        <Panel title="Activity by hour" meta="Sales by weekday and hour, in Kigali time">
+          {d ? (
             <ActivityHeatmap
-              data={data?.heatmap ?? []}
-              hrefFor={(dow, hour) => transactionsHref({ ...range, dow: dow ?? undefined, hour })}
+              data={d.heatmap}
+              hrefFor={(dow, hour) =>
+                transactionsHref({ from: ymd(new Date(from).getTime()), to: ymd(now), dow: dow ?? undefined, hour })
+              }
             />
-          </Card>
-        </Col>
-        <Col xs={24} xl={8}>
-          <Card title="How customers paid" className="!rounded-card h-full" size="small">
-            {(data?.payments ?? []).length === 0 ? (
-              <Empty description={<span className="text-ink-muted">No payments in this period</span>} />
-            ) : (
-              <div className="space-y-5">
-                {(data?.payments ?? []).map((p) => {
-                  const share = totalPayments > 0 ? (p.amount / totalPayments) * 100 : 0;
-                  const content = (
-                    <>
-                      <div className="flex items-baseline justify-between mb-1.5">
-                        <span className="text-sm font-medium text-ink">{p.method}</span>
-                        <span className="text-xs text-ink-muted tabular-nums">{share.toFixed(1)}%</span>
-                      </div>
-                      <div className="h-2 rounded-full bg-surface-muted overflow-hidden">
-                        <div
-                          className="h-full rounded-full"
-                          style={{ width: `${share}%`, background: 'var(--accent)' }}
-                        />
-                      </div>
-                      <div className="text-sm font-semibold tabular-nums text-ink mt-1.5">
-                        {formatRWF(p.amount)}
-                      </div>
-                    </>
-                  );
-                  return isPaymentFilter(p.method) ? (
-                    <Link
-                      key={p.method}
-                      href={transactionsHref({ ...range, payment: p.method })}
-                      className="block -mx-2 px-2 py-1.5 rounded-lg hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
-                    >
-                      {content}
-                    </Link>
-                  ) : (
-                    <div key={p.method}>{content}</div>
-                  );
-                })}
-              </div>
-            )}
-          </Card>
-        </Col>
-      </Row>
+          ) : (
+            <PanelSkeleton />
+          )}
+        </Panel>
+      ) : null}
 
-      {/* Rankings */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} xl={12}>
-          <Card title="Attendant performance" className="!rounded-card h-full" size="small">
-            <Table
-              columns={attendantColumns}
-              dataSource={data?.attendants ?? []}
-              rowKey={(r) => r.attendantId ?? r.name}
-              rowClassName={(r) => (r.attendantId ? 'cursor-pointer' : '')}
-              onRow={(r) => ({
-                onClick: () => {
-                  if (r.attendantId) router.push(attendantsHref({ attendant: r.attendantId, ...range }));
-                },
-              })}
-              size="small"
-              pagination={false}
-              scroll={(data?.attendants.length ?? 0) > 8 ? { y: 320 } : undefined}
-              locale={{ emptyText: 'No attendant activity in this period' }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} xl={12}>
-          <Card
-            title="Dispensing points"
-            className="!rounded-card h-full"
-            size="small"
-            extra={
-              <Text type="secondary" className="!text-xs">
-                Utilisation shown for chargers
-              </Text>
-            }
-          >
-            <div className="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
-              {(data?.pumps ?? []).length === 0 && (
-                <Empty description={<span className="text-ink-muted">No pumps configured</span>} />
-              )}
-              {(data?.pumps ?? []).map((pump) => {
-                const isEv = isEvProductType(pump.productType);
-                return (
-                  <Link
-                    key={pump.pumpId}
-                    href={pumpsHref(pump.pumpId)}
-                    className="flex items-center gap-3 py-2 -mx-2 px-2 rounded-lg border-b border-line-subtle last:border-0 hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
-                  >
-                    <span
-                      className="w-1 h-9 rounded-full shrink-0"
-                      style={{ background: productColor(pump.productType) }}
-                      aria-hidden
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-ink truncate">
-                        {isEv ? 'Charger' : 'Pump'} #{pump.pumpNumber}
-                        <span className="text-ink-muted font-normal">
-                          {' · '}
-                          {productLabel(pump.productType)}
-                        </span>
-                      </div>
-                      <div className="text-xs text-ink-muted tabular-nums">
-                        {pump.transactions.toLocaleString()} sales ·{' '}
-                        {formatQuantity(pump.quantity, pump.unit, 0)}
-                        {isEv && pump.powerKw ? ` · ${pump.powerKw} kW` : ''}
-                      </div>
-                    </div>
-
-                    {/* Only chargers have a rated capacity to be measured against. */}
-                    {isEv && pump.utilisation != null && (
-                      <div className="w-20 shrink-0">
-                        <Progress
-                          percent={Math.min(pump.utilisation, 100)}
-                          size="small"
-                          strokeColor={productColor(pump.productType)}
-                          format={(p) => <span className="text-[10px] tabular-nums">{p}%</span>}
-                        />
-                      </div>
-                    )}
-
-                    <span className="text-sm font-semibold tabular-nums text-ink w-24 text-right shrink-0">
-                      {formatRWF(pump.revenue)}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          </Card>
-        </Col>
-      </Row>
-    </div>
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <RecentSalesPanel sales={recent.data} loading={recent.loading} error={recent.error} onRetry={recent.reload} />
+        <OnShiftPanel shifts={t?.onShift} loading={today.loading} />
+      </div>
+    </>
   );
 }

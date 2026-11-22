@@ -2,13 +2,13 @@
 #
 # NEXT_PUBLIC_* is set at **build** via Docker build-args (see docker-compose.yml). Runtime
 # secrets are not required in the image; optional `.env` is supplied by Compose (env_file / mount).
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.18.0 --activate
 
 # Full install (devDependencies required for `next build`)
 FROM base AS deps
-COPY package.json pnpm-lock.yaml* package-lock.json* ./
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* package-lock.json* ./
 RUN \
   if [ -f pnpm-lock.yaml ]; then \
     pnpm install --frozen-lockfile; \

@@ -1,82 +1,90 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
+import { ArrowRight, CircleCheck, TriangleAlert } from 'lucide-react';
 import api from '@/lib/api';
 import { BUSINESS } from '@/lib/business';
+import { cx } from '@/lib/cx';
 
-type Fields = {
-  name: string;
-  email: string;
-  company: string;
-  stations: string;
-  message: string;
-  consent: boolean;
-};
-
+type Fields = { name: string; company: string; contact: string; stations: string; consent: boolean };
 type Errors = Partial<Record<keyof Fields, string>>;
 
-const EMPTY: Fields = { name: '', email: '', company: '', stations: '', message: '', consent: false };
+const EMPTY: Fields = { name: '', company: '', contact: '', stations: '', consent: false };
 
-function validate(f: Fields): Errors {
+/** The station-count choices; the values are what the API accepts. */
+export const STATION_CHOICES = [
+  { value: '1', label: '1' },
+  { value: '2-5', label: '2 to 5' },
+  { value: '6-20', label: '6 to 20' },
+  { value: '21+', label: 'More than 20' },
+] as const;
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** "0788 123 456", "+250 788-123-456": spaces kept, other separators made spaces. */
+export function cleanPhone(raw: string): string {
+  return raw.replace(/[-().]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/** Email if it has an @, otherwise a phone number of at least nine digits. */
+export function readContact(raw: string): { email: string } | { phone: string } | null {
+  const v = raw.trim();
+  if (v.includes('@')) return EMAIL.test(v) ? { email: v } : null;
+  const phone = cleanPhone(v);
+  return /^\+?\d[\d ]{7,18}\d$/.test(phone) && phone.replace(/\D/g, '').length >= 9 ? { phone } : null;
+}
+
+export function validate(f: Fields): Errors {
   const e: Errors = {};
   if (f.name.trim().length < 2) e.name = 'Enter your name.';
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) e.email = 'Enter a valid email address.';
   if (f.company.trim().length < 2) e.company = 'Enter your company name.';
-  if (f.stations.trim() !== '') {
-    const n = Number(f.stations);
-    if (!Number.isInteger(n) || n < 1 || n > 10_000) e.stations = 'Enter a whole number of stations, or leave it blank.';
-  }
-  if (f.message.length > 2000) e.message = 'Keep the message under 2000 characters.';
-  if (!f.consent) e.consent = 'Tick the box to confirm you have read the Privacy Policy.';
+  if (!readContact(f.contact)) e.contact = 'Enter an email address or a phone number we can reach you on.';
+  if (!f.consent) e.consent = 'Tick the box to agree to be contacted about this request.';
   return e;
 }
 
+const field =
+  'h-11 w-full rounded-control border border-border-strong bg-surface px-3.5 text-15 text-text placeholder:text-text-muted focus-visible:border-focus focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-focus aria-invalid:border-danger';
+const label = 'text-13 font-medium text-text-secondary';
+
 /**
- * Demo request. Collects only what is needed to reply: name, email, company.
- * Station count and message are optional. Consent is explicit and required.
+ * Demo request (Pencil "Contact"). Collects only what is needed to reply: a
+ * name, the company, and an email address or a phone number. The station count
+ * is optional. Consent is explicit and required, here and in the API.
  *
- * Validation runs on submit rather than on every keystroke, and the first invalid
- * field receives focus so keyboard and screen-reader users land on the problem.
+ * Validation runs on submit, not on every keystroke, and the first invalid field
+ * receives focus so keyboard and screen-reader users land on the problem.
  */
 export function DemoRequestForm() {
   const [fields, setFields] = useState<Fields>(EMPTY);
   const [errors, setErrors] = useState<Errors>({});
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
   const [failure, setFailure] = useState('');
-  const refs = useRef<Record<keyof Fields, HTMLInputElement | HTMLTextAreaElement | null>>({
-    name: null,
-    email: null,
-    company: null,
-    stations: null,
-    message: null,
-    consent: null,
-  });
+  const refs = useRef<Partial<Record<keyof Fields, HTMLInputElement | HTMLSelectElement | null>>>({});
 
   const set = <K extends keyof Fields>(key: K, value: Fields[K]) => {
     setFields((f) => ({ ...f, [key]: value }));
     if (errors[key]) setErrors((e) => ({ ...e, [key]: undefined }));
   };
 
-  const onSubmit = async (ev: React.FormEvent) => {
+  const onSubmit = async (ev: FormEvent) => {
     ev.preventDefault();
     const next = validate(fields);
     setErrors(next);
-    const first = (Object.keys(next) as Array<keyof Fields>).find((k) => next[k]);
+    const first = (['name', 'company', 'contact', 'stations', 'consent'] as const).find((k) => next[k]);
     if (first) {
       refs.current[first]?.focus();
       return;
     }
-
     setStatus('sending');
     setFailure('');
     try {
       await api.post('/contact/demo-request', {
         name: fields.name.trim(),
-        email: fields.email.trim(),
         company: fields.company.trim(),
-        ...(fields.stations.trim() ? { stations: Number(fields.stations) } : {}),
-        ...(fields.message.trim() ? { message: fields.message.trim() } : {}),
+        ...readContact(fields.contact),
+        ...(fields.stations ? { station_range: fields.stations } : {}),
         consent: true,
       });
       setStatus('sent');
@@ -92,155 +100,172 @@ export function DemoRequestForm() {
     }
   };
 
-  const describedBy = (key: keyof Fields, hintId?: string) =>
-    [errors[key] ? `${key}-error` : null, hintId ?? null].filter(Boolean).join(' ') || undefined;
+  const describedBy = (key: keyof Fields, hint?: string) =>
+    [errors[key] ? `demo-${key}-error` : null, hint ?? null].filter(Boolean).join(' ') || undefined;
+  const error = (key: keyof Fields) =>
+    errors[key] ? (
+      <p id={`demo-${key}-error`} className="m-0 text-12 text-danger">
+        {errors[key]}
+      </p>
+    ) : null;
 
   if (status === 'sent') {
     return (
-      <div role="status" className="mk-status mk-status-ok" style={{ marginTop: 24 }}>
-        <p style={{ fontWeight: 600 }}>Thank you. Your request has been sent.</p>
-        <p style={{ marginTop: 4 }}>
-          We will reply by email to arrange a time. If you do not hear from us, write to{' '}
-          <a className="mk-link" href={`mailto:${BUSINESS.contactEmail}`}>{BUSINESS.contactEmail}</a>.
+      <div role="status" className="flex flex-col gap-3 rounded-12 bg-success-tint p-5 text-success">
+        <p className="m-0 flex items-center gap-2 text-16 font-semibold">
+          <CircleCheck size={18} aria-hidden />
+          Thank you. Your request has been sent.
+        </p>
+        <p className="m-0 text-14 text-text-secondary">
+          We will get back to you to arrange a time. If you do not hear from us, write to{' '}
+          <a className="font-medium text-link underline" href={`mailto:${BUSINESS.contactEmail}`}>
+            {BUSINESS.contactEmail}
+          </a>
+          .
         </p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate aria-describedby="demo-form-intro" className="mk-form">
-      <p id="demo-form-intro" className="mk-small">
-        Fields marked required must be filled in.
-      </p>
+    <form onSubmit={onSubmit} noValidate aria-labelledby="demo-form-title" className="flex flex-col gap-5">
+      <h3 id="demo-form-title" className="m-0 text-22 font-semibold tracking-n10">
+        Request a demo
+      </h3>
 
-      <div>
-        <label htmlFor="name" className="mk-label">Your name <span>(required)</span></label>
-        <input
-          id="name"
-          name="name"
-          type="text"
-          autoComplete="name"
-          required
-          className="mk-field"
-          value={fields.name}
-          onChange={(e) => set('name', e.target.value)}
-          aria-invalid={errors.name ? 'true' : undefined}
-          aria-describedby={describedBy('name')}
-          ref={(el) => { refs.current.name = el; }}
-        />
-        {errors.name && <p id="name-error" className="mk-error" role="alert">{errors.name}</p>}
+      {status === 'failed' ? (
+        <div role="alert" className="flex items-start gap-2 rounded-control bg-danger-tint px-4 py-3 text-14 text-danger">
+          <TriangleAlert size={16} className="mt-0.5 shrink-0" aria-hidden />
+          <span>
+            {failure}{' '}
+            <a className="font-medium underline" href={`mailto:${BUSINESS.contactEmail}`}>
+              {BUSINESS.contactEmail}
+            </a>
+          </span>
+        </div>
+      ) : null}
+
+      <div className="grid gap-5 sm:grid-cols-2 sm:gap-3">
+        <div className="flex flex-col gap-2">
+          <label htmlFor="demo-name" className={label}>
+            Full name
+          </label>
+          <input
+            id="demo-name"
+            ref={(el) => {
+              refs.current.name = el;
+            }}
+            className={field}
+            value={fields.name}
+            onChange={(e) => set('name', e.target.value)}
+            autoComplete="name"
+            maxLength={120}
+            required
+            aria-invalid={errors.name ? true : undefined}
+            aria-describedby={describedBy('name')}
+          />
+          {error('name')}
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="demo-company" className={label}>
+            Company
+          </label>
+          <input
+            id="demo-company"
+            ref={(el) => {
+              refs.current.company = el;
+            }}
+            className={field}
+            value={fields.company}
+            onChange={(e) => set('company', e.target.value)}
+            autoComplete="organization"
+            maxLength={160}
+            required
+            aria-invalid={errors.company ? true : undefined}
+            aria-describedby={describedBy('company')}
+          />
+          {error('company')}
+        </div>
       </div>
 
-      <div>
-        <label htmlFor="email" className="mk-label">Work email <span>(required)</span></label>
+      <div className="flex flex-col gap-2">
+        <label htmlFor="demo-contact" className={label}>
+          Phone or email
+        </label>
         <input
-          id="email"
-          name="email"
-          type="email"
+          id="demo-contact"
+          ref={(el) => {
+            refs.current.contact = el;
+          }}
+          className={field}
+          value={fields.contact}
+          onChange={(e) => set('contact', e.target.value)}
           autoComplete="email"
-          inputMode="email"
+          maxLength={254}
           required
-          className="mk-field"
-          value={fields.email}
-          onChange={(e) => set('email', e.target.value)}
-          aria-invalid={errors.email ? 'true' : undefined}
-          aria-describedby={describedBy('email', 'email-hint')}
-          ref={(el) => { refs.current.email = el; }}
+          aria-invalid={errors.contact ? true : undefined}
+          aria-describedby={describedBy('contact', 'demo-contact-hint')}
         />
-        <p id="email-hint" className="mk-hint">Used only to reply to this request.</p>
-        {errors.email && <p id="email-error" className="mk-error" role="alert">{errors.email}</p>}
+        {error('contact')}
+        <p id="demo-contact-hint" className="m-0 text-12 text-text-muted">
+          We only use this to reply to your request
+        </p>
       </div>
 
-      <div>
-        <label htmlFor="company" className="mk-label">Company <span>(required)</span></label>
-        <input
-          id="company"
-          name="company"
-          type="text"
-          autoComplete="organization"
-          required
-          className="mk-field"
-          value={fields.company}
-          onChange={(e) => set('company', e.target.value)}
-          aria-invalid={errors.company ? 'true' : undefined}
-          aria-describedby={describedBy('company')}
-          ref={(el) => { refs.current.company = el; }}
-        />
-        {errors.company && <p id="company-error" className="mk-error" role="alert">{errors.company}</p>}
-      </div>
-
-      <div>
-        <label htmlFor="stations" className="mk-label">Number of stations <span>(optional)</span></label>
-        <input
-          id="stations"
-          name="stations"
-          type="number"
-          inputMode="numeric"
-          min={1}
-          max={10000}
-          step={1}
-          className="mk-field"
+      <div className="flex flex-col gap-2">
+        <label htmlFor="demo-stations" className={label}>
+          Number of stations <span className="font-normal text-text-muted">(optional)</span>
+        </label>
+        <select
+          id="demo-stations"
+          ref={(el) => {
+            refs.current.stations = el;
+          }}
+          className={cx(field, 'appearance-auto pr-3')}
           value={fields.stations}
           onChange={(e) => set('stations', e.target.value)}
-          aria-invalid={errors.stations ? 'true' : undefined}
-          aria-describedby={describedBy('stations')}
-          ref={(el) => { refs.current.stations = el; }}
-        />
-        {errors.stations && <p id="stations-error" className="mk-error" role="alert">{errors.stations}</p>}
+        >
+          <option value="">Choose</option>
+          {STATION_CHOICES.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </select>
       </div>
 
-      <div>
-        <label htmlFor="message" className="mk-label">Anything we should know <span>(optional)</span></label>
-        <textarea
-          id="message"
-          name="message"
-          className="mk-field"
-          maxLength={2000}
-          value={fields.message}
-          onChange={(e) => set('message', e.target.value)}
-          aria-invalid={errors.message ? 'true' : undefined}
-          aria-describedby={describedBy('message', 'message-hint')}
-          ref={(el) => { refs.current.message = el; }}
-        />
-        <p id="message-hint" className="mk-hint">For example, whether your sites sell fuel, EV charging or both.</p>
-        {errors.message && <p id="message-error" className="mk-error" role="alert">{errors.message}</p>}
-      </div>
-
-      <div>
-        <div className="mk-check">
+      <div className="flex flex-col gap-2">
+        <label className="flex cursor-pointer items-start gap-2.5 text-13 leading-[1.5] text-text-secondary">
           <input
-            id="consent"
-            name="consent"
+            ref={(el) => {
+              refs.current.consent = el;
+            }}
             type="checkbox"
-            className="mk-checkbox"
+            className="mt-0.5 size-4.5 shrink-0 cursor-pointer accent-primary"
             checked={fields.consent}
             onChange={(e) => set('consent', e.target.checked)}
-            aria-invalid={errors.consent ? 'true' : undefined}
+            aria-invalid={errors.consent ? true : undefined}
             aria-describedby={describedBy('consent')}
-            ref={(el) => { refs.current.consent = el; }}
           />
-          <label htmlFor="consent">
-            I have read the{' '}
-            <Link href="/privacy" className="mk-link">Privacy Policy</Link> and agree that{' '}
-            {BUSINESS.legalName} may use these details to reply to my request. (required)
-          </label>
-        </div>
-        {errors.consent && <p id="consent-error" className="mk-error" role="alert">{errors.consent}</p>}
+          <span>
+            I agree that {BUSINESS.productName} may contact me about this request, as described in the{' '}
+            <Link href="/privacy" className="font-medium text-link underline">
+              privacy policy
+            </Link>
+            .
+          </span>
+        </label>
+        {error('consent')}
       </div>
 
-      {status === 'failed' && (
-        <div role="alert" className="mk-status mk-status-error">
-          {failure}{' '}
-          <a className="mk-link" href={`mailto:${BUSINESS.contactEmail}`}>{BUSINESS.contactEmail}</a>
-        </div>
-      )}
-
-      <div className="mk-form-foot">
-        <button type="submit" className="mk-btn mk-btn-primary" disabled={status === 'sending'}>
-          {status === 'sending' ? 'Sending request' : 'Send demo request'}
-        </button>
-        <p className="mk-small">Goes straight to our sales team. Kept only until we have replied.</p>
-      </div>
+      <button
+        type="submit"
+        disabled={status === 'sending'}
+        className="inline-flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-control border-0 bg-primary text-16 font-semibold text-on-primary hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-wait disabled:opacity-70"
+      >
+        <ArrowRight size={18} aria-hidden />
+        {status === 'sending' ? 'Sending…' : 'Send demo request'}
+      </button>
     </form>
   );
 }

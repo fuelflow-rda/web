@@ -1,18 +1,17 @@
 'use client';
 
-import { Spin } from 'antd';
-import { BrandMark } from './BrandMark';
+import { RelaiMark } from './brand/RelaiMark';
 
-/** Full-screen loader shown while auth state is resolved or redirects run. */
+/**
+ * Full-screen loader shown while sign-in state is resolved or a redirect runs:
+ * the mark alone, pulsing gently, and a name for assistive tech.
+ */
 export function AppLoadingScreen() {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-surface-sunken">
-      <div className="text-center">
-        <div className="w-12 h-12 rounded-2xl bg-accent flex items-center justify-center mx-auto mb-4">
-          <BrandMark size={24} color="white" />
-        </div>
-        <Spin size="large" />
-      </div>
+    <div role="status" aria-label="Loading Relai" className="flex min-h-screen items-center justify-center bg-bg">
+      <span className="animate-pulse text-primary motion-reduce:animate-none">
+        <RelaiMark size={48} />
+      </span>
     </div>
   );
 }

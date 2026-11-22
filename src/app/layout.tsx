@@ -1,14 +1,11 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import React from 'react';
-import { Inter } from 'next/font/google';
 import './globals.css';
+import { fontVariables } from './fonts';
 import { Providers } from '@/components/Providers';
 import { ThemeScript } from '@/components/ThemeScript';
 import { BUSINESS } from '@/lib/business';
-
-// Downloaded at build time and served from our origin: the browser never
-// contacts Google Fonts. See docs/data-and-tracking-audit.md.
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
   metadataBase: new URL(BUSINESS.siteUrl),
@@ -19,16 +16,18 @@ export const metadata: Metadata = {
   description: 'Relai fuel and EV charging station management',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Set per request by src/proxy.ts; the Content-Security-Policy blocks inline scripts without it.
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
   return (
     // suppressHydrationWarning: ThemeScript sets data-theme and color-scheme on <html>
     // before React hydrates, so the server markup differs here by design.
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    <html lang="en" className={fontVariables} suppressHydrationWarning>
       <head>
-        <ThemeScript />
+        <ThemeScript nonce={nonce} />
       </head>
-      {/* Background comes from the token so it follows the theme. */}
-      <body className={`${inter.className} min-h-screen w-full m-0 p-0 overflow-x-hidden`}>
+      {/* Font and background come from tokens (globals.css), so they follow the theme. */}
+      <body className="min-h-screen w-full m-0 p-0 overflow-x-hidden">
         <Providers>{children}</Providers>
       </body>
     </html>

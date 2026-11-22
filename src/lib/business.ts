@@ -61,7 +61,7 @@ export const BUSINESS: BusinessDetails = {
   siteUrl: 'https://relai.rw',
 
   /** Legal pages carry the date of the last substantive change. */
-  policiesUpdated: '2026-09-14',
+  policiesUpdated: '2026-11-21',
 };
 
 export function formattedAddress(): string {

@@ -8,7 +8,7 @@ export const THEME_STORAGE_KEY = 'relai_theme';
  * wrong theme. Runs as a blocking inline script — it must stay dependency-free
  * and small. The stored preference wins; otherwise we follow the OS.
  */
-export function ThemeScript() {
+export function ThemeScript({ nonce }: { nonce?: string }) {
   const js = `(function(){try{
     var stored = localStorage.getItem('${THEME_STORAGE_KEY}');
     var theme = stored === 'light' || stored === 'dark'
@@ -20,5 +20,6 @@ export function ThemeScript() {
     document.documentElement.setAttribute('data-theme','light');
   }})();`;
 
-  return <script dangerouslySetInnerHTML={{ __html: js }} />;
+  // The nonce lets it past the Content-Security-Policy (src/lib/csp.ts).
+  return <script nonce={nonce} dangerouslySetInnerHTML={{ __html: js }} />;
 }

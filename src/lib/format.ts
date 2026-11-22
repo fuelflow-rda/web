@@ -17,5 +17,5 @@ export function fuelTypeColor(type: string): string {
 }
 
 export function fuelTypeBg(type: string): string {
-  return isGasolineFuelType(type) ? 'var(--warn-tint)' : 'var(--surface-muted)';
+  return isGasolineFuelType(type) ? 'var(--warning-tint)' : 'var(--surface-muted)';
 }

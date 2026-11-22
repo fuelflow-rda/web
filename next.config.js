@@ -3,10 +3,9 @@
 /**
  * Response headers for every route.
  *
- * No CSP here: Ant Design and the chart libraries inject styles at runtime, and
- * the pre-paint theme script is inline, so a policy strict enough to be worth
- * having would need nonce plumbing through the App Router. Tracked separately —
- * these are the headers that are safe to set unconditionally.
+ * The Content-Security-Policy is not here: it carries a fresh nonce for every
+ * response, so src/proxy.ts sets it (policy in src/lib/csp.ts). These are the
+ * headers that are the same on every response.
  */
 const securityHeaders = [
   // Stop MIME sniffing turning a response into something executable.
@@ -17,6 +16,12 @@ const securityHeaders = [
   // Features this app never uses.
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=()' },
   { key: 'X-DNS-Prefetch-Control', value: 'off' },
+  // Once a browser has reached the console over HTTPS, it refuses plain HTTP to
+  // this host for a year, so a network attacker cannot downgrade a later visit.
+  // Browsers ignore the header on plain-HTTP responses, so local dev is
+  // unaffected. includeSubDomains and preload are left off on purpose: they
+  // would bind every other subdomain of the production domain as well.
+  { key: 'Strict-Transport-Security', value: 'max-age=31536000' },
 ];
 
 const nextConfig = {
@@ -24,7 +29,7 @@ const nextConfig = {
   output: 'standalone',
   // Do not advertise the framework version.
   poweredByHeader: false,
-  transpilePackages: ['antd', '@ant-design/icons', '@ant-design/charts', 'recharts'],
+  transpilePackages: ['antd', 'recharts'],
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },
