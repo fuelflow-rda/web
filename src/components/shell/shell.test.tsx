@@ -18,9 +18,11 @@ describe('navFor', () => {
     expect(labels('MANAGER', 'company')).toEqual([
       'Main: Overview, Transactions',
       'Operations: Reconciliation, Pumps and chargers, Attendants, Prices',
+      'Customers: Customers, Vouchers',
       'System: Notifications, Settings',
     ]);
-    expect(labels('ADMIN', 'company')[2]).toBe('System: Notifications, Company, Settings');
+    expect(labels('ADMIN', 'company')[3]).toBe('System: Notifications, Company, Settings');
+    // The platform admin reads customers from a company's page, not a station's sidebar.
     expect(labels('SUPERADMIN', 'company')[2]).toBe('System: Notifications, Platform, Settings');
   });
 

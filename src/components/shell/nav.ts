@@ -14,6 +14,8 @@ import {
   Users,
   Briefcase,
   ShieldCheck,
+  IdCard,
+  Ticket,
 } from 'lucide-react';
 import type { AuthUser } from '@/store/auth-store';
 
@@ -85,6 +87,20 @@ export function navFor(user: AuthUser, area: ShellArea): NavGroup[] {
         { href: '/fuel-prices', label: 'Prices', icon: Tag },
       ],
     },
+    // Customers are the company's, across its stations: company admins manage
+    // them and station managers read them. The platform admin reads them from
+    // a company's page instead.
+    ...(user.role === 'ADMIN' || user.role === 'MANAGER'
+      ? [
+          {
+            label: 'Customers',
+            items: [
+              { href: '/customers', label: 'Customers', icon: IdCard },
+              { href: '/vouchers', label: 'Vouchers', icon: Ticket },
+            ],
+          },
+        ]
+      : []),
     { label: 'System', items: system },
   ];
 }

@@ -33,6 +33,8 @@
   --color-pay-cash: var(--pay-cash);
   --color-pay-card: var(--pay-card);
   --color-pay-momo: var(--pay-momo);
+  --color-pay-account: var(--pay-account);
+  --color-pay-voucher: var(--pay-voucher);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
