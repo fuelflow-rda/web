@@ -25,6 +25,9 @@ export function useShellCrumb(label: string | null | undefined) {
   }, [label, set]);
 }
 
+/** Company pages that no station's breadcrumb belongs in. */
+const COMPANY_WIDE = ['/customers', '/vouchers'];
+
 const SEARCH_PLACEHOLDER: Record<ShellArea, string> = {
   company: 'Search plates, phones, attendants',
   platform: 'Search companies, stations, users',
@@ -128,7 +131,10 @@ export function AppShell({
             label: user.role === 'SUPERADMIN' ? 'Relai platform' : (companyName ?? 'Company'),
             href: user.role === 'SUPERADMIN' ? '/admin' : undefined,
           },
-          ...(currentStation ? [{ label: currentStation.name, href: '/dashboard' }] : []),
+          // Customers and vouchers are the company's, not a station's.
+          ...(currentStation && !COMPANY_WIDE.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+            ? [{ label: currentStation.name, href: '/dashboard' }]
+            : []),
           { label: page || 'Overview' },
           ...(detail ? [{ label: detail }] : []),
         ];

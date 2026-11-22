@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { PumpTable, ResolvePanel } from './views';
+import { PaymentTable, PumpTable, ResolvePanel } from './views';
 import type { PumpLine, PumpShifts, Report } from './types';
 
 const line = (over: Partial<PumpLine>): PumpLine => ({
@@ -135,5 +135,38 @@ describe('ResolvePanel', () => {
   it('is read-only for people who do not decide', () => {
     render(<ResolvePanel line={pump2} decisions={[]} shifts={shifts} canDecide={false} onDecide={vi.fn()} />);
     expect(screen.queryByLabelText('Note for the record')).toBeNull();
+  });
+});
+
+describe('PaymentTable', () => {
+  it('marks prepaid payments as not in the till, and shows the discounts behind expected revenue', () => {
+    render(
+      <PaymentTable
+        report={{
+          ...report([]),
+          expectedRevenue: 1358345,
+          totalTransactions: 151,
+          splitSales: 6,
+          discounts: { total: 16928, card: 14428, promo: 2500, card_sales: 22, promo_sales: 4 },
+          paymentBreakdown: [
+            { method: 'CASH', count: 65, amount: 512840, prepaid: false },
+            { method: 'MOMO', count: 51, amount: 401236, prepaid: false },
+            { method: 'ACCOUNT', count: 22, amount: 255408, prepaid: true },
+          ],
+        }}
+      />,
+    );
+    const balance = screen.getByRole('row', { name: /Prepaid balance/ });
+    expect(within(balance).getByText('No · paid earlier')).toBeTruthy();
+    expect(within(screen.getByRole('row', { name: /Recorded revenue/ })).getByText('1,169,484')).toBeTruthy();
+    expect(screen.getByText(/6 were paid two ways/)).toBeTruthy();
+    expect(screen.getByText('RWF 1,375,273')).toBeTruthy();
+    expect(screen.getByText('−RWF 14,428')).toBeTruthy();
+  });
+
+  it('keeps the plain table for a day without cards or vouchers', () => {
+    render(<PaymentTable report={{ ...report([]), paymentBreakdown: [{ method: 'CASH', count: 3, amount: 9000 }] }} />);
+    expect(screen.queryByText('In the till')).toBeNull();
+    expect(screen.queryByText('Discounts')).toBeNull();
   });
 });
