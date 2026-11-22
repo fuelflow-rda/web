@@ -28,9 +28,11 @@ interface ExportButtonProps {
   data: object[];
   columns: ExportColumn[];
   filename: string;
+  /** The button's text; "Export" unless the page names what it exports. */
+  label?: string;
 }
 
-export default function ExportButton({ data, columns, filename }: ExportButtonProps) {
+export default function ExportButton({ data, columns, filename, label = 'Export' }: ExportButtonProps) {
   const exportToExcel = async () => {
     const ExcelJS = await import('exceljs');
     const workbook = new ExcelJS.Workbook();
@@ -122,7 +124,7 @@ export default function ExportButton({ data, columns, filename }: ExportButtonPr
 
   return (
     <Dropdown menu={{ items }} trigger={['click']}>
-      <Button icon={Download}>Export</Button>
+      <Button icon={Download}>{label}</Button>
     </Dropdown>
   );
 }
