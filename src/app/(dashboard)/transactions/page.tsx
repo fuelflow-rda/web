@@ -14,6 +14,7 @@ import { kigaliWindow, ymd } from '@/lib/kigali';
 import { cx } from '@/lib/cx';
 import { isPaymentFilter } from '@/lib/links';
 import { PRODUCT_TYPES, formatMeter, pointLabel, productCode, productColor, productName } from '@/lib/product-types';
+import { useAuthStore } from '@/store/auth-store';
 import { useStationStore } from '@/store/station-store';
 
 type Preset = 'today' | '7d' | '30d' | '90d';
@@ -110,6 +111,9 @@ function TransactionsView() {
   const params = useSearchParams();
   const { currentStation } = useStationStore();
   const stationId = currentStation?.id ?? null;
+  // The platform admin reads a station's sales; flags are the company's (the API refuses them).
+  const role = useAuthStore((st) => st.user?.role);
+  const canFlag = role === 'ADMIN' || role === 'MANAGER';
 
   // Links from the Overview and the search box arrive with the slice they mean.
   const [range, setRange] = useState<Range>(() => {
@@ -559,17 +563,21 @@ function TransactionsView() {
                           label={`Actions for the sale at ${dateTime(s.timestamp)}`}
                           items={[
                             { key: 'open', label: 'View details', icon: Eye, onClick: () => setOpen(s) },
-                            s.is_flagged
-                              ? { key: 'unflag', label: 'Remove flag', icon: FlagOff, onClick: () => void unflag(s) }
-                              : {
-                                  key: 'flag',
-                                  label: 'Flag for review…',
-                                  icon: Flag,
-                                  onClick: () => {
-                                    setFlagging(true);
-                                    setOpen(s);
-                                  },
-                                },
+                            ...(canFlag
+                              ? [
+                                  s.is_flagged
+                                    ? { key: 'unflag', label: 'Remove flag', icon: FlagOff, onClick: () => void unflag(s) }
+                                    : {
+                                        key: 'flag',
+                                        label: 'Flag for review…',
+                                        icon: Flag,
+                                        onClick: () => {
+                                          setFlagging(true);
+                                          setOpen(s);
+                                        },
+                                      },
+                                ]
+                              : []),
                           ]}
                         />
                       </td>
@@ -602,6 +610,7 @@ function TransactionsView() {
 
       <SaleDrawer
         sale={open}
+        canFlag={canFlag}
         focusFlag={flagging}
         onClose={() => {
           setOpen(null);
@@ -619,11 +628,14 @@ function TransactionsView() {
 /** Everything about one sale, and flagging it for a closer look. Not designed; built from the components. */
 function SaleDrawer({
   sale,
+  canFlag,
   focusFlag = false,
   onClose,
   onChanged,
 }: {
   sale: Sale | null;
+  /** Company admins and managers flag; the platform admin only sees the flag. */
+  canFlag: boolean;
   /** Opened from the row menu's "Flag for review": the cursor starts in the reason. */
   focusFlag?: boolean;
   onClose: () => void;
@@ -715,11 +727,13 @@ function SaleDrawer({
               <Flag size={16} aria-hidden /> Flagged for a closer look
             </p>
             <p className="m-0 text-14 text-text">{sale.flag_reason ?? 'No reason recorded.'}</p>
-            <Button icon={FlagOff} onClick={unflag} loading={saving}>
-              Remove flag
-            </Button>
+            {canFlag ? (
+              <Button icon={FlagOff} onClick={unflag} loading={saving}>
+                Remove flag
+              </Button>
+            ) : null}
           </div>
-        ) : (
+        ) : !canFlag ? null : (
           <form onSubmit={flag} noValidate className="flex flex-col gap-3 border-t border-border pt-5">
             <label htmlFor="flag-reason" className="text-13 font-medium text-text-secondary">
               Flag for a closer look
