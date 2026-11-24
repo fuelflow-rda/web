@@ -17,7 +17,7 @@ describe('navFor', () => {
   it('gives a station the design’s groups, with Company for company admins only', () => {
     expect(labels('MANAGER', 'company')).toEqual([
       'Main: Overview, Transactions',
-      'Operations: Reconciliation, Pumps and chargers, Attendants, Prices',
+      'Operations: Reconciliation, Pumps and chargers, Stock, Attendants, Prices',
       'Customers: Customers, Vouchers',
       'System: Notifications, Settings',
     ]);

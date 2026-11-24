@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   IdCard,
   Ticket,
+  Warehouse,
 } from 'lucide-react';
 import type { AuthUser } from '@/store/auth-store';
 
@@ -83,6 +84,7 @@ export function navFor(user: AuthUser, area: ShellArea): NavGroup[] {
       items: [
         { href: '/reconciliation', label: 'Reconciliation', icon: Scale, count: 'review' },
         { href: '/pumps', label: 'Pumps and chargers', icon: Fuel },
+        { href: '/stock', label: 'Stock', icon: Warehouse },
         { href: '/attendants', label: 'Attendants', icon: Users },
         { href: '/fuel-prices', label: 'Prices', icon: Tag },
       ],
