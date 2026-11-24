@@ -14,6 +14,7 @@ import { PanelError, PanelSkeleton, clock, num, rwf } from '@/components/overvie
 import { kigaliWindow, ymd } from '@/lib/kigali';
 import { cx } from '@/lib/cx';
 import { isPaymentFilter } from '@/lib/links';
+import { rwfExact, saleTax, taxLabel } from '@/lib/tax';
 import { PRODUCT_TYPES, formatMeter, pointLabel, productCode, productColor, productName } from '@/lib/product-types';
 import { useAuthStore } from '@/store/auth-store';
 import { useStationStore } from '@/store/station-store';
@@ -83,6 +84,10 @@ interface Sale {
   customers?: { id: string; name: string } | null;
   customer_cards?: { id: string; number: number; vehicle_plate: string | null } | null;
   vouchers?: { id: string; code: string } | null;
+  /** EBM tax type, rate and VAT recorded with the sale (prices include VAT). */
+  tax_type?: string | null;
+  tax_rate?: number | string | null;
+  vat_amount?: number | string | null;
 }
 interface Summary {
   sales: number;
@@ -290,18 +295,24 @@ function TransactionsView() {
 
   const first = total === 0 ? 0 : (page - 1) * PAGE + 1;
   const last = Math.min(page * PAGE, total);
-  const exportRows = (sales ?? []).map((s) => ({
-    time: dateTime(s.timestamp),
-    pump: s.pumps ? pointLabel(s.pumps.pump_number, s.product_type) : '',
-    product: productName(s.product_type),
-    quantity: formatMeter(s.quantity, s.unit),
-    price: s.unit_price,
-    amount: s.total_amount,
-    payment: payLabel(s),
-    attendant: s.users?.name ?? '',
-    plate: s.vehicle_plate ?? '',
-    status: STATUS[s.sale_status].label,
-  }));
+  const exportRows = (sales ?? []).map((s) => {
+    const tax = saleTax(s);
+    return {
+      time: dateTime(s.timestamp),
+      pump: s.pumps ? pointLabel(s.pumps.pump_number, s.product_type) : '',
+      product: productName(s.product_type),
+      quantity: formatMeter(s.quantity, s.unit),
+      price: s.unit_price,
+      amount: s.total_amount,
+      tax: taxLabel(tax.type, tax.rate),
+      vat: tax.vat,
+      excl_vat: tax.exclVat,
+      payment: payLabel(s),
+      attendant: s.users?.name ?? '',
+      plate: s.vehicle_plate ?? '',
+      status: STATUS[s.sale_status].label,
+    };
+  });
 
   const head =
     'px-3 py-2.5 text-left type-overline text-11 font-medium whitespace-nowrap text-text-muted first:pl-5 last:pr-5';
@@ -335,6 +346,9 @@ function TransactionsView() {
                 { header: 'Quantity', key: 'quantity' },
                 { header: 'Price (RWF)', key: 'price' },
                 { header: 'Amount (RWF)', key: 'amount' },
+                { header: 'Tax', key: 'tax' },
+                { header: 'VAT (RWF)', key: 'vat' },
+                { header: 'Excl. VAT (RWF)', key: 'excl_vat' },
                 { header: 'Payment', key: 'payment' },
                 { header: 'Attendant', key: 'attendant' },
                 { header: 'Plate', key: 'plate' },
@@ -700,6 +714,7 @@ function SaleDrawer({
   const st = STATUS[sale.sale_status];
   const per = sale.unit === 'KWH' ? 'kWh' : 'litre';
   const discount = Number(sale.discount_amount ?? 0);
+  const tax = saleTax(sale);
   const split: Array<[string, number]> =
     sale.payment_method === 'ACCOUNT' || sale.payment_method === 'VOUCHER'
       ? [
@@ -719,6 +734,8 @@ function SaleDrawer({
         ] as Array<[string, React.ReactNode]>)
       : ([['Price', `${rwf(sale.unit_price)} per ${per}`]] as Array<[string, React.ReactNode]>)),
     ['Amount', rwf(sale.total_amount)],
+    [`VAT · ${taxLabel(tax.type, tax.rate)}`, <span key="vat" className="font-mono">{rwfExact(tax.vat)}</span>],
+    ['Excl. VAT', <span key="ex" className="font-mono">{rwfExact(tax.exclVat)}</span>],
     ['Payment', payLabel(sale)],
     ...(sale.customers
       ? ([
