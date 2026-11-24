@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X } from 'lucide-react';
+import { Menu, Moon, Sun, X } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
+import { useThemeStore } from '@/store/theme-store';
+import { IconButton } from '@/components/ui';
 import { getDefaultRouteForUser } from '@/lib/auth-routes';
 import { RelaiLockup } from '@/components/brand';
 import { cx } from '@/lib/cx';
@@ -24,12 +26,24 @@ const link =
 const demo =
   'inline-flex h-10 items-center rounded-control bg-primary px-4 text-15 font-semibold text-on-primary no-underline hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus';
 
-/** The public site's top bar (Pencil "Nav"): lockup, section links, sign in, demo. */
+/** The public site's top bar (Pencil "Nav"): lockup, section links, theme, sign in, demo. */
 export function MarketingHeader() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const initialized = useAuthStore((s) => s.initialized);
+  const mode = useThemeStore((s) => s.mode);
+  const toggleTheme = useThemeStore((s) => s.toggle);
+  // The same control as the dashboard's top bar, so the choice carries across.
+  // On phones it matches the menu button's 44 px touch target.
+  const theme = (className?: string) => (
+    <IconButton
+      icon={mode === 'dark' ? Sun : Moon}
+      label={`Switch to ${mode === 'dark' ? 'light' : 'dark'} theme`}
+      onClick={toggleTheme}
+      className={className}
+    />
+  );
 
   const [lastPath, setLastPath] = useState(pathname);
   if (pathname !== lastPath) {
@@ -66,6 +80,7 @@ export function MarketingHeader() {
         </nav>
 
         <div className="hidden items-center gap-6 lg:flex">
+          {theme()}
           <Link href={accountHref} className={link}>
             {accountLabel}
           </Link>
@@ -74,16 +89,19 @@ export function MarketingHeader() {
           </Link>
         </div>
 
-        <button
-          type="button"
-          className="inline-flex size-11 cursor-pointer items-center justify-center rounded-control border border-border bg-surface text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus lg:hidden"
-          aria-expanded={open}
-          aria-controls="mobile-menu"
-          aria-label={open ? 'Close menu' : 'Open menu'}
-          onClick={() => setOpen((v) => !v)}
-        >
-          {open ? <X size={20} aria-hidden /> : <Menu size={20} aria-hidden />}
-        </button>
+        <div className="flex items-center gap-3 lg:hidden">
+          {theme('size-11')}
+          <button
+            type="button"
+            className="inline-flex size-11 cursor-pointer items-center justify-center rounded-control border border-border bg-surface text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            aria-expanded={open}
+            aria-controls="mobile-menu"
+            aria-label={open ? 'Close menu' : 'Open menu'}
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? <X size={20} aria-hidden /> : <Menu size={20} aria-hidden />}
+          </button>
+        </div>
       </div>
 
       <div id="mobile-menu" hidden={!open} className="border-t border-border lg:hidden">
