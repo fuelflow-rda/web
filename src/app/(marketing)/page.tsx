@@ -6,7 +6,7 @@ import { CardsAndVouchersPoints, CardsAndVouchersVisual } from '@/components/mar
 import { DemoRequestForm } from '@/components/marketing/DemoRequestForm';
 import { HeroVisual } from '@/components/marketing/HeroVisual';
 import { PlatformCards } from '@/components/marketing/PlatformCards';
-import { container, Display, Overline, PRODUCTS, SectionHead } from '@/components/marketing/parts';
+import { container, Display, nightEdge, Overline, PRODUCTS, SectionHead } from '@/components/marketing/parts';
 import { BUSINESS, formattedAddress } from '@/lib/business';
 import { cx } from '@/lib/cx';
 import evPhoto from '@/assets/photos/ev-charging.jpg';
@@ -297,7 +297,7 @@ export default function LandingPage() {
 
       <section id="contact" aria-labelledby="contact-heading" className="scroll-mt-6">
         <div className={cx(container, 'pb-20 lg:pb-30')}>
-          <div data-theme="dark" className="grid gap-12 rounded-20 bg-bg p-6 text-text sm:p-10 lg:grid-cols-2 lg:gap-16 lg:p-16">
+          <div data-theme="dark" className={cx('grid gap-12 rounded-20 bg-bg p-6 text-text sm:p-10 lg:grid-cols-2 lg:gap-16 lg:p-16', nightEdge)}>
             <div className="flex flex-col gap-6">
               <Overline tone="accent">Contact</Overline>
               <Display id="contact-heading">Ready to see every station in one place?</Display>
