@@ -3,7 +3,7 @@
 The Relai website and dashboard, in one Next.js app:
 
 - **Public site:** the landing page and legal pages.
-- **Company dashboard,** for company admins and station managers: sales, reconciliation, attendants, pumps, prices, customers and vouchers.
+- **Company dashboard,** for company admins and station managers: sales, reconciliation, attendants, pumps, prices, stock, customers and vouchers.
 - **Platform pages** for the Relai superadmin.
 
 It talks only to the [Relai API](https://github.com/relai-rw/api). Attendants don't use this app: they record sales in the [mobile app](https://github.com/relai-rw/mobile).
@@ -69,6 +69,7 @@ Rules for keeping the design consistent:
 | `/dashboard` | admins, managers | The day at a glance |
 | `/transactions`, `/reconciliation` | admins, managers | Sales with filters and exports; daily expected against recorded takings |
 | `/attendants`, `/pumps`, `/fuel-prices` | admins, managers | People, pumps and chargers, prices and scheduled changes |
+| `/stock` | admins, managers | Fuel and electricity stock: levels from the last count, deliveries with their cost, and counts |
 | `/customers`, `/vouchers` | admins; managers can read | Customers, cards, balances and statements; voucher batches and printable sheets |
 | `/notifications`, `/settings` | admins, managers | Alerts; your own account |
 | `/admin/...` | superadmin | Companies, stations, pumps, users, phone sync health, audit log |
