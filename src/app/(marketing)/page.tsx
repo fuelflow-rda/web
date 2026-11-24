@@ -47,8 +47,8 @@ const BENEFITS = [
     text: 'Expected against recorded revenue is computed per pump and per attendant, so a shortfall is traced to a shift rather than discovered at month end.',
   },
   {
-    title: 'Works without a signal',
-    text: 'The attendant app keeps a local queue and syncs when the connection returns. A weak network does not stop a sale from being recorded.',
+    title: 'Works without internet',
+    text: 'The attendant app keeps a local queue and syncs when the internet is back. Losing the internet does not stop a sale from being recorded.',
   },
   {
     title: 'One view across all sites',
@@ -67,8 +67,8 @@ const BENEFITS = [
 const QUESTIONS = [
   {
     topic: 'Connectivity',
-    q: 'What happens when the forecourt loses signal?',
-    a: 'The attendant app keeps recording. Each sale is queued on the phone and synced the moment the connection returns, with its original time and price.',
+    q: 'What happens when the internet goes down at the forecourt?',
+    a: 'The attendant app keeps recording. Each sale is queued on the phone and synced the moment the internet is back, with its original time and price.',
   },
   {
     topic: 'Records',
@@ -97,7 +97,7 @@ export default function LandingPage() {
             </h1>
             <p className="m-0 max-w-135 text-18 leading-[1.55] text-text-secondary lg:text-20">
               Relai gives multi-station operators live sales, shift control and automatic daily reconciliation, with an
-              attendant app that keeps working when the signal drops.
+              attendant app that keeps working when the internet drops.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link

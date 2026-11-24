@@ -43,7 +43,7 @@ export function PlatformCards() {
           <CloudOff size={16} className="mt-0.5 shrink-0 text-warning" />
           <span className="flex flex-col gap-0.5">
             <span className="text-14 font-semibold text-warning">1 sale waiting to sync</span>
-            <span className="text-12 text-text-secondary">Saved on this phone. It sends when the signal returns.</span>
+            <span className="text-12 text-text-secondary">Saved on this phone. It sends when the internet is back.</span>
           </span>
         </div>
       </Card>

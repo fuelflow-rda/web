@@ -121,7 +121,7 @@ export function Gallery() {
         </Panel>
         <div className="grid max-w-[1060px] grid-cols-2 gap-3">
           <Banner tone="warning" title="1 sale waiting to sync" icon={CloudOff} action={{ label: 'Sync now', onClick: () => undefined }}>
-            It is saved on this phone and will send when there is signal.
+            It is saved on this phone and will send when the internet is back.
           </Banner>
           <Banner tone="info" title="Prices change at midnight">New prices take effect on every pump at 00:00.</Banner>
           <Banner tone="danger" title="Reconciliation failed">Pump 2 reported no closing reading.</Banner>

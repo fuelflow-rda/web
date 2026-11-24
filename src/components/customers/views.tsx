@@ -786,7 +786,7 @@ export function StopCardDrawer({
     >
       <form id="stop-card" onSubmit={submit} noValidate className="flex flex-col gap-5.5">
         <p className="m-0 -mt-1 text-14 text-text-secondary">
-          It is refused at the pump at once. Phones without signal stop it at their next sync; a sale made before then is flagged
+          It is refused at the pump at once. Phones without internet stop it at their next sync; a sale made before then is flagged
           for you.
         </p>
         <TextField label="Reason" value={reason} onChange={(e) => setReason(e.target.value)} error={error} autoFocus />
