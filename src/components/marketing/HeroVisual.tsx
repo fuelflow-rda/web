@@ -90,8 +90,7 @@ function HomeScreen() {
       <div className="flex gap-2.5">
         <Stat label="Sales" value="24" unit="since 06:00" />
         <Stat label="Litres" value="702.4" unit="dispensed" />
-        {/* The app shrinks a long figure to fit; a nine-character revenue ends up at about 16. */}
-        <Stat label="RWF" value="2,079,503" unit="revenue" small />
+        <Stat label="RWF" value="2,079,503" unit="revenue" />
       </div>
 
       <div className="flex min-h-7 items-center justify-between">
@@ -135,13 +134,16 @@ const SALES = [
   { badge: 'DC', color: 'var(--product-ev-dc)', quantity: '32.0 kWh', amount: 'RWF 12,160', time: '09:02', payment: 'Voucher', undo: null },
 ];
 
-/** relai-mobile Stat: a Mono caps label, the figure, a quiet unit line. */
-function Stat({ label, value, unit, small = false }: { label: string; value: string; unit: string; small?: boolean }) {
+/**
+ * relai-mobile Stat: a Mono caps label, the figure, a quiet unit line. Like the
+ * app, stats share the row by content, so the RWF figure gets the room it needs.
+ */
+function Stat({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
-    <span className="flex min-w-0 flex-1 flex-col gap-1.5 rounded-card border border-border bg-surface p-3.5">
+    <span className="flex min-w-0 flex-auto flex-col gap-1.5 rounded-card border border-border bg-surface p-3.5">
       <span className="font-mono text-11 font-medium tracking-p80 text-text-muted uppercase">{label}</span>
-      <span className={cx('font-mono font-semibold tracking-n20 whitespace-nowrap', small ? 'text-16' : 'text-22')}>{value}</span>
-      <span className="text-12 text-text-muted">{unit}</span>
+      <span className="font-mono text-22 font-semibold tracking-n20 whitespace-nowrap">{value}</span>
+      <span className="text-12 whitespace-nowrap text-text-muted">{unit}</span>
     </span>
   );
 }
