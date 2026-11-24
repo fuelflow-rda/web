@@ -30,6 +30,8 @@ const nextConfig = {
   // Do not advertise the framework version.
   poweredByHeader: false,
   transpilePackages: ['antd', 'recharts'],
+  // The landing page's photos: AVIF where the browser takes it, WebP otherwise, resized per screen.
+  images: { formats: ['image/avif', 'image/webp'] },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

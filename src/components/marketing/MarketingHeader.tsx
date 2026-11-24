@@ -13,6 +13,7 @@ import { container } from './parts';
 /** Anchors on the landing page. Absolute so they work from the legal pages too. */
 export const NAV_LINKS = [
   { href: '/#platform', label: 'Platform' },
+  { href: '/#cards', label: 'Cards and vouchers' },
   { href: '/#how-it-works', label: 'How it works' },
   { href: '/#questions', label: 'Questions' },
   { href: '/#contact', label: 'Contact' },
@@ -56,7 +57,7 @@ export function MarketingHeader() {
           <RelaiLockup height={25} />
         </Link>
 
-        <nav aria-label="Primary" className="hidden items-center gap-9 lg:flex">
+        <nav aria-label="Primary" className="hidden items-center gap-7 lg:flex xl:gap-9">
           {NAV_LINKS.map((l) => (
             <Link key={l.href} href={l.href} className={link}>
               {l.label}
