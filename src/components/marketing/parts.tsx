@@ -2,11 +2,15 @@ import type { ReactNode } from 'react';
 import { cx } from '@/lib/cx';
 
 /**
- * Building blocks of the public pages (Pencil "Landing / Home"). The site is
- * light only: its frame carries data-theme="light", and the night sections
- * (hero, contact, footer) carry data-theme="dark", so the same tokens give each
- * part its colours.
+ * Building blocks of the public pages (Pencil "Landing / Home"). The frame
+ * follows the visitor's theme; the night sections (hero, contact, footer)
+ * carry data-theme="dark" in both, so the same tokens give each part its
+ * colours. `nightEdge` gives a night block a hairline when the page around it
+ * is dark too.
  */
+
+/** A border on a night block, only when the whole page is dark: there the block would otherwise vanish. */
+export const nightEdge = '[:root[data-theme=dark]_&]:border [:root[data-theme=dark]_&]:border-border';
 
 /** 1200 px of content, centred, with the page's side margins on smaller screens. */
 export const container = 'mx-auto w-full max-w-300 px-5 sm:px-8 xl:px-0';

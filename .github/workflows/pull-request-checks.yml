@@ -3,7 +3,7 @@
 name: Relai Web — Pull Request Checks
 on:
   pull_request:
-    branches: [main, develop]
+    branches: [main, staging, develop]
 
 permissions:
   contents: read
