@@ -1,6 +1,6 @@
 {
   "name": "relai-web",
-  "version": "0.13.3",
+  "version": "0.14.0",
   "packageManager": "pnpm@11.18.0",
   "engines": {
     "node": ">=22.12.0"
