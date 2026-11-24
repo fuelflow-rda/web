@@ -1,12 +1,17 @@
 import type { Metadata } from 'next';
+import Image, { type StaticImageData } from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, Mail, MapPin } from 'lucide-react';
+import { CardsAndVouchersPoints, CardsAndVouchersVisual } from '@/components/marketing/CardsAndVouchers';
 import { DemoRequestForm } from '@/components/marketing/DemoRequestForm';
 import { HeroVisual } from '@/components/marketing/HeroVisual';
 import { PlatformCards } from '@/components/marketing/PlatformCards';
 import { container, Display, Overline, PRODUCTS, SectionHead } from '@/components/marketing/parts';
 import { BUSINESS, formattedAddress } from '@/lib/business';
 import { cx } from '@/lib/cx';
+import evPhoto from '@/assets/photos/ev-charging.jpg';
+import forecourtPhoto from '@/assets/photos/forecourt-dusk.jpg';
+import managerPhoto from '@/assets/photos/manager-office.jpg';
 
 export const metadata: Metadata = {
   title: { absolute: 'Relai: fuel and EV station management for Rwanda' },
@@ -71,6 +76,11 @@ const QUESTIONS = [
     a: 'The attendant app keeps recording. Each sale is queued on the phone and synced the moment the internet is back, with its original time and price.',
   },
   {
+    topic: 'Customers',
+    q: 'Can customers pay with a prepaid balance or a voucher?',
+    a: 'Yes. Give a company or a person an account with a prepaid balance and membership cards, or print vouchers. The attendant scans the QR code at the pump, the balance or voucher pays, and any rest is paid in cash or MoMo. Paying from a balance or a voucher needs internet; a card’s discount does not.',
+  },
+  {
     topic: 'Records',
     q: 'Can a sale be edited after the fact?',
     a: 'No. An attendant can undo a mistake within two minutes of saving it. After that the transaction is locked for everyone, including us. The price in force at the time is stored with it.',
@@ -79,6 +89,28 @@ const QUESTIONS = [
     topic: 'Access',
     q: 'Who sees what?',
     a: 'A station manager sees their station only. A company administrator sees every station in the company. Attendants use the mobile app and have no access to the web portal.',
+  },
+];
+
+/** Where Relai is used. The photos are AI-generated stand-ins until real pilot-station photography replaces them. */
+const PLACES: { photo: StaticImageData; alt: string; title: string; text: string }[] = [
+  {
+    photo: forecourtPhoto,
+    alt: 'Attendants in green vests serving cars and moto-taxis at a fuel station at dusk, with an EV charger to one side',
+    title: 'On the forecourt',
+    text: 'Attendants sign in with a phone number and PIN and record each sale at the pump, with or without internet.',
+  },
+  {
+    photo: managerPhoto,
+    alt: 'A station manager smiles at sales charts on his laptop in an office overlooking the forecourt',
+    title: 'In the office',
+    text: 'Managers follow the day’s sales as they are recorded and open the reconciliation in the morning.',
+  },
+  {
+    photo: evPhoto,
+    alt: 'A driver checks his phone while his white electric car charges at a station charger',
+    title: 'At the charger',
+    text: 'Charging sessions are recorded in kilowatt hours, on the same reports as fuel.',
   },
 ];
 
@@ -123,9 +155,7 @@ export default function LandingPage() {
               ))}
             </ul>
           </div>
-          <div className="hidden xl:block">
-            <HeroVisual />
-          </div>
+          <HeroVisual />
         </div>
       </section>
 
@@ -152,6 +182,38 @@ export default function LandingPage() {
             lead="One app on the forecourt, one portal in the office, one set of numbers that every shift has to add up to."
           />
           <PlatformCards />
+        </div>
+      </section>
+
+      <section id="cards" aria-labelledby="cards-heading" className="scroll-mt-6 bg-surface-muted">
+        <div className={cx(container, 'grid gap-14 py-20 lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-20 lg:py-30')}>
+          <div className="flex flex-col gap-12">
+            <SectionHead
+              overline="Customers"
+              titleId="cards-heading"
+              title="Membership cards and vouchers, scanned at the pump."
+              lead="Give fleets and regular drivers an account at your stations. The attendant scans the code, and Relai applies the discount or takes the payment from the balance or the voucher."
+            />
+            <CardsAndVouchersPoints />
+          </div>
+          <CardsAndVouchersVisual />
+        </div>
+      </section>
+
+      <section aria-labelledby="sites-heading" className="py-20 lg:py-30">
+        <div className={cx(container, 'flex flex-col gap-12')}>
+          <SectionHead overline="On site" titleId="sites-heading" title="Made for the forecourt, the office and the charger." />
+          <ul className="m-0 grid list-none gap-10 p-0 md:grid-cols-3 md:gap-6">
+            {PLACES.map((p) => (
+              <li key={p.title} className="flex flex-col gap-4">
+                <div className="relative aspect-4/3 overflow-hidden rounded-16">
+                  <Image src={p.photo} alt={p.alt} fill placeholder="blur" sizes="(min-width: 768px) 33vw, 100vw" className="object-cover" />
+                </div>
+                <h3 className="m-0 text-22 font-semibold tracking-n10">{p.title}</h3>
+                <p className="m-0 text-16 leading-[1.55] text-text-secondary">{p.text}</p>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
