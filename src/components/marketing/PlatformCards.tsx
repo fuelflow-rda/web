@@ -13,7 +13,7 @@ export function PlatformCards() {
       <Card
         icon={Smartphone}
         title="Attendant app for Android and iOS"
-        text="Phone number and PIN sign-in. Sales queue on the device when the network drops and sync when it returns. Large buttons, sized for gloves and sunlight."
+        text="Phone number and PIN sign-in. Sales queue on the device when the internet drops and sync when it is back. Large buttons, sized for gloves and sunlight."
         picture="The sale screen with Pump 1 chosen, and a note that one sale is waiting to sync"
       >
         <div className="grid grid-cols-3 gap-2.5">
