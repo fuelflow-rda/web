@@ -67,7 +67,7 @@ export function PlatformCards() {
         picture="A reconciliation listing Pump 2 for review and two pumps matched"
       >
         <div className="flex flex-col gap-2.5">
-          <Row label="Pump 2 · Diesel" value="−3.2 L · −RWF 5,168" bad />
+          <Row label="Pump 2 · Diesel" value="−3.2 L · −RWF 9,366" bad />
           <Row label="Pump 1 · Gasoline" value="−0.4 L" />
           <Row label="Charger 1 · EV DC" value="0.0 kWh" />
         </div>
